@@ -190,7 +190,9 @@ loop never reached its target length, so tell the user.
 Then run `ENGINE finalize <dir>`. It writes `<dir>/transcript.txt` in the app's
 `[Name]: text` format and reports spoken minutes and generation time. If it lists
 `changedAfterCommit`, a speaker rewrote its file after its turn was committed. Tell the
-user which turns those were.
+user which turns those were. Its `viewAudit` re-reads every sheet the speakers were
+given and checks that each one saw the whole conversation before it spoke, with no line
+dropped, duplicated, or out of order. If it isn't `ok`, report the turns it lists.
 
 ## 3. Render audio (skip with `--no-audio`)
 

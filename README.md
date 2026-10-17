@@ -148,6 +148,16 @@ every call. Cast mode doesn't:
 3. The engine tracks which history each role has seen (`seen`), who wrote which
    variable (`var_author`), and each role's agent ID (`cast`, registered with
    `advance --cast "Role=agentId"`), so a compacted showrunner can recover.
+4. **`engine.py audit`** (also run by `finalize`) checks the deltas from the outside.
+   It re-reads the sheet files each speaker was actually given and rebuilds, turn by
+   turn, what that agent had seen: the transcript in its first full sheet, plus every
+   delta since, plus its own lines. That must equal the true transcript up to the turn,
+   line for line and in order.
+   - It passed on all 60 speaker turns in the four cast runs, including the re-cast.
+   - On deliberately corrupted copies it caught a dropped line, a duplicated line, two
+     swapped lines, and a line cut in half.
+   - What it can't see is whether a speaker actually read its whole sheet. Speakers are
+     told to read to the closing marker.
 
 Speakers write their lines to a file, and the showrunner never reads or re-types them,
 so its own context stays small. Consecutive private prep steps for different roles are

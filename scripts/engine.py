@@ -906,6 +906,94 @@ def transcript_text(st):
     return "".join("[%s]: %s\n\n" % (h["role"], h["text"]) for h in st["history"])
 
 
+def _norm(text):
+    return " ".join(text.split())
+
+
+def _entries(block, roles):
+    """Split a transcript block into normalized (role, text) entries."""
+    if not block.strip():
+        return []
+    pat = re.compile(r"^\[(%s)\]: " % "|".join(re.escape(r) for r in roles), re.M)
+    ms = list(pat.finditer(block))
+    out = []
+    for i, m in enumerate(ms):
+        end = ms[i + 1].start() if i + 1 < len(ms) else len(block)
+        out.append((m.group(1), _norm(block[m.end():end])))
+    return out
+
+
+def audit_views(st, template):
+    """Check, from the sheet files themselves, that every speaker saw the whole transcript.
+
+    For each committed turn, rebuild what that role's speaker had been shown: the
+    transcript in its full sheet when it was cast (or re-cast), plus every delta sheet
+    since, plus its own lines. That must equal the true transcript up to the turn,
+    entry for entry and in order. A dropped, duplicated, or reordered line fails.
+    """
+    if st.get("mode") == "single":
+        return {"ok": True, "skipped": "single writer sees everything"}
+    roles = [r["name"] for r in template["roles"]]
+    otp = template["outputTranscriptPrompt"].split("{{output}}")
+    suffix = _norm(otp[1])[:40] if len(otp) == 2 else ""
+    truth, hi = {}, 0
+    for t in st["turns"]:
+        if t["visible"]:
+            h = st["history"][hi]
+            truth[t["turn"]] = (h["role"], _norm(h["text"]))
+            hi += 1
+    views, problems, checked = {}, [], 0
+    for t in st["turns"]:
+        role = t["role"]
+        stem = re.sub(r"(\.recast\d+)?\.txt$", "", t["file"])
+        delta = stem + ".delta.md"
+        used_delta = (st.get("mode", "cast") == "cast" and os.path.exists(delta)
+                      and ".recast" not in os.path.basename(t["file"]))
+        if used_delta:
+            text = read_text(delta)
+            if "Nothing has been said since your last turn." in text:
+                got = []
+            else:
+                a = text.index("Since your last turn, this was said:") + len("Since your last turn, this was said:")
+                b = text.index("Your instruction for this turn:")
+                got = _entries(text[a:b], roles)
+            views[role] = views.get(role, []) + got
+        else:
+            text = read_text(stem + ".prompt.md")
+            if NO_CONVERSATION_YET in text.split("=== PROMPT", 1)[-1]:
+                views[role] = []
+            else:
+                body = text.split("=== PROMPT", 1)[-1]
+                m = re.search(r"^\[(%s)\]: " % "|".join(re.escape(r) for r in roles), body, re.M)
+                block = body[m.start():] if m else ""
+                if suffix and block:
+                    # Cut at the template's closing words for the history block.
+                    flat_idx = None
+                    for cut in re.finditer(re.escape(suffix.split()[0]), block):
+                        if _norm(block[cut.start():]).startswith(suffix):
+                            flat_idx = cut.start()
+                            break
+                    if flat_idx is not None:
+                        block = block[:flat_idx]
+                views[role] = _entries(block, roles)
+        expected = [truth[n] for n in sorted(truth) if n < t["turn"]]
+        checked += 1
+        if views[role] != expected:
+            first = next((i for i, (x, y) in enumerate(zip(views[role], expected)) if x != y),
+                         min(len(views[role]), len(expected)))
+            problems.append({"turn": t["turn"], "role": role, "sheet": "delta" if used_delta else "full",
+                             "saw": len(views[role]), "expected": len(expected), "firstDifferenceAt": first})
+            views[role] = list(expected)   # keep checking later turns against the truth
+        if t["visible"]:
+            views[role].append(truth[t["turn"]])
+    return {"ok": not problems, "turnsChecked": checked, "problems": problems}
+
+
+def cmd_audit(args):
+    st = load_state(args.run_dir)
+    emit(audit_views(st, template_of(st)))
+
+
 def cmd_finalize(args):
     st = load_state(args.run_dir)
     if not st["done"]:
@@ -931,6 +1019,7 @@ def cmd_finalize(args):
         "generationSeconds": round(elapsed),
         "roles": [r["name"] for r in template["roles"]],
         "changedAfterCommit": changed,
+        "viewAudit": audit_views(st, template),
     })
 
 
@@ -1324,6 +1413,10 @@ def main():
     p.add_argument("--model", required=True)
     p.add_argument("--project-dir", default=".")
     p.set_defaults(func=cmd_pin_agent)
+
+    p = sub.add_parser("audit", help="check from the sheet files that every speaker saw the whole transcript")
+    p.add_argument("run_dir")
+    p.set_defaults(func=cmd_audit)
 
     p = sub.add_parser("watchdog", help="background stall detector; exits on a stall or when the run ends")
     p.add_argument("run_dir")
