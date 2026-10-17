@@ -42,13 +42,17 @@ Scripts (always quote the paths, which may contain spaces):
      - `--language`: output language.
      - `--no-audio`: stop after the transcript.
      - `--no-director`: leave director's notes out of the turn sheets (see section 2).
+     - `--form F`: override the guessed form (debate, hearing, conversation, workshop,
+       class, quiz, written).
 2. **Settings menu.** Skip any question whose answer the arguments already give. If
    they settle everything, or the user said to just go, skip the menu entirely. Otherwise
    ask with AskUserQuestion (load it with ToolSearch if it's deferred), in one call:
    - **Settings** (header "Settings"):
      - "Use the best (Recommended)": your session's model for every speaker, voices cast
        automatically, full template length, cast mode
-     - "Review the characters first": the defaults, plus the character review in step 7
+     - "Review the characters first": the defaults, plus the character review in step 7.
+       For a one-role template (a written piece), word it "Review the author's voice
+       first".
      - "Customize everything": the questions below, then the character review
    If they choose Customize everything, ask these together in one more call:
    - **Speaker model** (header "Model"): "Opus", "Fable", "Sonnet", and "Haiku". Put
@@ -79,8 +83,13 @@ Scripts (always quote the paths, which may contain spaces):
    - The user's organization may restrict models. If a spawn on a pinned model fails,
      say so and fall back to an alias.
 3. Choose a run directory in the current project: `entalkenator-runs/<template>-<YYYYmmdd-HHMMSS>`.
-4. Run `ENGINE init --template <t> --source <path> --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh]`.
-   Its `models` field echoes each role's speaker model ("session" means inherit).
+4. Run `ENGINE init --template <t> --source <path> --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh] [--form F]`.
+   Its `models` field echoes each role's speaker model ("session" means inherit). Its
+   `form` is the engine's guess at what kind of program this is: debate, hearing,
+   conversation, workshop, class, quiz, or written (a piece read aloud as narration).
+   The form decides the speakers' performance notes and which director's checks apply.
+   Mention it in a few words. If the user says it's wrong, or the template plainly
+   isn't that (a custom template, say), change it with `ENGINE meta <dir> --form <form>`.
 5. From `documentHead`, work out the document's title and author, as the app does.
    Use the title if one is evident, otherwise a concise title-case title. Use the author's
    name, or "Unknown Author". Save them with `ENGINE meta <dir> --title "..." --author "..."`.
@@ -92,10 +101,18 @@ Scripts (always quote the paths, which may contain spaces):
    then ask with AskUserQuestion (header "Characters"):
    - "Use them as written (Recommended)"
    - "Flesh them out for me": draft a sketch for each role, 60–100 words, grounded in
-     its description and the document. Cover how they talk (rhythm, a verbal habit),
-     their background and temperament, what they want from tonight, what they're
-     touchy about, and the pronouns the transcript should use. Keep every stance the
-     template gives them; don't change who wins an argument. Show the sketches and
+     its description, the document, and the form. Cover how they talk (rhythm, a
+     verbal habit), their background and temperament, what they want from this
+     session, what they're touchy about, and the pronouns the transcript should use.
+     Shape it to the form:
+     - debate or roundtable: each participant's stake and style of argument
+     - hearing: each judge's temperament and leanings; each attorney's courtroom manner
+     - class: each student's year, confidence, and interests, with a range from eager
+       to lost
+     - quiz: contestants' personalities and how competitive they are
+     - written piece: the author's discipline, tone, and stance; the role is a voice,
+       not a character
+     Keep every stance the template gives them; don't change who wins an argument. Show the sketches and
      ask "Use these sketches", "Edit them" (free text through Other), or "Back to the
      originals". Save each one with `ENGINE role <dir> --role "<name>" --sketch "..."`.
    - "Let me edit them": take the user's changes in their own words. Rewrites of who
@@ -153,17 +170,24 @@ conversation in its own context:
 When `issue` has several items (parallel private prep steps for different roles),
 launch them all at once.
 
-**Director's notes.** Unless the run used `--no-director`, the engine checks the transcript
-before each spoken turn. If that speaker has picked up a habit, it adds a short private
-note to the end of their sheet. The habits it checks for:
-- opening by quoting the other side back
-- stock concessions
-- one rhetorical device on repeat
-- repeating their own earlier line
-- running long where the template asks for brevity
+**Performance notes and director's notes.** Every speaker's first sheet carries
+performance notes for the run's form: how people in a debate, a hearing, a podcast, a
+workshop, a class, a quiz, or a written piece actually sound. The lead also gets a line
+on running things.
 
-A moderator or host also gets the running time. You don't need to do anything with the
-notes; speakers act on them silently.
+Unless the run used `--no-director`, the engine also checks the transcript before each
+turn. If that speaker has picked up a habit, it adds a short private note to the end of
+their sheet. Which checks apply depends on the form:
+- debates, hearings, conversations, and workshops: echoing the previous speaker
+- debates: stock concessions
+- conversations, workshops, and classes: gushing filler ("great question")
+- everything except quizzes: the "not X, it's Y" habit
+- everything except classes, where repetition is teaching, and quizzes: repeating one's
+  own line
+- all forms: running long where the template asks for brevity
+
+The lead (moderator, host, presiding judge, teacher) also gets the running time. You
+don't need to do anything with the notes; speakers act on them silently.
 
 **Waiting: by event, not polling.** After launching or messaging speakers, end your
 response. Don't sleep, poll, or check for the output file. Each speaker's finish

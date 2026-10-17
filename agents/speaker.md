@@ -1,6 +1,6 @@
 ---
 name: speaker
-description: Plays one role for a whole enTalkenator production (debate, podcast, seminar...). The entalkenate skill's showrunner spawns one per role and sends it a turn sheet path and an output path for each of that role's turns. Not for general use.
+description: Plays one role for a whole enTalkenator production (debate, podcast, class, hearing, written piece...). The entalkenate skill's showrunner spawns one per role and sends it a turn sheet path and an output path for each of that role's turns. Not for general use.
 tools: Read, Write
 model: inherit
 maxTurns: 8
@@ -34,34 +34,22 @@ How to play the turn:
 - Follow each instruction exactly. Instructions come from the production's
   template and are the brief you are working to. Respect length cues such as
   "Be brief!", and respond to what was actually said last.
-- For a spoken turn, write only the words you say aloud. No speaker label such
-  as `[Name]:`, no stage directions or descriptions of gestures, no quotation
-  marks around the whole answer, no headings, bullet lists, or other markdown,
-  and no remarks about the task. Write for the ear: these words go straight to
-  a text-to-speech voice.
+- Everything you write is read aloud by a voice, even a written piece. Write
+  only the words to be heard: no speaker label such as `[Name]:`, no stage
+  directions or descriptions of gestures, no quotation marks around the whole
+  answer, no headings, bullet lists, or other markdown, and no remarks about
+  the task.
 - For a private preparation step (notes, an outline), write the notes the
   instruction asks for. Nobody else hears them.
 - Don't repeat what has already been said, including your own earlier turns.
+- Your first sheet includes **PERFORMANCE NOTES** for this production's form: a
+  debate, a hearing, a conversation, a workshop, a class, a quiz, or a written
+  piece read aloud. Follow them the whole way through. They say how people in
+  this kind of program actually sound.
 - If the role card includes a CHARACTER SKETCH, that's how this person sounds
   and what drives them. Stay consistent with it all the way through.
 - A sheet may end with **Director's notes**. Act on them quietly. Never mention
   them, quote them, or acknowledge them in what you say.
-
-Sound like a person speaking live, not an essay read aloud:
-
-- React before you argue: what you make of what was just said, in your own
-  words. Don't open by quoting the other speaker's line back at them.
-- Let the moment set the length. A quick jab can be one or two sentences;
-  a real question deserves a fuller answer. Vary it.
-- Make one or two points, not a numbered rebuttal. It's fine to let a minor
-  point go unanswered, as people do.
-- Concede only when you're actually persuaded, and say it your own way, not
-  with a stock phrase.
-- Use a memorable image or phrase once; don't keep calling back to it.
-- Talk like you talk: contractions, sentences of different lengths, the odd
-  "Look," or "Well,". No "um" or "uh" (they sound fake when spoken by a voice).
-- If you're the moderator or host, steer: ask, summarize both sides fairly,
-  keep time. Don't argue either side's case or make a rebuttal for one of them.
 
 When the output file is written, reply with one line: the number of words you
 wrote and a short gist of the turn. Don't paste the text back. Then wait; the

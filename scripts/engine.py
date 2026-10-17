@@ -329,6 +329,131 @@ def transcript_block(template, history):
     return prefix + body + suffix + OUTPUT_TRANSCRIPT_PROMPT_ADDITION
 
 
+FORMS = ("debate", "hearing", "conversation", "workshop", "class", "quiz", "written")
+
+FORM_LABELS = {
+    "debate": "a moderated debate",
+    "hearing": "a courtroom hearing (oral argument)",
+    "conversation": "a conversation (podcast, chat, or panel)",
+    "workshop": "an academic workshop",
+    "class": "a class (lecture or seminar)",
+    "quiz": "a quiz show",
+    "written": "a written piece read aloud as narration",
+}
+
+PERFORMANCE = {
+    "debate": [
+        "React before you argue: say what you make of what was just said, in your own words. Don't open by quoting the other side's line back at them.",
+        "Let the moment set the length. A quick jab can be a sentence or two; a real question deserves a fuller answer.",
+        "Make one or two points, not a numbered rebuttal. It's fine to let a minor point go.",
+        "Concede only when you're actually persuaded, and say it your own way.",
+        "Use a memorable image or phrase once; don't keep calling back to it.",
+        "Talk like you talk: contractions, sentences of different lengths, the odd \"Look,\" or \"Well,\".",
+    ],
+    "hearing": [
+        "This is a courtroom. Counsel address the bench (\"Your Honor\") and answer the question actually asked, first and directly, before returning to their argument. They never interrupt a judge.",
+        "Judges ask short, pointed questions, follow up when an answer dodges, and test arguments with hypotheticals. They don't make speeches, and they rarely argue with each other at length.",
+        "Counsel speak formally but plainly: complete sentences, few contractions, no rhetorical flourishes.",
+        "Concede what has to be conceded and move to the ground you can hold; that's what good advocates do.",
+    ],
+    "conversation": [
+        "This is a conversation between people who enjoy ideas, not a contest. Build on what was just said as often as you push back; agreeing and adding is natural.",
+        "Follow the other person's thread and ask real questions. Bring your own examples.",
+        "Casual spoken register: contractions, short sentences, the odd aside. Vary the length of your turns.",
+        "Don't summarize the conversation back to each other, don't wrap up every turn, and skip gushing filler (\"Great point!\", \"Absolutely!\", \"I love that\").",
+    ],
+    "workshop": [
+        "An academic workshop among colleagues who've read the paper. Discussants raise one sharp, specific question or comment at a time, and may disagree with each other.",
+        "The presenter answers the question asked, concedes what's fair, and defends what matters, without re-delivering the talk.",
+        "Collegial but candid, and spoken: contractions, plain words, no reading from notes.",
+        "Skip praise filler (\"Great question\", \"Thank you for that wonderful paper\") beyond a brief courtesy.",
+    ],
+    "class": [
+        "A class. The teacher explains, signposts, and checks understanding; repeating a key idea in new words is good teaching, not a fault.",
+        "Students sound like real students: some confident, some unsure. They ask genuine questions, sometimes get things partly wrong, and keep their turns short.",
+        "The teacher answers the actual question, by name, and ties it back to the material. Don't open every reply with \"Great question\".",
+        "Spoken register: contractions, varied sentence length, no reading out of lists.",
+    ],
+    "quiz": [
+        "A quiz show. The host keeps it brisk and warm: one clear question at a time, the right answer confirmed, the score kept aloud when the format calls for it.",
+        "Contestants answer briefly. They sometimes hesitate, guess, or get it wrong, and react to the result. Banter is short.",
+    ],
+    "written": [
+        "This is a finished written piece that will be read aloud as narration. Write polished prose in the author's voice: clear topic sentences, signposting between sections, varied sentence length.",
+        "No headings, bullet lists, bracketed citations, or footnote-style asides. Say in words anything a reader would otherwise see on the page.",
+        "Don't address the listener as an audience or mention that this is audio. A formal register is fine; no conversational tics.",
+    ],
+}
+
+LEAD_NOTES = {
+    "debate": "You're the moderator: steer, ask, summarize both sides fairly, and keep time. Don't argue either side's case or make a rebuttal for one of them.",
+    "hearing": "You're presiding: keep the argument moving, manage time, and make sure each side answers the bench's real concerns.",
+    "conversation": "You're the host: draw the other person out, keep it moving, and share your own view sparingly.",
+    "workshop": "You're moderating: keep the queue moving, call on people, and don't evaluate the paper yourself.",
+    "class": "You're the teacher: you lead, but leave room for students to think aloud.",
+    "quiz": "You're the host: keep time and score, and keep the energy up without hogging the floor.",
+}
+
+# Director checks that make sense for each form.
+FORM_CHECKS = {
+    "debate": {"echo", "stock_adversarial", "device", "self", "length", "time"},
+    "hearing": {"echo", "device", "self", "length", "time"},
+    "conversation": {"echo", "stock_gush", "device", "self", "length", "time"},
+    "workshop": {"echo", "stock_gush", "device", "self", "length", "time"},
+    "class": {"stock_gush", "device", "length", "time"},
+    "quiz": {"length", "time"},
+    "written": {"device", "self", "length"},
+}
+
+
+def guess_form(template):
+    """Best guess at what kind of program a template makes (the showrunner can override)."""
+    text = " ".join([template.get("displayName", "")] + list(template["initialContext"].values())
+                    + [st_["promptTemplate"] for st_ in template["steps"]]).lower()
+    roles = " ".join(r["name"] + " " + r["roleDescription"] for r in template["roles"]).lower()
+    if len(template["roles"]) == 1:
+        return "written" if not re.search(r"\b(lecture|class|podcast|talk show)\b", text) else "class"
+    if re.search(r"\b(quiz|contestants?)\b", text):
+        return "quiz"
+    if re.search(r"\bjudge", roles) and re.search(r"\b(attorney|counsel|appellant|appellee)", roles):
+        return "hearing"
+    if re.search(r"\bdebate\b", text):
+        return "debate"
+    if re.search(r"\b(workshop|hot bench|presenter)\b", text + " " + roles):
+        return "workshop"
+    if re.search(r"\b(professor|teacher|instructor|lecturer)\b", roles) and re.search(r"\b(class|lecture|seminar|students?)\b", text):
+        return "class"
+    return "conversation"
+
+
+OPENER_RE = re.compile(r"\b(welcom\w*|introduc\w*|announc\w*|has just begun|is just beginning|is beginning|"
+                       r"get it started|call (?:on|the))\b", re.I)
+
+
+def lead_role(template):
+    """The role that opens the program as its host: whoever speaks the first visible step,
+    if that step welcomes, introduces, or announces. (Role descriptions mention each other,
+    so they're a poor guide.)"""
+    for step in template["steps"]:
+        if is_visible(step):
+            name = step["roleName"].strip()
+            return name if "," not in name and OPENER_RE.search(step["promptTemplate"]) else None
+    return None
+
+
+def is_lead(template, role):
+    return role["name"] == lead_role(template)
+
+
+def performance_block(st, template, role):
+    form = st.get("form") or guess_form(template)
+    lines = list(PERFORMANCE.get(form, []))
+    if form in LEAD_NOTES and len(template["roles"]) > 1 and is_lead(template, role):
+        lines.append(LEAD_NOTES[form])
+    return ("PERFORMANCE NOTES (this production is %s; follow these all the way through):\n%s\n"
+            % (FORM_LABELS.get(form, form), "\n".join("- " + l for l in lines)))
+
+
 def effective_role(st, template, name):
     """The template's role with the user's reviewed character applied.
 
@@ -354,9 +479,12 @@ more most much many some any all each every one two three there here there's let
 says go going know think well yes now only even still because like over out up down off same other another own
 again too back way thing things something nothing anything everyone someone people""".split())
 
-STOCK_PHRASES = ["fair hit", "fair point", "fair question", "fair challenge", "fair enough", "i'll grant you",
-                 "i'll take that", "i'll give you that", "take the hit", "credit where due", "let me be clear",
-                 "here's the thing", "make no mistake", "at the end of the day", "to be fair"]
+STOCK_ADVERSARIAL = ["fair hit", "fair point", "fair question", "fair challenge", "fair enough", "i'll grant you",
+                     "i'll take that", "i'll give you that", "take the hit", "credit where due", "let me be clear",
+                     "here's the thing", "make no mistake", "at the end of the day", "to be fair"]
+STOCK_GUSH = ["great point", "great question", "good question", "excellent question", "excellent point",
+              "absolutely", "i love that", "that's fascinating", "so interesting", "couldn't agree more",
+              "exactly right", "you're so right", "what a great"]
 NOT_IT_IS = re.compile(r"\b(not|n't)\b[^.?!]{0,80}[.?!]\s+(It|That)('s| is| was)\b")
 
 
@@ -410,12 +538,13 @@ def director_notes(st, template, step, role_name):
     """
     if not st.get("director", True) or not is_visible(step):
         return []
+    form = st.get("form") or guess_form(template)
+    checks = FORM_CHECKS.get(form, set())
     hist = st["history"]
     given = st.setdefault("director_given", {}).setdefault(role_name, [])
     notes = []
     role = effective_role(st, template, role_name) or {}
-    desc = (role.get("roleDescription", "") + " " + role.get("sketch", "")).lower()
-    if re.search(r"\b(moderat|host|chair|presiding)", desc):
+    if "time" in checks and len(template["roles"]) > 1 and is_lead(template, role):
         minutes = st["total_words"] / WORDS_PER_MINUTE
         if minutes >= 1:
             notes.append("Running time so far: about %d minutes." % round(minutes))
@@ -428,27 +557,28 @@ def director_notes(st, template, step, role_name):
     # 1. Echo openers: starting by quoting the other side's words back.
     recent = mine_idx[-3:]
     echoes = sum(1 for i in recent if i > 0 and _is_echo_opener(hist[i]["text"], hist[i - 1]["text"], names))
-    if echoes >= 2 and "echo" not in given:
-        notes.append("You've opened %d of your last %d turns by quoting the other side's words back. Start this "
-                     "one somewhere else: your reaction, a question, or your own point." % (echoes, len(recent)))
+    if "echo" in checks and echoes >= 2 and "echo" not in given:
+        notes.append("You've opened %d of your last %d turns by quoting the previous speaker's words back. Start "
+                     "this one somewhere else: your reaction, a question, or your own point." % (echoes, len(recent)))
         given.append("echo")
 
     # 2. Stock concessions and set phrases.
     joined = " ".join(mine).lower().replace("\u2019", "'")
-    used = [ph for ph in STOCK_PHRASES if ph in joined]
-    if sum(joined.count(ph) for ph in STOCK_PHRASES) >= 2 and "stock" not in given:
-        notes.append("You've leaned on set phrases (%s). If you concede or agree, say it in your own words, and "
-                     "only when you mean it." % ", ".join("'%s'" % u for u in used[:3]))
+    stock = (STOCK_ADVERSARIAL if "stock_adversarial" in checks else []) + (STOCK_GUSH if "stock_gush" in checks else [])
+    used = [ph for ph in stock if re.search(r"\b%s\b" % re.escape(ph), joined)]
+    if stock and sum(len(re.findall(r"\b%s\b" % re.escape(ph), joined)) for ph in stock) >= 2 and "stock" not in given:
+        notes.append("You've leaned on set phrases (%s). Say it in your own words, or skip it." % (
+            ", ".join("'%s'" % u for u in used[:3])))
         given.append("stock")
 
     # 3. One rhetorical device on repeat.
     dev = sum(len(NOT_IT_IS.findall(t)) for t in mine)
-    if dev >= 3 and "device" not in given:
+    if "device" in checks and dev >= (4 if form == "written" else 3) and "device" not in given:
         notes.append("You've used the 'That's not X. It's Y.' construction %d times. Vary how you make a point." % dev)
         given.append("device")
 
     # 4. Repeating one's own earlier line.
-    if len(mine) >= 2:
+    if "self" in checks and len(mine) >= 2:
         def grams(t, n=7):
             w = _words(t)
             return set(" ".join(w[i:i + n]) for i in range(len(w) - n + 1))
@@ -463,7 +593,7 @@ def director_notes(st, template, step, role_name):
             given.append(key)
 
     # 5. Length where the template asks for brevity.
-    if re.search(r"\b(brief|short|succinct|concise)\b", step["promptTemplate"], re.I):
+    if "length" in checks and re.search(r"\b(brief|short|succinct|concise)\b", step["promptTemplate"], re.I):
         lens = sorted(len(h["text"].split()) for h in hist)
         median = lens[len(lens) // 2]
         last = len(mine[-1].split())
@@ -520,6 +650,7 @@ def cmd_templates(args):
             "steps": len(t["steps"]),
             "loopMinutes": [lv[1] for lv in loops if lv and lv[0] == "start"],
             "userInput": (t.get("userInputConfig") or {}).get("label"),
+            "form": guess_form(t),
         })
     emit({"templatesDir": d, "templates": out})
 
@@ -556,6 +687,7 @@ def cmd_init(args):
 
     title = args.title or os.path.splitext(os.path.basename(src))[0]
     models = parse_models(args.model, args.models, template)
+    form = args.form if args.form and args.form != "auto" else guess_form(template)
     st = {
         "version": 1,
         "run_dir": run,
@@ -572,6 +704,7 @@ def cmd_init(args):
         "mode": args.mode,
         "models": models,   # role -> "" (session model), an alias, or a full model ID
         "director": not args.no_director,
+        "form": form,
         "role_overrides": {},
         "seed": uuid.uuid4().hex,
         "current_index": 0,
@@ -606,6 +739,8 @@ def cmd_init(args):
         "title": title,
         "author": st["author"],
         "models": {r: (m or "session") for r, m in models.items()},
+        "form": form,
+        "formLabel": FORM_LABELS[form],
         "documentHead": text[:800],
     })
 
@@ -668,8 +803,10 @@ def cmd_meta(args):
         st["user_input"] = args.user_input
     if args.model is not None or args.models is not None:
         st["models"] = parse_models(args.model, args.models, template_of(st))
+    if args.form is not None:
+        st["form"] = args.form
     save_state(args.run_dir, st)
-    emit({"title": st["title"], "author": st["author"], "userInput": st["user_input"],
+    emit({"title": st["title"], "author": st["author"], "userInput": st["user_input"], "form": st.get("form"),
           "models": {r: (m or "session") for r, m in st.get("models", {}).items()}})
 
 
@@ -747,6 +884,7 @@ def issue(st, template, index):
     visible = is_visible(step)
     sketch = ("\nCHARACTER SKETCH (how you sound and who you are; stay consistent with it):\n%s\n"
               % role["sketch"]) if role.get("sketch") else ""
+    sketch += "\n" + performance_block(st, template, role)
     sheet = (
         "ROLE CARD: you are %s.\n%s\n%s\n"
         "Turn %d. %s\n\n"
@@ -784,8 +922,10 @@ def issue(st, template, index):
     elif mode == "single":
         first = not any(t["role"] == role_name for t in st["turns"]) and not any(
             p["role"] == role_name for p in st["pending"])
+        everyone_first = not st["turns"] and not st["pending"]
         pend["instruction"] = (role["roleDescription"]
                                + ("\n\nCharacter sketch: " + role["sketch"] if first and role.get("sketch") else "")
+                               + ("\n\n" + performance_block(st, template, role).strip() if everyone_first else "")
                                + "\n\n" + step_prompt_for_known_context(
                                    st, template, step, role_name, variables, writer_knows_all=True)
                                + ("\n\n" + notes_block(notes).strip() if notes else ""))
@@ -1582,6 +1722,8 @@ def main():
                                    "(default), or a full ID such as claude-opus-4-8")
     p.add_argument("--models", help='per-role overrides, e.g. "Hillford Johns=haiku;*=opus"')
     p.add_argument("--no-director", action="store_true", help="don't add director's notes to turn sheets")
+    p.add_argument("--form", choices=("auto",) + FORMS, default="auto",
+                   help="what kind of program this is; sets performance notes and director checks (default: guessed)")
     p.add_argument("--mode", choices=["cast", "fresh", "single"], default="cast",
                    help="cast: one persistent speaker agent per role (default); fresh: a new speaker "
                         "agent every turn; single: the showrunner writes every turn")
@@ -1610,6 +1752,7 @@ def main():
     p.add_argument("--user-input")
     p.add_argument("--model")
     p.add_argument("--models")
+    p.add_argument("--form", choices=FORMS)
     p.set_defaults(func=cmd_meta)
 
     for name, fn in (("next", cmd_next), ("advance", cmd_advance)):
