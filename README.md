@@ -168,7 +168,7 @@ every turn. `--mode single` has the showrunner write every role itself.
 
 ### Characters and director's notes
 
-**Character review.** The opening menu offers "Review the characters first". The
+**Character review.** The opening menu offers "Review the characters first" ("Review the author's voice first" for a one-role written piece). The
 showrunner lists each role's description from the template, then offers three choices:
 - **Use them as written.**
 - **Flesh them out:** a 60–100-word sketch per role covering voice, background,
@@ -219,13 +219,36 @@ character sketch, wrote the turn from that point:
 This is one probe, not a measured improvement. The original Opus turn at that point was
 short too.
 
-The brief also now asks for live speech:
-- react before you argue
-- let the moment set the length
-- one or two points per turn
-- concede in your own words
-- contractions, and no scripted "um"
-- moderators steer, and don't argue either side's case
+**Forms.** Templates aren't all debates, so realism is defined per form. The engine
+guesses each template's form; `--form` overrides it.
+
+| Form | Templates | Performance notes, in short |
+| :- | :- | :- |
+| debate | debate | React before you argue; vary length; concede in your own words; neutral moderator |
+| hearing | oralargument | Counsel answer the bench first and directly; judges ask short, pointed questions |
+| conversation | podcast, explainer, roundtable | Build on each other as often as you push back; casual; no gushing filler |
+| workshop | workshop, hotBench | One sharp question at a time; presenter answers without re-giving the talk |
+| class | introClass, seminar | Teacher signposts and repeats key ideas on purpose; students ask real, sometimes unsure questions |
+| quiz | quiz | Brisk host, one question at a time; short answers, guesses |
+| written | criticalReply, replyPaper, firstDraft, compressor, summary, referencebuilder | Finished prose read aloud: signposting, no headings or lists, no conversational tics |
+
+The lead role gets one more line on running the room: the moderator, host, presiding
+judge, or teacher. The engine identifies it structurally: whoever opens the program
+with a welcome, introduction, or announcement. All 16 templates are classified and
+given a lead correctly; explainer, two friends, correctly has none.
+
+Director's checks apply per form:
+- echo openers: only where speakers answer each other
+- stock concessions: debates only
+- gushing filler: conversations, workshops, classes
+- self-repetition: everywhere except classes, where repetition is teaching, and quizzes
+
+`speaker.md` now holds only rules that apply to every form.
+
+A short live run of explainer (Sonnet) produced a friendly two-person conversation:
+- follow-up questions on the other's thread, an everyday analogy, casual asides
+- no debate-style concessions or gushing filler
+- a clean audit
 
 ### Waiting and stall recovery
 
