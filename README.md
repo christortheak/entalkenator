@@ -27,7 +27,7 @@ plugin/
 ├── templates/               snapshot of enTalkenator/Templates/*.json, used outside this repo
 └── examples/
     ├── plain-language-opinions.txt   ~500-word sample used for the test run
-    └── test-run/                     transcripts from the four test runs (+ .m4a files and bundle, not committed)
+    └── test-run/                     transcripts from the test runs (+ .m4a files and bundles, not committed)
 ```
 
 There's no top-level `bin/`, because Cowork and claude.ai refuse plugins that have one.
@@ -459,6 +459,45 @@ at A, `bm_george` at C, and `am_michael` at C+. **Listen before judging.** The f
 render exposed a real casting problem: auto-assignment gave Janson a female voice, but
 the transcript calls him "a man" and "his". The fix is the voice-casting step in the
 skill. The final `.m4a` uses `am_michael`, `bm_george`, and `af_heart`.
+
+### Oral argument on a pending Supreme Court case (Sonnet)
+
+- **Input:** both merits briefs in *St. Mary Catholic Parish v. Roy*, No. 25-581, set for
+  argument Nov. 3, 2026. They were downloaded from supremecourt.gov and extracted with
+  PDFKit: 31,069 words.
+- **Template:** `oralargument`, as written, with `--loop-scale 0.4`, so each side got
+  about 4 minutes of questions. All five speakers ran on Sonnet, with the director on.
+- **Result:** 21 spoken turns plus 2 private prep notes, 2,710 words. Audio: 17.1 minutes,
+  rendered in 37 s. Generation took 13.5 minutes.
+- **Audit:** clean, with no stale drafts.
+- **Long first sheets:** each speaker's first sheet carried both briefs, about 42k tokens,
+  and every speaker paged through it to the end marker.
+
+Observations:
+- **It sounds like a real bench.**
+  - Judges ask 70–100-word questions that build on each other: Patterson presses for a
+    limiting principle, and Maralla extends Patterson's co-religionist hypothetical.
+  - Counsel answer first and directly ("No, Your Honor.", "I accept that a mistaken guess
+    alone would not be enough") and concede where they have to.
+  - Holland, the originalist, presses both sides on how far *Carson* reaches.
+- **Facts are grounded.**
+  - Every name used (Rassbach, Norton, Odean, Cooke) and every specific claim checked
+    against the briefs: the page cites, forty faith-based providers, six Catholic Charities
+    preschools, the January 14, 2023 instruction, and no complaints on record.
+  - The one loose paraphrase: "approved seventeen requests, and none departed from it",
+    where the brief has 17 requests for adjustments under one provision.
+- **The template stages a three-judge federal appeals panel, not the Supreme Court.**
+  The speakers mostly adapted ("this court could not [overrule Smith] if you did"), but
+  there are seams: the presiding judge says the case was "affirmed by the Tenth Circuit",
+  and the respondents' lawyer cites "this Court's" church-autonomy cases. A Supreme Court
+  variant of the template (nine justices, petitioner/respondent) would remove that.
+- **The respondents' opening ran 672 words**, against 374 for the petitioners. The
+  template puts no brevity cue on openings, so no director's note applied.
+- **App bug, real-world case.** Case names contain periods ("St.", "v."). The bundle
+  imports, because its file names are UUID-based. But once imported, the app makes the
+  display name the item's file prefix, and `importFromEnTalkenator` matches files by
+  `components(separatedBy: ".")[0]`. So exporting this item from the app and importing it
+  again would fail.
 
 ### What didn't work, and workarounds
 
