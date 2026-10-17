@@ -31,6 +31,9 @@ Subcommands (all print JSON on stdout):
   package  RUN --audio M4A [--out DIR]
                                   build an .enTalkenator bundle the app can import
   verify   BUNDLE                 replay the app's import logic on a bundle
+  watchdog RUN                    background stall detector (exits on a stall or at the end)
+  nudge    RUN --turn N           restart a stalled turn's clock; prints the reminder to send
+  recast   RUN --turn N           re-issue a stalled turn to a fresh speaker
 """
 
 import argparse
@@ -791,6 +794,7 @@ def commit_one(st, template, pend):
         "sha1": hashlib.sha1(text.encode("utf-8")).hexdigest(),
         "issued_at": pend["issued_at"],
         "committed_at": now(),
+        "write_seconds": round(os.path.getmtime(out_file) - pend["issued_at"], 1),
     })
     if st["current_index"] >= len(template["steps"]):
         st["done"] = True
@@ -822,7 +826,9 @@ def cmd_commit(args, quiet=False):
     save_state(run, st)
     if problems:
         emit({"committed": committed, "problems": problems,
-              "note": "Write the missing output file(s), then run commit again."})
+              "pending": [describe(st, p, st.get("mode", "cast")) for p in st["pending"]],
+              "note": "These turns are still open. Wait for their speakers (the watchdog flags stalls), "
+                      "then run advance again."})
         sys.exit(2)
     if not quiet:
         emit({"committed": committed, "done": st["done"], "progress": progress(st, template)})
@@ -1093,6 +1099,150 @@ def cmd_pin_agent(args):
     })
 
 
+def find_pending(st, turn):
+    for pend in st["pending"]:
+        if pend["turn"] == turn:
+            return pend
+    fail("Turn %d isn't pending. Pending turns: %s" % (turn, [p["turn"] for p in st["pending"]] or "none"))
+
+
+def stall_limit(st, pend, min_seconds, factor):
+    """How long a speaker may take before its turn counts as stalled.
+
+    Scaled from this run's own history (median time to write the file) so a slow
+    model or a long prep step isn't flagged just for being itself. Private prep
+    steps write much more and get a longer floor.
+    """
+    same = [t["write_seconds"] for t in st["turns"]
+            if t.get("write_seconds") is not None and t["visible"] == pend["visible"]]
+    # Prep notes run to ~1,000 words, several times a spoken turn. A role's first
+    # turn is a cold start: a new agent reading the full sheet, document and all.
+    floor = min_seconds if pend["visible"] else min_seconds * 2
+    if not st.get("cast", {}).get(pend["role"]) or not pend.get("delta_file"):
+        floor *= 1.25
+    if not same:
+        return floor
+    same.sort()
+    median = same[len(same) // 2] if len(same) % 2 else (same[len(same) // 2 - 1] + same[len(same) // 2]) / 2.0
+    return max(floor, factor * median)
+
+
+def pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def cmd_watchdog(args):
+    """Run in the background; exit (waking the showrunner) only when a turn stalls or the run ends.
+
+    It reads state.json every few seconds and costs no model tokens. A turn counts
+    as stalled when its output file hasn't appeared within the limit, measured from
+    when it was issued or last nudged.
+    """
+    run = args.run_dir
+    pidfile = os.path.join(run, "watchdog.pid")
+    if os.path.exists(pidfile):
+        try:
+            other = int(read_text(pidfile).strip())
+        except ValueError:
+            other = 0
+        if other and other != os.getpid() and pid_alive(other):
+            emit({"event": "already-running", "pid": other})
+            return
+    write_text(pidfile, str(os.getpid()))
+    started = now()
+    try:
+        while True:
+            st = load_state(run)
+            if st["done"]:
+                emit({"event": "done", "progress": progress(st, template_of(st))})
+                return
+            if now() - started > args.max_minutes * 60:
+                emit({"event": "expired", "note": "Watchdog ran for %d minutes; restart it if the run is still going."
+                      % args.max_minutes})
+                return
+            for pend in st["pending"]:
+                if os.path.exists(pend["output_file"]):
+                    continue
+                since = max(pend["issued_at"], pend.get("nudged_at") or 0)
+                waited = now() - since
+                limit = stall_limit(st, pend, args.min_seconds, args.factor)
+                if waited > limit:
+                    nudges = pend.get("nudges", 0)
+                    emit({
+                        "event": "stall",
+                        "turn": pend["turn"],
+                        "role": pend["role"],
+                        "agent": st.get("cast", {}).get(pend["role"]),
+                        "visible": pend["visible"],
+                        "waitedSeconds": round(waited),
+                        "limitSeconds": round(limit),
+                        "nudges": nudges,
+                        "recasts": pend.get("recasts", 0),
+                        "outputFile": pend["output_file"],
+                        "next": "nudge" if nudges == 0 else "recast",
+                    })
+                    return
+            time.sleep(args.interval)
+    finally:
+        try:
+            if read_text(pidfile).strip() == str(os.getpid()):
+                os.remove(pidfile)
+        except OSError:
+            pass
+
+
+def cmd_nudge(args):
+    """Restart a stalled turn's clock and give the showrunner the reminder to send."""
+    st = load_state(args.run_dir)
+    pend = find_pending(st, args.turn)
+    pend["nudged_at"] = now()
+    pend["nudges"] = pend.get("nudges", 0) + 1
+    save_state(args.run_dir, st)
+    sheet = pend.get("delta_file") or pend["prompt_file"]
+    emit({
+        "turn": pend["turn"],
+        "role": pend["role"],
+        "agent": st.get("cast", {}).get(pend["role"]),
+        "nudges": pend["nudges"],
+        "message": ("Turn %d for %s is still open. If you're done, write your lines to the output file now "
+                    "and reply with one line; if something is blocking you, say what.\nTurn sheet: %s\n"
+                    "Output file: %s") % (pend["turn"], pend["role"], sheet, pend["output_file"]),
+    })
+
+
+def cmd_recast(args):
+    """Replace a stalled speaker: same turn, full sheet, fresh output file, new agent."""
+    st = load_state(args.run_dir)
+    pend = find_pending(st, args.turn)
+    role = pend["role"]
+    old_agent = st.setdefault("cast", {}).pop(role, None)
+    # The replacement didn't write this role's earlier notes, so later sheets must
+    # spell them out instead of pointing back to them.
+    for key, who in list(st.setdefault("var_author", {}).items()):
+        if who == role:
+            st["var_author"][key] = role + " (earlier speaker)"
+    st.setdefault("seen", {}).pop(role, None)
+    k = pend.get("recasts", 0) + 1
+    stem = re.sub(r"\.recast\d+$", "", pend["output_file"][:-4])
+    pend["output_file"] = "%s.recast%d.txt" % (stem, k)
+    pend["recasts"] = k
+    pend["issued_at"] = now()
+    pend["nudges"] = 0
+    for key in ("nudged_at", "delta_file", "agent"):
+        pend.pop(key, None)
+    save_state(args.run_dir, st)
+    emit({
+        "oldAgent": old_agent,
+        "issue": [describe(st, pend, st.get("mode", "cast"))],
+        "note": ("Stop the old agent if you can (TaskStop). If it writes late, it writes to the old file, "
+                 "which is ignored. Register the new speaker with advance --cast as usual."),
+    })
+
+
 def cmd_verify(args):
     try:
         emit({"bundle": os.path.abspath(args.bundle), "ok": True, "appImport": simulate_import(args.bundle)})
@@ -1174,6 +1324,26 @@ def main():
     p.add_argument("--model", required=True)
     p.add_argument("--project-dir", default=".")
     p.set_defaults(func=cmd_pin_agent)
+
+    p = sub.add_parser("watchdog", help="background stall detector; exits on a stall or when the run ends")
+    p.add_argument("run_dir")
+    p.add_argument("--min-seconds", type=float, default=180,
+                   help="floor for a spoken turn (prep steps get 2x, a role's first turn another 1.25x)")
+    p.add_argument("--factor", type=float, default=4,
+                   help="stall after this many times the run's median write time")
+    p.add_argument("--interval", type=float, default=3)
+    p.add_argument("--max-minutes", type=float, default=180)
+    p.set_defaults(func=cmd_watchdog)
+
+    p = sub.add_parser("nudge", help="restart a stalled turn's clock; prints the reminder to send")
+    p.add_argument("run_dir")
+    p.add_argument("--turn", type=int, required=True)
+    p.set_defaults(func=cmd_nudge)
+
+    p = sub.add_parser("recast", help="re-issue a stalled turn to a fresh speaker")
+    p.add_argument("run_dir")
+    p.add_argument("--turn", type=int, required=True)
+    p.set_defaults(func=cmd_recast)
 
     p = sub.add_parser("verify", help="replay the app's import logic on an .enTalkenator file")
     p.add_argument("bundle")

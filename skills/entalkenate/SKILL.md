@@ -97,7 +97,8 @@ ENGINE advance <dir> --batch [--cast "<role>=<agentId>" ...]
 Each result lists the step(s) to write under `issue`. Each item has `role`, `turn`,
 `visible`, `outputFile`, an `action`, and a `sheet` (the turn sheet path). It also lists
 what was just `committed`, with a short `preview`, and shows `progress` (spoken minutes
-so far, loop target).
+so far, loop target). If it reports `problems` instead, some turns are still open; their
+details are under `pending`.
 
 **Cast mode (default): one persistent speaker per role.** Each role is played by one
 `entalkenator:speaker` agent for the whole run. It is cast on its first turn and
@@ -108,6 +109,7 @@ conversation in its own context:
   - `subagent_type: <agentType>`. This is `entalkenator:speaker`, or a pinned agent for
     a past model version.
   - `model: <model>`, only when the item has one.
+  - `run_in_background: true`.
   - `description: "<role> · turn <turn>"`.
   - This prompt:
   ```
@@ -115,12 +117,10 @@ conversation in its own context:
   Turn sheet: <sheet>
   Output file: <outputFile>
   ```
-  The result gives the agent's ID. Pass it on your next `advance` as
+  The launch result gives the agent's ID. Pass it on your next `advance` as
   `--cast "<role>=<agentId>"` so the engine sends that role only deltas from then on.
 - `action: "message"` means the role's speaker exists (`agent`). Send it the turn with
-  SendMessage (`to: <agent>`; load the tool with ToolSearch first if it's deferred).
-  Then wait for its one-line reply before calling `advance`. The reply arrives as a
-  message, not as the tool result:
+  SendMessage (`to: <agent>`; load the tool with ToolSearch first if it's deferred):
   ```
   Turn <turn> for <role>. Read your turn sheet, write your lines to the output file, and reply with one line.
   Turn sheet: <sheet>
@@ -131,12 +131,42 @@ conversation in its own context:
   aren't sent again.
 
 When `issue` has several items (parallel private prep steps for different roles),
-launch them all at once and wait for all of them. Don't read the turn sheets or
-output files yourself. The speaker's one-line reply and the `preview` are enough to
-follow the show. If a speaker reports a problem or its output file is missing, send
-the same turn again. `advance` re-issues outstanding turns. If a speaker can't be
-continued, spawn a new one with the full `<turn>.prompt.md` sheet for that turn (same
-name, `.prompt.md` instead of `.delta.md`). Then register the new agent with `--cast`.
+launch them all at once.
+
+**Waiting: by event, not polling.** After launching or messaging speakers, end your
+response. Don't sleep, poll, or check for the output file. Each speaker's finish
+reaches you as a notification with its one-line reply, and that starts your next turn.
+Then run `advance`.
+- If you launched several speakers, `advance` commits the finished ones and reports
+  the rest as still open. End your response again until the others finish.
+- Don't read the turn sheets or output files yourself. The speaker's reply and the
+  `preview` are enough to follow the show.
+- A speaker that reports a problem, or whose output file is missing, gets the same
+  turn again. `advance` re-issues open turns.
+
+**Watchdog.** Right after the first `advance`, start `ENGINE watchdog <dir>` with Bash
+`run_in_background: true`, and keep one running for the whole run (a second copy exits
+at once with `already-running`). It costs no tokens. It exits, which wakes you, only
+when the run is `done` or a turn `stall`s, meaning its output file hasn't appeared
+within the larger of 3 minutes and 4× this run's median write time. Private prep steps
+get twice the floor, and a role's first turn (a cold start) gets another quarter. When
+it reports a stall:
+
+1. **First stall (`next: "nudge"`).** The usual cause is a speaker waiting on a
+   permission prompt (for example, to write its file), or a slow or rate-limited model.
+   Tell the user which role is stuck and ask them to check for a pending prompt. Run
+   `ENGINE nudge <dir> --turn <turn>`, send its `message` to the speaker with
+   SendMessage, and restart the watchdog.
+2. **Second stall (`next: "recast"`).** Stop the old agent with TaskStop if you have
+   it. Run `ENGINE recast <dir> --turn <turn>`. It re-issues the turn as a `spawn`, with
+   the full sheet and a fresh output file, so a late answer from the old speaker is
+   ignored. Spawn the new speaker as above, register it with `--cast` on the next
+   `advance`, and restart the watchdog. The new speaker gets everything it needs from
+   the full sheet; later sheets spell out the role's earlier notes instead of
+   pointing back to them.
+
+If a recast speaker stalls too, stop and tell the user. Something outside the run is
+wrong, such as limits, permissions, or the model being unavailable.
 
 **Fresh mode (`--fresh`, init `--mode fresh`)** spawns a new speaker on every turn,
 always with `action: "spawn"` and the full sheet. Don't pass `--cast`. That's the app's

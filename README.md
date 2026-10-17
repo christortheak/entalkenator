@@ -156,6 +156,68 @@ issued together (`--batch`) and run in parallel.
 `--mode fresh` keeps the app's stateless behaviour: a new agent with a full sheet on
 every turn. `--mode single` has the showrunner write every role itself.
 
+### Waiting and stall recovery
+
+The showrunner never polls. After it launches a speaker (in the background) or
+messages one, it ends its response. The speaker's finish arrives as a notification,
+and that starts the showrunner's next turn. A speaker between turns isn't running at
+all. `SendMessage` resumes it, with its history intact, when its role is next up.
+
+The things that don't produce an event are a speaker stuck on a permission prompt or a
+hung API call. `engine.py watchdog` covers those:
+- It runs as one background process per run. It reads `state.json` every few seconds
+  and costs no tokens.
+- It exits, waking the showrunner, only when the run ends or a turn's output file is
+  overdue.
+- "Overdue" scales with the run: the larger of 3 minutes and 4× its median write time.
+  Prep notes get 2× the floor, and a role's first turn gets another 1.25×.
+
+When a turn stalls, the showrunner escalates in steps:
+1. **First stall:** it tells the user to check for a pending permission prompt, records
+   the stall with `engine.py nudge`, sends the speaker a reminder, and restarts the
+   watchdog.
+2. **Second stall:** `engine.py recast` re-issues the turn to a fresh speaker. The new
+   speaker gets the full sheet and a new output file, so a late answer from the old
+   speaker is ignored. From then on, that role's delta sheets spell out its earlier
+   prep notes, because the new agent didn't write them.
+3. **A third stall** means something outside the run is wrong, so the showrunner stops
+   and tells the user.
+
+**Tested end to end.** This was a short debate (`--loop-scale 0.1`, Sonnet speakers,
+13 steps, 2,234 words), run with event waiting only and the watchdog's floor cut to
+45 s for the test. I injected a stall by never sending turn 5. The watchdog fired at
+95 s (limit 94 s, scaled from the run's own write times). The second window fired
+`recast`, and the replacement Author speaker wrote turn 5 in 25 s and carried the role
+to the end. Its later sheets included the original speaker's prep notes in full, and
+the original agent's file path was never used. The run took 707 s, including about 3
+minutes lost to the injected stall.
+
+The test also caught a false positive. With the shortened floor, Janson's first prep
+step (1,750 words of notes, 92 s on Sonnet) was flagged at 70 s, which led to the
+longer allowance for prep steps and first turns. At the default 3-minute floor it
+wouldn't have fired. Per turn, the showrunner's round trip (wake, `advance`, send)
+was 11–16 s, about the same as with polling. Waiting on events removes the polling
+calls and the stale-draft race, but doesn't shorten each cycle.
+
+### Why speakers don't hear every line live
+
+It's tempting to broadcast each new line to every speaker as it's said, so that idle
+cast members "listen". I tried the idea on paper and left it out:
+- **Nothing to gain.** The delta sheet already gives the next speaker exactly the lines
+  it missed, in order, just before it speaks. A speaker that had been hearing every
+  line live would end up with the same lines in the same order, so its next turn would
+  be no better informed.
+- **More calls.** Each broadcast wakes an idle speaker for a full model call that
+  re-reads its whole context, just to reply "noted". Each reply also wakes the
+  showrunner, whose context is the largest in the run. With 3 roles that's roughly
+  one extra speaker call and one extra showrunner wake-up per line; with 5 roles,
+  three of each.
+- **More risk.** Every broadcast is another chance for a cast member, especially on
+  Sonnet or Haiku, to write lines or touch files out of turn.
+
+The template's hidden prep steps are the right place for speakers to think ahead, and
+they already run in parallel.
+
 ## Bundle format
 
 `engine.py package` writes a zip laid out like `enTalkenator/Default Items/default.enTalkenator`:
