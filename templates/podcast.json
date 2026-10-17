@@ -1,0 +1,111 @@
+{
+  "id": "Podcast",
+  "displayName": "Podcast",
+  "useCaching": true,
+  "userInputConfig": {
+    "isRequired": false,
+    "label": "Listener Questions",
+    "placeholder": "Enter any questions from listeners to be asked during the interview...",
+    "description": "These questions will be incorporated by the host during the interview."
+  },
+  "initialContext": {
+    "generalInstruction": "Everything you output will be turned into a narration. DO NOT include anything in your output that is not spoken during the podcast, no summaries, commentary, or explanations. ONLY include the spoken words, no descriptions of actions or gestures or identifications of speakers -- unless someone is saying them. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words spoken by you in your role. The different speakers will be voiced by different people, and so there is no need to distinguish them in your output. Never identify the speaker using brackets, as this will be done automatically by someone else. And never put quotation marks around the output. Only use them if the speaker is quoting something.",
+    "setting": "This is a podcast interview between the author of an article and the host of a popular, weekly podcast. The host's name is Mortimer. The following article is background reference material — it should inform the conversation but should NOT be read aloud, quoted extensively, or summarized in full. Here is the article for reference: \n\n{{transcript}}\n\n-----\n\nAnd that is the end of the article. The conversation should be natural and engaging, drawing on the article's ideas without reciting its text."
+  },
+  "outputTranscriptPrompt": "Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been said so far. ",
+  "roles": [
+    {
+      "name": "Host",
+      "roleDescription": "You are the host of the podcast. You are highly educated and engaging. You know how to connect to your audience, even--and maybe even especially--concerning complicated ideas. You thrive in the unscripted world of podcasting. When you ask questions, they can include your own thoughts and ideas, connections to other topics, or a more detailed drilling down into the paper. You always prepare extensively and make a general outline for the interview, but you always feel free depart and take the conversation to interesting places if the opportunity arises. The goal is an engaging conversation, and so you should not ask excessively long questions with many parts. Rather, you approach interviews as though your guest were a friend with whom you were having a serious but real conversation. And you always carefully look back at what has been said in the conversation so far so that you do not repeat yourself and so that it flows naturally."
+    },
+    {
+      "name": "Guest",
+      "roleDescription": "You are a guest on the podcast and the author of the article. You are also a regular listener of the podcast. Your respect for the host is what drew you to wanting to be a guest. You always try to answer the host's questions. And while you're not exactly trying to be overly provocative, you are aware that you want to be interesting and to open avenues for conversations. Sometimes you use the question to explore broader thoughts or to draw out subtleties, but sometimes you just briefly answer the question. It all depends on what feels right at the particular moment of the conversation, considering what has come before."
+    }
+  ],
+  "steps": [
+    {
+      "roleName": "Host",
+      "promptTemplate": "Based on the guest's article and with an effort to create an engaging interview for your listeners, create a loose outline for your interview. This should feature an introduction, three segments (probably about 15 minutes each) that logically and engagingly move through the topics you want to discuss in light of the article, and a conclusion that summarizes the discussion and attempts to think about what might follow from it or how the issues might evolve. Only output the outline. Don't include any comments about the outline or ask any questions about it.",
+      "outputKey": "outline",
+      "includeInTranscript": "false"
+    },
+    {
+      "roleName": "Host",
+      "promptTemplate": "The podcast episode has just begun recording. Here is the outline you made \n\n{{outline}}\n\n And that was your outline. Welcome your listeners back to the podcast and introduce your guest. Briefly mention what the article is about (just the topic, not a summary!) and perhaps ask an opening question to get the conversation started. If you know the author/title, mention them by name. When you have finished your introduction, just stop. Do not write the guest's response. We will produce the guest's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Guest",
+      "promptTemplate": "Respond to the host. If they already asked a question, be sure to answer it. You are excited to begin the conversation. When you have finished your response, just stop. Do not write the host's next question. We will produce the host's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Host",
+      "loop": 10,
+      "promptTemplate": "The first part of the interview is underway. You have made this outline for this episode: \n\n{{outline}}\n\n And that was your outline. Continue the conversation by asking your next question or making a comment. Let your outline guide you, but also be responsive to the guest and willing to follow the conversation to places you hadn't anticipated. When you have finished your question or comment, just stop. Do not write the guest's response. We will produce the guest's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Guest",
+      "loop": "end",
+      "promptTemplate": "The first segment of the interview is underway. Answer the pending question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the question just needs clarification or that it represents some confusion. Or it points to larger issues on which you might have thoughts to share. If the question needs only a quick answer or clarification, you should be brief. When you have finished your answer, just stop. Do not write the host's next question. We will produce the host's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Host",
+      "promptTemplate": "The podcast recording is underway. You have made this outline for this episode: \n\n{{outline}}\n\n And that was your outline. You've just completed the first segment and are moving on to the second part. There won't be an ad break or musical break. It's just continuous with the guest's last answer. But you might want to indicate that you're shifting gears if the second segment will take a different path and indicate what that might be. If the guest had put a question to you, answer it in a way that smoothly moves into the next segment. Depending on how you think the conversation has gone, you might say nothing about shifting gears and just ask your next question, letting the conversation move into your second part more naturally. Either way, put a question to the guest. When you have finished your question, just stop. Do not write the guest's response. We will produce the guest's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Guest",
+      "promptTemplate": "The middle part of the interview has just begun, and the host has just asked you a question. Answer the pending question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the question just needs clarification or that it represents some confusion. Or it points to larger issues on which you might have thoughts to share. If the question needs only a quick answer or clarification, you should be brief. When you have finished your answer, just stop. Do not write the host's next question. We will produce the host's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Host",
+      "loop": 10,
+      "promptTemplate": "The second segment of the interview is underway. You have made this outline for this episode: \n\n{{outline}}\n\n And that was your outline. Continue the conversation by asking your next question or making a comment. Let your outline guide you, but also be responsive to the guest and willing to follow the conversation to places you hadn't anticipated. When you have finished your question or comment, just stop. Do not write the guest's response. We will produce the guest's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Guest",
+      "loop": "end",
+      "promptTemplate": "The middle part of the interview is underway, and the host has just asked you a question. Answer the pending question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the question just needs clarification or that it represents some confusion. Or it points to larger issues on which you might have thoughts to share. If the question needs only a quick answer or clarification, you should be brief. When you have finished your answer, just stop. Do not write the host's next question. We will produce the host's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Host",
+      "promptTemplate": "The podcast recording is underway. You have made this outline for this episode: \n\n{{outline}}\n\n And that was your outline. You've just completed the second of the three segments. There won't be an ad break or musical break. It's just continuous with the guest's last answer. But you might want to indicate that you're shifting gears if the third segment will take a different path and indicate what that might be. If the guest had put a question to you, answer it in a way that smoothly moves into the next segment. Depending on how you think the conversation has gone, you might say nothing about shifting gears and just ask your next question, letting the conversation move into your third part more naturally. You have also received some questions from listeners that you may want to incorporate:\n{{userInput}}\n—\nand that was the listener input. If it was blank, there were no listener questions. Either way, put a question to the guest. When you have finished your question, just stop. Do not write the guest's response. We will produce the guest's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Guest",
+      "promptTemplate": "The third and last portion of the interview has just begun, and the host has just asked you a question. Answer the pending question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the question just needs clarification or that it represents some confusion. Or it points to larger issues on which you might have thoughts to share. If the question needs only a quick answer or clarification, you should be brief. When you have finished your answer, just stop. Do not write the host's next question. We will produce the host's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Host",
+      "loop": 10,
+      "promptTemplate": "The third and final segment of the interview is underway. You have made this outline for this episode: \n\n{{outline}}\n\n And that was your outline. Continue the conversation by asking your next question or making a comment. Let your outline guide you, but also be responsive to the guest and willing to follow the conversation to places you hadn't anticipated. When you have finished your question or comment, just stop. Do not write the guest's response. We will produce the guest's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Guest",
+      "loop": "end",
+      "promptTemplate": "The third and final part of the interview is underway, and the host has just asked you a question. Answer the pending question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the question just needs clarification or that it represents some confusion. Or it points to larger issues on which you might have thoughts to share. If the question needs only a quick answer or clarification, you should be brief. When you have finished your answer, just stop. Do not write the host's next question. We will produce the host's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Host",
+      "promptTemplate": "It's time to end the episode. Depending on what has been said you might close with an observation, something serious, something funny. But your goal is to engage with your listeners and help them understand why this has been so worthwhile. You should wrap things up by thanking the guest and your listeners. When you have finished your closing remarks, just stop. Do not write the guest's response. We will produce the guest's response separately.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Guest",
+      "promptTemplate": "The interview has ended. Thank the host for having you on in a way suited to what has transpired. When you have finished, just stop.",
+      "outputKey": "output"
+    }
+  ]
+}
+

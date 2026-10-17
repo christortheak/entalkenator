@@ -1,0 +1,14 @@
+{
+  "name": "entalkenator-local",
+  "description": "Local marketplace for the enTalkenator proof-of-concept plugin.",
+  "owner": {
+    "name": "Christian Turner"
+  },
+  "plugins": [
+    {
+      "name": "entalkenator",
+      "source": "./",
+      "description": "Run enTalkenator templates in Claude Code and render multi-voice audio."
+    }
+  ]
+}

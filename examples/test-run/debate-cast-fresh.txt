@@ -1,0 +1,114 @@
+[Hillford Johns]: Good evening, everyone, and welcome. I have to say, I was told to expect a modest turnout, and I'm looking out at standing room only. To the students who came for the argument, and to the faculty who came to see whether we'd get the law right, thank you for being here at the University of Georgia tonight.
+
+Our subject is an essay that has been passed around a good many offices in this building lately. It's called Every Opinion Deserves a Plain-Language Summary. The proposal sounds simple: every appellate court in the country should publish, next to each precedential opinion, a short summary of no more than three hundred words, written so that a reader with a high-school education can understand who won, what the court decided, and what it means for people in the same position. Simple proposals tend to start the liveliest arguments, and I suspect this one will be no exception.
+
+Its author is Dana Whitfield. I know Dana only through the writing, but I've admired that writing for some time. It's clear, it's direct, and it takes the objections seriously before answering them, which is rarer than it ought to be. Dana, thank you for making the trip and for being willing to defend the idea in person.
+
+Across the stage is Janson Skullbottom, who needs very little introduction in this room. Janson has been my colleague for a good many years, and I can tell you from experience that nobody here reads a judicial opinion more closely, or reads a proposal about judicial opinions more skeptically. I mean that as a compliment. Most of the time.
+
+I'll admit I've been looking forward to this pairing. The two of you clearly share a respect for courts and for the people courts serve. You just may not agree on what that respect requires. That's the kind of disagreement worth an evening, and I'm grateful to you both for giving us one.
+
+So, without further delay, Janson, the floor is yours.
+
+[Janson Skullbottom]: Thank you, Hillford. And I'll take "most of the time" as the kindest review you've given me in years.
+
+Let me begin with a concession, because Dana has earned it. Courts write badly for the public. The tenant facing eviction, the parent in a custody fight: these people have more riding on a judicial opinion than anyone in this room, and they are the least able to read one. Dana is right about the problem. My quarrel is entirely with the cure.
+
+Here is what the proposal actually does. It creates a second text of the law. That text speaks in the court's voice but carries none of the court's force, and it is written for exactly the readers least equipped to tell the difference. That is a well-meant mistake.
+
+Take the three things the summary is supposed to say. First, who won. Picture a tenant who reads that her case was reversed and remanded. Did she win? Maybe. Or maybe she just gets another hearing, which she could lose. Appellate outcomes are partial, mixed, and hedged, and often the most important thing in an opinion is what the court declined to decide. That is the first thing three hundred words will cut.
+
+Second, what the court decided. Choosing how broadly to state a holding is itself a judicial act. If the summary puts it a little more broadly than the opinion does, which version does that frightened tenant believe?
+
+Third, what the decision means for people in the same position. That isn't a summary. That's advice. It asks a court to predict how its ruling applies to facts that were never in front of it, which is precisely what courts are built not to do.
+
+And having told the public that this document is written for them, the proposal would punish anyone who relies on it in court, in a system where many of the people reading it will be representing themselves. That isn't an invitation. It's a trap.
+
+So tonight I'll argue for one text, not two, and for spending the effort where the people actually are. Dana, I've been looking forward to this.
+
+[The Author]: Thank you, Hillford. And Janson, thank you for conceding the problem. You've just described the very people I wrote this for.
+
+But you've answered a proposal I didn't make. You called it a second text of the law. It isn't. The opinion stays the law, and the summary carries no weight at all. And you said I'd punish anyone who relies on it. I didn't. The essay says courts can sanction lawyers. Not the tenant standing in court on her own. Nobody is setting a trap for her.
+
+Now take your own example, because it's a good one. Reversed and remanded. You're right, she can't tell whether she won. She can't tell from the opinion either, and she certainly can't tell from the headline that says tenant wins appeal. That's the case for a summary, not against it. Three plain sentences. You haven't won yet. The trial court made a mistake. You'll get a new hearing, and you could still lose. That is exactly what she needs to know, and exactly what nobody tells her now.
+
+And saying what a ruling means for people in her position isn't advice. It's the holding, in words she actually uses.
+
+You worry the summary might state the holding a little too broadly. So do I. But somebody is summarizing that decision tonight. A reporter on deadline, a landlords' association, a tenants' group with a newsletter. You want one text? There are already five. The question isn't whether summaries will exist, but who writes them. If the court overstates its own holding, the court can correct it, and anyone can check it against the opinion sitting right beside it.
+
+So, Janson, when she loses that new hearing, what document are you going to hand her to explain why?
+
+[Janson Skullbottom]: You asked the best question of the night, Dana, so let me answer it straight. When she loses that new hearing, I hand her the trial court's order. Because that's where she loses. Not in the court of appeals. In the trial court, on a crowded eviction docket, very often on a form order with a box checked and a signature at the bottom. And your rule doesn't touch that court. Not one word of it. You asked what explains her loss, and the honest answer is a document your proposal leaves exactly as it is. That's where I'd spend the hours.
+
+Now look at the three sentences you just gave us. You haven't won yet. The trial court made a mistake. You'll get a new hearing, and you could still lose. Those are good sentences. So put them in the opinion. First paragraph, addressed to the parties, in the court's voice and under the court's authority. No disclaimer. Nothing to sanction. Nothing to check against anything, because it is the opinion. You've just written my alternative. You don't need a second document to say three plain sentences. You need judges willing to write them.
+
+And about checking. You say anyone can compare the summary to the opinion sitting right beside it. Dana, your whole proposal rests on the premise that she can't read the opinion. If she can't read it, she can't check the summary against it. The only people equipped to catch the court's mistake are the lawyers you've told to keep their hands off the thing.
+
+You're right that there are already five summaries out there tonight. But every one of them competes with the others, and every reader knows whose voice it is. A landlords' association sounds like a landlords' association. Make one of them official, and when it's wrong, it isn't one account among many. It's the court itself, telling her something untrue, in words she trusts precisely because they were written for her.
+
+And I'll take your correction on sanctions. You said lawyers, not litigants. But think about where that leaves her. The landlord's lawyer can't touch the summary. She can wave it around all she likes, right up until the judge explains that it isn't the law. She learns it doesn't count at the exact moment she needs it to.
+
+[Hillford Johns]: Let me step in here, partly because the two of you have managed something rare tonight. You agree on the sentences, and you're fighting over where to put them. Dana wrote three plain sentences, and Janson, you adopted them on the spot. I'd call that progress, though I suspect neither of you will.
+
+Before we turn to the audience, I'm going to take the moderator's privilege and ask a question of my own. Janson, it goes to you.
+
+Your alternative is to put those plain sentences in the first paragraph of the opinion itself, in the court's voice, with no disclaimer. But a few minutes ago your worry was that a short, plain statement will put the holding a little too broadly. If that happens in a separate summary, it's a mistake, and the opinion sitting beside it is still the law. If it happens in the first paragraph of the opinion, it is the law. Lawyers will quote it, trial judges will follow it, and the next tenant will be bound by it. Haven't you taken the very risk you warned us about and given it the force of precedent?
+
+And one smaller piece of the same question. Dana's essay speaks to people in the same position, not only to the parties. A paragraph addressed to this tenant says nothing to the hundred other tenants on the same docket next month. Under your approach, where do they find out what the court decided?
+
+[Janson Skullbottom]: That's a fair hit, Hillford, and I'll take it straight. Yes. A plain sentence in the opinion binds, and a careless one binds carelessly. But look at what those three plain sentences actually do. They don't state a rule. They tell her what happened in her case. That's the judgment, and the judgment already binds. There's nothing in it to overstate. The danger lives in Dana's third clause, what the decision means for everyone else. That's the part I'd leave out.
+
+And where a plain sentence does touch the rule, I want it to carry weight. Here's why. Judges are careful with words that bind. Every sentence in an opinion gets voted on by the panel, attacked by the dissent, and picked apart in a petition for rehearing by a lawyer with every reason to catch the overstatement. A sentence with no force gets none of that. Dana says the court can correct its summary. Who's going to ask it to? Nobody fights over a sentence that doesn't count, so nobody fixes it. The disclaimer doesn't make the overbroad sentence safe. It just makes it nobody's problem. I'd rather the sentence be dangerous enough that the judges have to get it right.
+
+Now the hundred other tenants, and that's the better question. Ask where Dana's summary lives. On the appellate court's website, beside an opinion those tenants have never heard of. Not one of them is going to look there. They learn the law the way they meet it: in the eviction notice, on the form the clerk hands them, at the self-help desk down the hall, from a legal aid lawyer if they're lucky enough to find one. Suppose the court of appeals holds that a landlord must give proper notice before filing. The next hundred tenants find out when the trial court's forms change, when the notice they receive spells out their rights, when the handout at the help desk gets rewritten. That's how a ruling reaches people in the same position. Not through a paragraph posted where they'll never see it, but by changing the papers that actually land in their hands.
+
+And a hundred tenants with a hundred different leases need someone who can look at their lease. That's not a court talking to the public. That's a lawyer talking to a client. If we want them to know, let's fund the people whose job is to tell them.
+
+[Hillford Johns]: Janson, I'll note for the record that you just gave away two thirds of Dana's proposal and called it a defense. You'll keep who won and what the court decided, so long as it speaks only to this case, and you'll strike the part about everyone else. That's a concession dressed up as a principle, and I say that as a friend.
+
+But I want to stay with your point about scrutiny, because I think it may be the sharpest thing said tonight. Words that bind get fought over. The panel votes on them, the dissent attacks them, and the losing lawyer combs through them looking for a rehearing. A sentence that counts for nothing gets none of that attention. So the disclaimer that's supposed to make the summary safe may be the very thing that makes it careless.
+
+Your answer on the hundred tenants did something interesting too. You moved the whole argument down a floor, to the trial court, the clerk's forms, and the help desk down the hall. I'd only observe that somebody at that help desk still has to read the appellate decision and decide what it means for the handout. Call it a summary or don't, but it's being written.
+
+Which brings me to you, Dana. Two questions, though I think they're really one. First, Janson says nobody fights over a sentence that doesn't count, so nobody fixes it. Under your proposal, when a court's summary gets the holding wrong, who notices, who has any reason to say so, and what actually happens next?
+
+And second, if Janson is right that the tenants themselves will never visit an appellate court's website, then the people reading your summary are the clerk redrafting the form, the volunteer at the help desk, and the legal aid lawyer with forty files on her desk. Is that who you're really writing for? And if it is, is three hundred words at a high-school reading level still the right design?
+
+[The Author]: You said those were really one question, Hillford, and you're right. Who notices a bad summary depends on who reads it.
+
+So start with Janson's line, because it's a good one. Nobody fights over a sentence that doesn't count. I'd put it another way. Nobody fights over a sentence nobody reads. And this will be the most-read thing the court publishes. The reporter will quote it instead of the opinion. The legal aid office will build its handout from it. So when it gets the holding wrong, the lawyers on both sides notice first, because their clients read the summary before anything else and call them about it. Every judge on the panel notices, because nothing in my proposal lets a summary leave the building without the panel signing off on it. And the press notices, because a court whose own summary contradicts its own opinion is a better story than the case. Courts hate being caught saying two different things. That's a motive, and a strong one. What happens next is ordinary. The court corrects it, the way it already corrects errors in opinions, and the opinion controls in the meantime, as it always did.
+
+Now look at Janson's alternative. He wants the plain sentence dangerous enough that judges have to get it right. But we know what judges do with dangerous sentences. They hedge them, qualify them, footnote them. That's not a failing. It's exactly why opinions read the way they do. Put a plain sentence where every word binds, and by the third draft it won't be plain anymore. The summary carries no weight not to make it careless, but to make it possible.
+
+Your second question. Am I really writing for the clerk, the volunteer, the lawyer with forty files? Partly, yes, and gladly. You caught it already, Hillford. Janson's plan depends on someone at that help desk reading the appellate decision and deciding what it means. Right now each of them does that alone, a little differently. Give them the court's own three hundred words and they start from the same page. Janson wants the forms to change. My summary is how they change correctly.
+
+But I won't raise the reading level for them. Write for the reader with the least training, and everyone down the chain can use it. Write for the volunteer, and the father who just lost custody on appeal can't. And he will read it. Not on a website he's never heard of, but on his phone, the night the decision comes down, because his lawyer or his sister sent it to him. Three hundred plain words can be printed on a handout, read aloud at a help desk, translated into Spanish or Vietnamese. Try that with a forty-page opinion.
+
+So yes, same length, same floor. The lawyer with forty files doesn't need it harder. She needs it short.
+
+[Janson Skullbottom]: Dana, you've just told us two things that can't both be true. Judges hedge any sentence that carries their name and its consequences. And no summary leaves the building without the panel signing off on it. But the summary carries their name. When it goes wrong, that press story you described is about them. So if the panel reads every word with care, they'll hedge it, for exactly the reasons they hedge the opinion, and by the third draft it won't be plain either. And if it stays plain, it's because they waved it through. Your summary stays readable only as long as the judges don't take it seriously.
+
+And that sign-off isn't hours. It's a second round of deliberation, on every precedential case, in every appellate court in the country.
+
+Then you said this will be the most-read thing the court publishes, and that reporters will quote it instead of the opinion. I agree completely. That's my objection. The text everybody reads becomes the one that isn't the law. We've run this experiment. The warning on the Supreme Court's syllabus traces back to a 1906 case, Detroit Timber and Lumber, where the Court had to remind everyone that the reporter's headnote is not the opinion. More than a century later, it still prints that reminder on every decision. That isn't a risk managed. That's a risk that never leaves.
+
+And your correction process. The father reads the summary on his phone the night it comes down, because his sister sent it to him. Three weeks later the court fixes it. Who sends him the fix? Not his sister. The mistake travels by text message. The correction gets posted on a website you just told us he never visits.
+
+[The Author]: Janson, you've handed me a dilemma, so let me show you its third horn. It's yours. Your plain first paragraph carries the judges' names and the force of law. By your own account, that's the sentence they'll hedge hardest. If my summary gets qualified to death by the third draft, yours won't survive the first.
+
+But I don't accept the dilemma. Judges hedge a binding sentence because they're writing for the next case, the one with facts they can't see yet. They're guarding the rule's reach. A summary that binds nobody has no reach to guard. The panel asks it one question: is this true of what we just decided? That isn't waving it through. That's checking it. And it isn't a second round of deliberation. Deliberation is over. The votes are cast and the opinion is written. A summary of a settled decision is the cheapest legal writing the court will ever produce, and checking it is cheaper still.
+
+Now your 1906 case. You call that warning a risk that never leaves. I'd call it a risk that never won. For more than a century the Court has printed the syllabus and the warning together, and the syllabus has never swallowed an opinion. A court that thought it was losing that fight would have stopped. It kept going.
+
+And the father with the text message. You're right, the mistake travels faster than the fix. That's true tonight of the headline his sister actually sends him, and nobody ever corrects that one. Under my proposal there's at least a correction, from the court, for his lawyer to pass along. You're measuring my summary against perfection, Janson. Measure it against what's already in his pocket.
+
+[Hillford Johns]: I'm going to stop us there. It isn't because either of you has run out of things to say. I suspect you could keep going until they lock the building.
+
+I promised the audience a turn, and I'm afraid the two of you used it up. My apologies to everyone who came with a question. Bring it to the reception. I'm told both of them will be there, and I'd happily pay to watch.
+
+Let me offer one thought before you go. We started with a fight over whether courts should write a second document. We're ending, I think, with a narrower and much harder one. Janson believes a sentence only gets checked if it carries weight. Dana believes a sentence only stays plain if it doesn't. Each of you made a strong case, and each of you made the other's case look stronger by going after it so hard. What I'll remember, though, is that neither of you defended the way things are now. Not once tonight did anyone speak up for the opinion the tenant can't read, or for the headline the father gets instead. Whatever the courts end up doing, this room agreed on that much, and that's further than most rooms get.
+
+And for the law students in the back, I'll point out that you just spent an evening listening to two people argue about precision in legal language, in words every person here could follow. Make of that what you will.
+
+Dana, thank you. You walked into a room full of Janson's colleagues and gave as good as you got, and your essay holds up even better out loud than it does on the page. Janson, thank you as well. You were skeptical, as promised, and generous, which you never promised. And to all of you, thank you for filling these seats and for staying in them. Good night.
+

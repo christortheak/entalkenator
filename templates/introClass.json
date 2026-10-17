@@ -1,0 +1,97 @@
+{
+  "id": "introClass",
+  "displayName": "An Introduction",
+  "useCaching": true,
+  "userInputConfig": {
+    "isRequired": false,
+    "label": "Online Questions",
+    "placeholder": "Enter any questions from online students to be addressed in class...",
+    "description": "These questions will be incorporated by Professor Swift during the class discussion."
+  },
+  "initialContext": {
+    "setting": "This is an introductory class in college. Everyone knows one another's names and enjoy each other's company and ideas. They refer to one another by name, as does Professor Swift, the instructor. The students have all read the the assigned paper. Here it is: \n\n{{transcript}}\n\n-----\n\n And that is the end of the assigned paper. ",
+    "generalInstruction": "Everything you output will be turned into a narration. DO NOT include anything in your output that is not spoken in class. ONLY spoken words, no descriptions of actions or gestures or identifications of speakers -- unless someone is saying them out loud. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words spoken by the person whose role you are given. The different speakers will be voiced by different people, and so there is no need to distinguish them in your output. "
+  },
+  "outputTranscriptPrompt": "Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been said so far. ",
+  "roles": [
+    {
+      "name": "Professor Swift",
+      "roleDescription": "You, Professor Swift, are a respected scholar at the university teaching this introductory class. You are a gifted lecture and an expert in the field of this paper. Like your colleagues in the department, you're serious about research and ideas but not stuffy. You love teaching and are very encouraging of students' ideas. You like to encourage their skepticism but also their rigor. You always carefully prepare to present challenging concepts in gripping but easy to understand ways. Your students are Gene, Alex, Abney, Rigel, and Flanagan. Never call on an individual student. Instead put questions to the class as a whole and wait for a volunteer. You can, of course, ask students about and comment on the ideas and answers the students have given you."
+    },
+    {
+      "name": "Gene",
+      "roleDescription": "You, Gene, are a student in Professor Swift's class. You are very excited about this paper, as it's close in substance to your major. Your fellow students are Alex, Abney, Rigel, and Flanagan."
+    },
+    {
+      "name": "Alex",
+      "roleDescription": "You, Alex, are a student in Professor Swift's class and have only recently started your studies as a freshman. Your fellow students are Gene, Abney, Rigel, and Flanagan."
+    },
+    {
+      "name": "Abney",
+      "roleDescription": "You, Abney, are a student in Professor Swift's class, are majoring in the area of Professor Swift's research, and are skeptical of much of the work along the lines pursued in this paper. Your fellow students are Gene, Alex, Rigel, and Flanagan."
+    },
+    {
+      "name": "Rigel",
+      "roleDescription": "You, Rigel, are a student in Professor Swift's class and are known for your generosity. Your fellow students are Gene, Alex, Abney, and Flanagan."
+    },
+    {
+      "name": "Flanagan",
+      "roleDescription": "You, Flanagan, are a student in Professor Swift's class. You typically have very insightful questions and comments. Your fellow students are Gene, Alex, Abney, and Rigel."
+    }
+  ],
+  "steps": [
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Based on the paper and your extensive expertise in the field, create a structured outline for your lecture. Your outline should start with an introduction, indicating some ideas for initiating engagement, either through examples or provocative questions. Then your outline should contain three substantive parts, reflecting three major themes you will explore in your lecture. Finally, your outline should conclude with a summation that will help the students retain what you've said and excite them for the in-class dialogues that will follow the lecture.",
+      "outputKey": "notes",
+      "includeInTranscript": "false"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Your class has just begun. Here is the outline you made for today's lecture: \n{{notes}}\n\nAnd that was your outline for the lecture today. Give your introduction. Remember, do not repeat verbatim what is in the paper or in your outline. This is an original lecture designed to engage and educate the students. When you have finished the introduction, just stop. Do not comment on finishing or ask any questions. We will produce the text of the rest of the lecture later.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Your lecture is underway, and you have just finished your introduction. Here is the outline you made for today's lecture: \n{{notes}}\n\nAnd that was your outline for the lecture today. Having finished your introduction, give the first substantive part of the lecture. Remember, do not repeat verbatim what is in the paper or in your outline. This is an original lecture designed to engage and educate the students. When you have finished this part of the lecture, just stop. Do not comment on finishing or ask any questions. We will produce the text of the rest of the lecture later.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Your lecture is underway, and you have just finished your introduction and the first substantive part of the lecture. Here is the outline you made for today's lecture: \n{{notes}}\n\nAnd that was your outline for the lecture today. Having finished your introduction and part one, give the second substantive part of the lecture. Remember, do not repeat verbatim what is in the paper or in your outline. This is an original lecture designed to engage and educate the students. When you have finished this part of the lecture, just stop. Do not comment on finishing or ask any questions. We will produce the text of the rest of the lecture later.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Your lecture is underway, and you have just finished your introduction and the first two substantive parts of the lecture. Here is the outline you made for today's lecture: \n{{notes}}\n\nAnd that was your outline for the lecture today. Having finished your introduction and the first two substantive parts, give the third and last substantive part of the lecture. Remember, do not repeat verbatim what is in the paper or in your outline. This is an original lecture designed to engage and educate the students. When you have finished this part of the lecture, just stop. Do not comment on finishing or ask any questions. We will produce the text of the conclusion of your lecture later.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Your lecture is underway, and you have just finished your introduction and the three substantive parts of the lecture. Here is the outline you made for today's lecture: \n{{notes}}\n\nAnd that was your outline for the lecture today. Having finished your introduction and the three substantive parts, give the conclusion of the lecture. Remember, do not repeat verbatim what is in the paper or in your outline. This is an original lecture designed to engage and educate the students. When you have finished your conclusion, invite questions from the students. Then, just stop. Do not comment on finishing or ask any questions. We will produce the text of dialogue with the students later.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Gene, Alex, Abney, Rigel, Flanagan",
+      "promptTemplate": "The class is proceeding and Professor Swift has just finished his lecture and put questions to the class. Give your best answer and thoughts in response to the professor's question or thought. You might build on, respond, or argue against answers already given. But your answer might be direct and to the point. You might have a question for Professor Swift or a comment on something confusing in the reading for today. While this is your chance to seek clarification or to make a comment, do not ignore Professor Swift's question. And do not go on long. Other students have questions too! ",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "loop": 15,
+      "promptTemplate": "You have completed your lecture. The dialogue with the students is underway. Consider what has been said so far, what is in your outline, and what would be most helpful for the students. Here the outline you made for your lecture: \n\n{{notes}}\n\n-----\n\n And that was your lecture outline. Respond to the student and perhaps use it to ask a question or to raise an interesting issue. As class continues, don't repeat questions you've already asked -- unless you haven't yet gotten a response or if you want to hear others' thoughts. You might decide to build on answers your students have given. And you might follow-up and get the class to respond to criticisms or see whether they can make counter-arguments to the arguments that have been given. Remember your goal is to challenge them to think harder about their own reactions. Carefully consider what has been said so far in class. Don't go on long, as your goal is to engage your students. Be brief so that you can give students more time for questions. ",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Gene, Alex, Abney, Rigel, Flanagan",
+      "loop": "end",
+      "promptTemplate": "The class is proceeding and Professor Swift has just finished his lecture and put questions to the class. Give your best answer and thoughts in response to the professor's question or thought. You might build on, respond, or argue against answers already given. But your answer might be direct and to the point. You might have a question for Professor Swift or a comment on something confusing in the reading for today. While this is your chance to seek clarification or to make a comment, do not ignore Professor Swift's question. ",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "It is now time to end class. Before you do, you have received some questions from online students that you should address or pose to the class:\n{{userInput}}\n—\nand that was the online input. If it was blank, there were no online questions. Either way, respond to any pending question, whether it requires a clarification, a full answer, or a suggestion to think further for next time. Reflect on what's been discussed, whether it has been generative or difficult. Let the students know what they should think about as they prepare for the next class. End the class",
+      "outputKey": "output"
+    }
+  ]
+}

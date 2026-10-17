@@ -1,0 +1,56 @@
+{
+  "outputTranscriptPrompt" : "Here is everything that has been produced so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been produced so far. ",
+  "roles" : [
+    {
+      "name" : "Compressor",
+      "roleDescription" : "You are an expert academic editor specializing in compressing academic articles while preserving their core thesis, arguments, evidence, and scholarly integrity. You have extensive experience in making complex academic content accessible for audio narration without sacrificing intellectual rigor. You're skilled at identifying the most important elements of an article and presenting them in a clear, coherent manner that retains the author's voice and argumentative structure.",
+      "id" : "D1D48665-801A-41DA-B575-DAEC601B68ED"
+    }
+  ],
+  "initialContext" : {
+    "setting" : "This is an academic article that needs to be compressed to roughly 1\/3 or 1\/4 of its original length while preserving its main thesis and most important components. The compressed version should be suitable for audio narration, including descriptions of key figures and important citations in a way that's understandable in audio form. Here is the article to be compressed:\n\n{{transcript}}\n\n-----\n\nAnd that is the end of the article. The output should only be material that will be voiced — including nothing about these instructions and no reference to a narrator or speaker.",
+    "generalInstruction" : "Your task is to compress this academic article while maintaining its core arguments, key evidence, and essential structure. This is not a brief summary but a substantial compression that preserves the academic integrity of the work. The compression should be suitable for audio narration, so any visual elements (figures, tables, graphs) should be described verbally in a concise manner. Important citations should be mentioned when they're crucial to understanding the argument. Avoid unnecessarily technical language when simpler terms would suffice, but maintain the academic rigor of the original. Do not add your own commentary, analysis, or opinions that aren't in the original text."
+  },
+  "useCaching" : true,
+  "id" : "5403C57F-F903-4E77-9E4C-E88333EE7AAC",
+  "steps" : [
+    {
+      "promptTemplate" : "First, analyze the academic article provided. Create a structured outline that reorganizes the article into an introduction, three main substantive parts (regardless of how many sections the original contains), and a conclusion. This outline should identify the paper's main thesis, key arguments, essential evidence, and significant conclusions. Your outline should be comprehensive enough to guide the compression process while ensuring no crucial content is lost. The goal is to create a roadmap for compressing the article to about 1\/3 or 1\/4 of its original length while maintaining its academic integrity.",
+      "includeInTranscript" : "false",
+      "outputKey" : "outline",
+      "id" : "AEDFE02D-1300-439A-A3AA-C401510199FE",
+      "roleName" : "Compressor"
+    },
+    {
+      "promptTemplate" : "Based on your analysis of the article, create a compressed introduction that establishes the context, presents the main thesis or research question, and briefly outlines the approach taken in the paper. This introduction should give listeners a clear understanding of what the article is about and why it matters. Keep in mind that this is a compression, not just a summary - you should preserve the author's voice and key terminology while making the content more concise and suitable for audio narration. Here is the outline you've created to guide you:\n\n{{outline}}\n\nAnd that was your outline. Now draft the introduction. Do not refer to these instructions or indicate who is speaking. Later sections of your outline will be prepared later and added to this.",
+      "outputKey" : "output",
+      "id" : "03A62062-D94D-4095-AF81-95DFD2D91A97",
+      "roleName" : "Compressor"
+    },
+    {
+      "promptTemplate" : "Now that you have drafted the introduction, compress the first main part of the article according to your outline. Remember, this doesn't necessarily correspond to the first section of the original article, but rather to the first major component you identified in your three-part structure. Include key evidence, methodologies, arguments, and necessary citations. If there are figures or tables that are essential to understanding this part, describe in them briefly in a way that would make sense in audio form. Here is your outline for reference:\n\n{{outline}}\n\nAnd that was your outline. Now draft the first substantive part. Do not refer to these instructions or indicate who is speaking. Later sections of your outline will be prepared later and added to this.",
+      "outputKey" : "output",
+      "id" : "22B01FC3-E441-4AA3-8604-523D9E2BAA22",
+      "roleName" : "Compressor"
+    },
+    {
+      "promptTemplate" : "Now that you have drafted the introduction and first part, compress the second main part of the article according to your outline. Remember, this corresponds to the second major component you identified in your three-part structure. Include key evidence, methodologies, arguments, and necessary citations. If there are figures or tables that are essential to understanding this part, describe them briefly in a way that would make sense in audio form. Here is your outline for reference:\n\n{{outline}}\n\nAnd that was your outline. Now draft the second substantive part. Do not refer to these instructions or indicate who is speaking. Later sections of your outline will be prepared later and added to this. Focus only on the second part of your outline in this step.",
+      "outputKey" : "output",
+      "id" : "8DBD15D1-22EC-43F7-BE8D-9E682FDF668B",
+      "roleName" : "Compressor"
+    },
+    {
+      "promptTemplate" : "Now compress that you have compressed the introduction and first two substantive parts according to your outline, compress the third main part of the article according to your outline. Remember, this corresponds to the third major component you identified in your three-part structure. Include key evidence, methodologies, arguments, and necessary citations. If there are figures or tables that are essential to understanding this part, describe them briefly in a way that would make sense in audio form. Here is your outline for reference:\n\n{{outline}}\n\nAnd that was your outline. Now draft the third part. Do not refer to these instructions or indicate who is speaking. The conclusion of your outline will be prepared later and added to this. Focus only on the third part of your outline in this step.",
+      "outputKey" : "output",
+      "id" : "5F7A9DD0-0F24-47C2-91F6-FC37E5A9B25A",
+      "roleName" : "Compressor"
+    },
+    {
+      "promptTemplate" : "Now that you have drafted all other parts according to your outline, draft the conclusion of your compression. This should synthesize the main findings, revisit the thesis or research question, and capture any important implications, limitations, or suggestions for future research mentioned by the authors. This conclusion should give listeners a clear understanding of what the article contributed to its field and why it matters. Here is your outline for reference:\n\n{{outline}}\n\nAnd that was your outline. Now draft the conclusion, according to your outline. Do not refer to these instructions or indicate who is speaking.",
+      "outputKey" : "output",
+      "id" : "A2335E91-DABD-4D2C-BFA9-F8D13CA1B2E9",
+      "roleName" : "Compressor"
+    }
+  ],
+  "displayName" : "Academic Article Compression"
+}

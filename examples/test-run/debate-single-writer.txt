@@ -1,0 +1,118 @@
+[Hillford Johns]: Good evening, everyone, and welcome. I have to say, when we booked this room I worried it would be too large. I see now it is too small. There are students standing along the back wall, and I count at least three members of the faculty who told me they never come out after six. Thank you all for being here.
+
+Tonight's subject is an essay that has been passed around this law school more than any assigned reading this semester: Every Opinion Deserves a Plain-Language Summary. Its argument is simple to state. Every appellate court in the country should publish, next to each precedential opinion, a summary of no more than three hundred words, written for a reader with a high-school education, saying who won, what the court decided, and what it means for people in the same position. The summary would carry no precedential weight. The opinion would remain the law.
+
+With us is the author of that essay, Dana Whitfield. I know Dana only through the written work, but I will confess that I have admired it for some time, and this piece in particular has the rare quality of being short enough to read in five minutes and hard enough to stop thinking about for a week. Dana, thank you for making the trip.
+
+And across from Dana is someone many of you know far too well from the first-year curriculum, my colleague down the hall, Professor Janson Skullbottom. Janson has spent a career writing about how courts reason and how that reasoning gets misread, and he has never been shy about telling a good idea it is not as good as it thinks it is. I have lost more arguments to him over coffee than I care to admit, so I am looking forward to watching someone else take a turn.
+
+I am grateful to you both. It is not often we get to hear an author and a critic face to face, with a room full of people who have actually read the text. Janson, as the challenger tonight, the floor is yours.
+
+[Janson Skullbottom]: Thank you, Hillford, and thank you, Dana, for coming into the lion's den. Let me say at the outset that I share the goal. People should understand the decisions that govern them. My quarrel is with the instrument, and with the claim that it is cheap, safe, and good for the courts. I think it is none of those things.
+
+Start with Dana's best evidence, the Supreme Court syllabus. It is written by the Reporter of Decisions, not by the justices, and the famous warning at the top exists because, back in 1906, the Court had to clean up a mess in which a headnote was mistaken for the Court's own words. That disclaimer is a scar, not a design feature. And the syllabus is written for lawyers. A century of lawyers summarizing for lawyers tells us nothing about courts translating for the public.
+
+Second, look at the three sentences Dana wants. Who won is often a fiction. Affirmed in part, vacated, remanded. A tenant reading that her case was sent back still does not know if she keeps the apartment. And what the decision means for people in the same position is the most dangerous sentence a court could write. It is a prediction about people who were never in the courtroom. It is dicta with a megaphone.
+
+Third, Dana's answer to misuse is to sanction lawyers. But the whole point is that the readers are not lawyers. You cannot sanction a landlord for reading.
+
+Courts do not owe the public a translation. They owe the public a reason. I intend to argue tonight that this proposal gives the public less of one.
+
+[The Author]: Thank you, Hillford. And Janson, I came for the lion's den, so I am glad you did not hold back.
+
+You are right about the facts of the syllabus. The Reporter writes it, and the warning came out of a mistake more than a hundred years ago. But look at what happened next. The Court put a label on a separate document, and for over a century that document has sat on top of every opinion without anyone serious confusing it for the law. A disclaimer that has worked for a hundred years is not a scar. It is a track record.
+
+On who won. You say a remand leaves the tenant in the dark. It does not have to. The court did not decide who wins. It sent the case back so the trial judge can decide whether the landlord gave proper notice. That is a true sentence, and a tenant can read it. If a court cannot say what it did in words like those, I would worry about the opinion, not the summary.
+
+On the third sentence. Every precedential opinion is a statement about people who were never in the courtroom. That is what precedent means. The summary does not invent that reach. It just admits it.
+
+And on misuse. You cannot sanction a landlord for reading, agreed. But that landlord is already reading something: a newspaper story, a trade-group bulletin, a lawyer's marketing post, with no label at all. Compare my summary to that, not to the opinion.
+
+Finally, Janson, I agree courts owe us a reason. So the summary gives one. Because the landlord skipped the notice the statute requires. That is a reason, in one sentence.
+
+[Janson Skullbottom]: Dana, notice the example you keep reaching for. A landlord who skipped the statutory notice. It is a lovely case. It is also the kind of case that almost never makes it to a precedential appellate opinion, because nobody needs an appeals court to tell them a statute means what it says.
+
+Here is what appellate opinions are actually about. Whether an objection was preserved at trial. Whether the standard of review is abuse of discretion or de novo. Whether a claim was filed a week too late. Try your one-sentence reason on those. The tenant lost because her lawyer did not object at the right moment. That is true, it is plain, and it will be read by every tenant in the state as, the courts decide on technicalities. You will have explained the decision and damaged the court in the same breath.
+
+Now, precedent. You say every opinion already speaks to people outside the courtroom. Yes, through its holding, which lawyers spend three years learning to extract carefully, narrowly, against the facts. Your third sentence does that extraction for them, in advance, in the loosest language the court will ever use. That is not admitting the reach of precedent. It is widening it.
+
+And on the newspaper. The difference between the reporter's story and yours is not the label. It is the letterhead. When a journalist gets it wrong, we blame the journalist. When the court's own summary gets it wrong, the court has misled the public, in its own name, and no disclaimer will undo that headline.
+
+Last point. You mentioned the unpublished-opinion rules in your essay as proof courts can police misuse. They could not. The federal courts gave up, and since 2007 they have been forbidden from banning those citations. That is not a model. It is a warning.
+
+[Hillford Johns]: Let me step in here for a moment. I will admit the question cards we collected at the door came back empty, which I choose to interpret as a room full of people too busy rereading the essay to write anything down. So I will exercise the moderator's privilege and ask one of my own.
+
+First, an observation. You two agree on more than you are letting on. Both of you want the public to understand courts, and both of you want that understanding to come with a reason attached. Where you split is on who should be trusted to carry the reason out of the building.
+
+Janson, my question is for you, and it comes from something you just said. You told us that a plain summary of a case lost on preservation, the tenant lost because her lawyer did not object in time, would lead people to conclude that courts decide on technicalities, and that this would damage the court. But that summary would be true. If ordinary people would think less of the courts once they understood how cases are actually decided, is that an argument against the summary, or is it an argument that the public is entitled to know exactly that? Put differently, are you defending the courts' legitimacy, or their privacy?
+
+[Janson Skullbottom]: That is a fair hit, Hillford, and I am not going to duck it. The public is entitled to know that cases are lost on preservation. I am defending legitimacy, not privacy. But let me show you why those are the same answer.
+
+Those of you in the first-year seats learned the preservation rule this fall. And the first thing you asked was, why should a person lose a good argument because their lawyer raised it late? And then you read the reasons. The trial judge deserves a chance to fix the mistake. The other side deserves to respond to it with evidence. Otherwise every losing party saves an argument in their pocket and springs it on appeal. Once you understood that, the rule stopped looking like a technicality. It started looking like fairness.
+
+That is what a reason does. It turns an outcome you resent into one you can respect, even when you lose. And that is exactly what three hundred words cannot carry. The summary will say the tenant lost because of a missed objection. It will not have room for why. So it will be true, and it will still leave people believing something false about how courts work.
+
+So my objection is not that the public would learn too much. It is that they would learn the verdict and not the reasoning, and then we would call that transparency.
+
+Here is what I would do instead. Ask judges to write the first page of every opinion so that a careful high-school senior can follow it. Many already do. That page is the court's own words, signed by the whole panel, with the reasons attached, not a second document drafted by staff that three busy judges now have to negotiate. And for the tenant who needs to know what to do on Monday, fund the people who can actually tell her. A clinic can. A summary cannot.
+
+[Hillford Johns]: I will note, Janson, that you just explained the entire rationale for the preservation rule in about four sentences, to a room that includes a good number of people who have never taken civil procedure, and I watched them nod. I am not sure that helps your claim that the reason will not fit in three hundred words. It may be the best evidence Dana has heard all night.
+
+But I take the deeper point. There is a difference between a document that says what happened and one that makes you understand why it was fair. And I think your alternative deserves a direct answer, because it is not a small one. You are not saying leave the opinions alone. You are saying make the opinion itself readable, at least its opening page, and keep the court speaking in one voice.
+
+So, Dana, here is my question for you. Why a second document at all? If the goal is a reader with a high-school education understanding who won, what was decided, and why, why not require that the first page of the opinion do exactly that, signed by the whole panel, carrying the full authority of the court and none of the risk of the summary and the opinion drifting apart? What does a separate summary give the public that a well-written opening page cannot?
+
+[The Author]: First, Hillford, thank you for noticing what Janson just did. He told this room why the preservation rule is fair in four sentences, and everyone followed. I could not have asked for a better demonstration that the reason fits. I may ask him to draft a few summaries for me.
+
+Now, your question, which is the right one. Why not just make the first page of the opinion readable?
+
+Because the first page of the opinion is the law. Every sentence on it can be quoted in the next case as the court's holding. So judges write it the way they must write law: carefully, with the standard of review, with the qualifications, with the word arguably in all the places it needs to be. That precision is not bad writing. It is the job. And it is precisely what makes it unreadable to the tenant.
+
+And notice what happens if you force that page into plain language anyway. Janson worried all evening about dicta with a megaphone. His alternative puts the megaphone inside the binding text. Now the loose, simple sentence is not a labeled summary. It is the opinion, and a lawyer in the next case can cite it as law. My proposal keeps the plain words outside, clearly marked, so they can be plain without becoming precedent.
+
+There is a practical reason too. A separate summary can stand on its own. It can be posted on its own page, translated, read aloud, handed out at the courthouse. The first page of an opinion sits beneath a caption, docket numbers, and a list of counsel, inside a forty-page file most people will never open.
+
+And Janson says many judges already write that way. Many do. Many do not. A rule that says every court shall publish a summary is something you can check. A hope that judges will write better is something we have had for a very long time.
+
+The highest court in the United Kingdom already publishes a short summary with each of its judgments, marked as not part of the decision. The sky has not fallen there. I am asking for the same courtesy here.
+
+[Janson Skullbottom]: I will take the drafting job, Dana, at my usual rate, which is that you concede.
+
+But listen to what you just argued. Plain sentences are too loose to be trusted inside the opinion, because someone might rely on them as law. So you move them outside, label them, and hand them to the tenant, the very person who will rely on them as law. If those words are not safe enough for the next lawyer, why are they safe enough for her? You have not removed the danger. You have moved it onto the one reader with no way to check.
+
+And the United Kingdom. Their highest court issues well under a hundred judgments a year and has a communications staff to match. You are proposing this for every appellate court in America, including intermediate state courts that turn out precedential opinions by the hundreds with a handful of clerks. That is not the same courtesy. It is a different animal.
+
+My answer to the tenant is still the same. Give her a page from the court she can trust because the court will be bound by it, and a person who can tell her what it means for her case.
+
+[The Author]: No concession tonight, Janson, but I appreciate the offer.
+
+Your question is a good one, so here is a straight answer. The words are not unsafe because they are wrong. They are unsafe for the next lawyer because the next lawyer is arguing about the edge of the rule, the odd case the court never imagined. The tenant is not at the edge. She wants the center. Did the law change? Does it sound like it might apply to me? Should I call someone? A plain summary answers those questions honestly. It was never meant to settle the hard case at the margin, and it says so on its face.
+
+And she does have a way to check. My summary sits next to the opinion, links to it, and tells her to get advice about her own situation. The bulletin her landlord slid under the door does none of that.
+
+On scale, you are right that a busy intermediate court is not the UK Supreme Court. But think about what you just described: hundreds of precedential opinions a year that bind thousands of people, from a court almost nobody can name. That is not the court that can least afford a summary. It is the court whose public most needs one.
+
+And your page that binds the court? The moment it binds, judges will hedge it back into the language we started with.
+
+[Janson Skullbottom]: Judges will hedge, you say. Some will. Others write a clear first page today, under exactly that pressure, and their opinions are still law. Hedging is a habit, not a law of nature, and I would rather break the habit than build a second document around it.
+
+But here is a problem we have not touched. Two to one decisions. Who writes the summary when the panel splits? If the dissent gets no sentence, your summary tells the tenant the court spoke with one voice when it did not. If the dissent does get a sentence, the concurrence will want one too, and now three judges are trading edits over three hundred words. That is the real cost, Dana. Not hours. Negotiation. And it lands on exactly the closely divided cases where the public most needs an honest account.
+
+And one correction. The tenant is rarely at the center. People go looking for a decision because their facts are a little different and they hope it helps. That is the edge, and your summary will be read there whether it says so or not.
+
+[The Author]: Split decisions are the easiest part, Janson. One judge disagreed. She would have ruled for the landlord because she read the statute's deadline differently. Two sentences. The dissenting judge writes them herself, the majority does not get to edit them, and the cap keeps anyone from turning it into a second opinion. Judges already circulate drafts and answer each other's dissents line by line. Two sentences will not break them.
+
+And look at what that buys the public. Right now most people never learn a decision was two to one. Telling them the court was divided, and why, is not a cost. It is the most honest thing the summary will say.
+
+As for the tenant at the edge, you have made my case. If she is reading because her facts are a little different, the most useful sentence she could find is the one that says what this decision does not decide. That sentence tells her to call a lawyer. The opinion buries it on page thirty. My summary puts it in the first paragraph.
+
+[Hillford Johns]: And on that, I am going to exercise the one power a moderator truly has, which is the power to stop people mid-argument. Believe me, these two could go another hour.
+
+A closing thought, if you will indulge me. I came in expecting a fight about whether courts should explain themselves to the public. That turned out not to be the fight at all. Neither of you disputed it. The real disagreement tonight was about where the plain words should live: inside the opinion, carrying the court's full weight and the risk that comes with it, or beside it, clearly labeled, carrying less weight and a different risk. Janson worries that a summary gives people the verdict without the fairness behind it. Dana worries that without one, people get the verdict from someone else and the fairness from no one. I suspect both of you are right about the danger and are still arguing about which one is worse. That is a good question to leave a room full of future lawyers and judges with, because some of you will be the ones deciding it.
+
+I would add only this. Somewhere in the last hour, each of you explained a hard legal idea in a few plain sentences, and this room followed every word. Whatever the right rule is, it is clearly possible.
+
+Dana, thank you for writing something worth arguing about, and for defending it with such clarity and good humor. Janson, thank you for being, as always, the most generous opponent a good idea could hope for. You make every argument sharper, including the ones you lose, and I will not say tonight whether this was one of them.
+
+And to all of you, students and faculty, thank you for filling this room on a weeknight and for listening so closely. Please join me in thanking our speakers. Good night.
+

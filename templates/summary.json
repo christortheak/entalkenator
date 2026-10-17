@@ -1,0 +1,23 @@
+{
+  "id": "Summary",
+  "displayName": "Summary",
+  "useCaching": true,
+  "initialContext": {
+      "setting": "The reader has provided a text for which they want a summary. Here is the text: \n\n{{transcript}}\n\n-----\n\n And that was the end of the text provided by the reader. ",
+      "generalInstruction": "Everything you output will be turned into a narration. DO NOT include anything in your output that is not to be provided to the reader. ONLY spoken words, no descriptions of actions or gestures. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words that summarize the text. "
+  },
+  "outputTranscriptPrompt": "Here is some output: \n\n{{output}}\n\n That was some output.",
+  "roles": [
+    {
+      "name": "Summarizer",
+      "roleDescription": "You are an expert teacher and knowledgeable in the field of this text. You know how to distill complicated issues in your field into understandable summaries."
+    }
+  ],
+  "steps": [
+    {
+      "roleName": "Summarizer",
+      "promptTemplate": "Please provide a detailed summary of the text, highlighting the key points and main ideas. This summary will be a script for an audio version, and so it is vital that your summary be written in a way that works well as an audio narration. That means summarizing as though you were talking with someone about the paper in a careful and clear way. So don't use bullet points or abbreviations. It's a one-sided conversation, not a textual note. Do not say that you are tailoring your summary for audio narration. Just give a summary. If the article is short, a short summary will suffice. But if the article is longer, your summary should be longer, helping explain the parts of the argument in detail and giving a good summation. As a rough guide we could be aiming for the summary to about 10% or so the length of the original. So a 10,000 word article probably (though not invariably) merits a 1,000 word summary. Err on the side of more detail and explanation than less. Again, tailor your summary to the complexity of the text.",
+      "outputKey": "output"
+    }
+  ]
+}

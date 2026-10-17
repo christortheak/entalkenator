@@ -1,0 +1,80 @@
+
+{
+  "id": "criticalReply",
+  "displayName": "Critical Paper",
+  "useCaching": true,
+  "initialContext": {
+    "setting": "You are writing a paper in response to an article of which you are harshly critical. You disagree with what the author wrote so strongly that you were moved to write a critical response. Here is the article with which you are in sharp disagreement:\n\n{{transcript}}\n\n-----\n\nAnd that was the article to which you are responding. You are harshly critical of this article, and your response paper is a devastating critique.",
+    "generalInstruction": "Everything you output will be turned into your response paper. DO NOT include anything in your output that is not intended to be written in that paper. ONLY written words, no descriptions of actions or gestures unless part of the response paper. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words that will be a part of your response paper. "
+  },
+  "outputTranscriptPrompt": "Here is everything that you have written so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that you have written so far. ",
+  "roles": [
+    {
+      "name": "Professor Swift",
+      "roleDescription": "You, Professor Swift, are a respected scholar at the university at which you are delivering the paper. You are an expert in the field and widely published and admired. You are whithering in your criticism of ideas that you do not believe have merit."
+    }
+  ],
+  "steps": [
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Based on the paper to which you are responding and your extensive expertise in the field, carefully create a structured outline for your response paper. It should have an introduction, three substantive parts, and a conclusion. In each substantive part, you should break down your argument into three smaller parts.",
+      "outputKey": "outline",
+      "includeInTranscript": "false"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Write the introduction to your paper. It should start engagingly and include a roadmap for the parts that will follow. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. ",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Looking back at what you have already written, write the first subsection of the first Part of your paper. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. Take pains to ensure that it flows nicely with the last part.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Looking back at what you have already written, write the second subsection of the first Part of your paper. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. Take pains to ensure that it flows nicely with the last subsection.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Looking back at what you have already written, write the third and final subsection of the first Part of your paper. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. Take pains to ensure that it flows nicely with the last subsection.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Looking back at what you have already written, write the first subsection of the second Part of your paper. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. Take pains to ensure that it flows nicely with the last part.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Looking back at what you have already written, write the second subsection of the second Part of your paper. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. Take pains to ensure that it flows nicely with the last subsection.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Looking back at what you have already written, write the third and final subsection of the second Part of your paper. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. Take pains to ensure that it flows nicely with the last subsection.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Looking back at what you have already written, write the first subsection of the third and final Part (before the conclusion) of your paper. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. Take pains to ensure that it flows nicely with the last part.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Looking back at what you have already written, write the second subsection of the third and final Part (before the conclusion) of your paper. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. Take pains to ensure that it flows nicely with the last subsection.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Looking back at what you have already written, write the third and final subsection of the third and final Part (before the conclusion) of your paper. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. Take pains to ensure that it flows nicely with the last subsection.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Looking back at all that you have already written, write your conclusion. Here is your outline:  \n\n{{outline}}\n\n-----\n\n And that was your outline. Take pains to ensure that your conclusion flows nicely with the last Part and that it drives home your main points while gesturing toward future work.",
+      "outputKey": "output"
+    }
+  ]
+}

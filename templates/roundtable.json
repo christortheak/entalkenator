@@ -1,0 +1,113 @@
+{
+  "id": "Roundtable",
+  "displayName": "Critic Roundtable",
+  "useCaching": true,
+  "userInputConfig": {
+    "isRequired": false,
+    "label": "Reader Questions",
+    "placeholder": "Enter any questions from readers to be discussed during the roundtable...",
+    "description": "These questions will be incorporated by the moderator during the discussion."
+  },
+  "initialContext": {
+    "setting": "This is a critic roundtable consisting of Janson Skullbottom (a respected critic for the New Amsterdam Times), Hillford Johns (an independent blogger who has written about this topic extensively), Abney Weathertop (a writer for The Centurion, an independent, online newspaper), and Reenus Lewis (a youtuber who has amassed a huge following making engaging, educational content about history and science). Everyone knows one another's names and enjoy each other's writing. They are all eager to share their thoughts and ideas. They refer to one another by name. All of the participants have read the article that is the subject of this discussion. Here it is: \n\n{{transcript}}\n\n-----\n\n And that is the end of the article. ",
+    "generalInstruction": "Everything you output will be turned into a narration. DO NOT include anything in your output that is not spoken in class. ONLY spoken words, no descriptions of actions or gestures or identifications of speakers -- unless someone is saying them out loud. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words spoken by the person whose role you are given. The different speakers will be voiced by different people, and so there is no need to distinguish them in your output. "
+  },
+  "outputTranscriptPrompt": "Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been said so far. Pay careful attention to making sure your output flows smoothly with what came before and avoid repeating what has already been said or returning to the same ideas. ",
+  "roles": [
+    {
+      "name": "Janson Skullbottom",
+      "roleDescription": "You, Janson Skullbottom, are a respected critic for the New Amsterdam Times. You have been immersed in the subject of this article for years and have many thoughts about it. You are generous with the ideas of othes, putting them in their best possible light, and highly creative."
+    },
+    {
+      "name": "Hillford Johns",
+      "roleDescription": "You, Hillford Johns, are an independent blogger who has written about this topic extensively. You are critical of much conventional wisdom and often write abut the dangers of conformity and the homogenization of culture. You are not afraid to challenge established norms or to be a devil's advocate."
+    },
+    {
+      "name": "Abney Weathertop",
+      "roleDescription": "You, Abney Weathertop, are a writer for The Centurion, an independent, online newspaper. You are known for your deep dives and exhaustive research. You tend to be wary of making claims you cannot verify."
+    },
+    {
+      "name": "Reenus Lewis",
+      "roleDescription": "You, Reenus Lewis, are a youtuber who has amassed a huge following making engaging, educational content about history and science. You are known for your clear explanations and engaging storytelling."
+    }
+  ],
+  "steps": [
+    {
+        "roleName": "Reenus Lewis",
+        "promptTemplate": "You have convened this group and will moderate the conversation. Make a brief outline comprising three general topics for three phases of the roundtable. You'll use this to help guide the conversation.",
+        "outputKey": "outline",
+        "includeInTranscript": "false"
+    },
+    {
+      "roleName": "Reenus Lewis",
+      "promptTemplate": "The conversation is starting. Get it started by welcoming your colleagues and sharing your initial thoughts. You may refer to your outline: \n\n{{outline}}\n\n-----\n\n And that was your outline. You can raise a question for the group but do not put forward more than one question. Your comments or questions should not be put to particular people.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Hillford Johns, Janson Skullbottom",
+      "loop": 10,
+      "promptTemplate": "The conversation is underway. Considering everything that has been said so far, especially what has just been said, offer your comment. Your comments should not put questions to particular people, but you may, of course, refer to what others have already said in making your comments.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Reenus Lewis, Abney Weathertop",
+      "loop": "end",
+      "promptTemplate": "The conversation is underway. Considering everything that has been said so far, especially what has just been said, offer your comment. Your comments should not put questions to particular people, but you may, of course, refer to what others have already said in making your comments.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Hillford Johns, Janson Skullbottom",
+      "promptTemplate": "The conversation is underway. Considering everything that has been said so far, especially what has just been said, offer your comment. Your comments should not put questions to particular people, but you may, of course, refer to what others have already said in making your comments.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Reenus Lewis",
+      "promptTemplate": "The conversation is underway. Depending on how you think it's going, it may be time to prompt the group to move to the second topic in your outline: \n\n{{outline}}\n\n-----\n\n And that was your outline. You can raise a question for the group or throw out an idea but do not put forward more than one question or idea. Your comments or questions should not be put to particular people.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Abney Weathertop, Janson Skullbottom",
+      "loop": 8,
+      "promptTemplate": "The conversation is underway. Considering everything that has been said so far, especially what has just been said, offer your comment. Your comments should not put questions to particular people, but you may, of course, refer to what others have already said in making your comments.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Hillford Johns, Reenus Lewis",
+      "loop": "end",
+      "promptTemplate": "The conversation is underway. Considering everything that has been said so far, especially what has just been said, offer your comment. Your comments should not put questions to particular people, but you may, of course, refer to what others have already said in making your comments.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Abney Weathertop, Janson Skullbottom",
+      "promptTemplate": "The conversation is underway. Considering everything that has been said so far, especially what has just been said, offer your comment. Your comments should not put questions to particular people, but you may, of course, refer to what others have already said in making your comments.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Reenus Lewis",
+      "promptTemplate": "The conversation is underway. Depending on how you think it's going, it may be time to prompt the group to move to the third topic in your outline: \n\n{{outline}}\n\n-----\n\n And that was your outline. You should be guided by the conversation, and are free to explore other ideas that deviate from your outline but have occurred to you after hearing others. You can raise a question for the group or throw out an idea but do not put forward more than one question or idea. Your comments or questions should not be put to particular people.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Abney Weathertop, Hillford Johns",
+      "loop": 7,
+      "promptTemplate": "The conversation is underway. Considering everything that has been said so far, especially what has just been said, offer your comment. Your comments should not put questions to particular people, but you may, of course, refer to what others have already said in making your comments.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Janson Skullbottom, Reenus Lewis",
+      "loop": "end",
+      "promptTemplate": "The conversation is underway. Considering everything that has been said so far, especially what has just been said, offer your comment. Your comments should not put questions to particular people, but you may, of course, refer to what others have already said in making your comments.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Abney Weathertop, Hillford Johns",
+      "promptTemplate": "The conversation is underway. Considering everything that has been said so far, especially what has just been said, offer your comment. Your comments should not put questions to particular people, but you may, of course, refer to what others have already said in making your comments.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Reenus Lewis",
+      "promptTemplate": "It's time to end the roundtable. Before you do, you have received some questions from readers that you might want to put to the group or address yourself:\n{{userInput}}\n—\nand that was the reader input. If it was blank, there were no reader questions. Either way, offer a closing comment, and thank everyone for joining.",
+      "outputKey": "output"
+    }
+  ]
+}

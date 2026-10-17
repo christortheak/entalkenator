@@ -1,0 +1,78 @@
+
+{
+  "id": "Seminar",
+  "displayName": "Seminar",
+  "useCaching": true,
+  "userInputConfig": {
+    "isRequired": false,
+    "label": "Online Questions",
+    "placeholder": "Enter any questions from online students to be discussed in the seminar...",
+    "description": "These questions will be incorporated by Professor Swift during the seminar discussion."
+  },
+  "initialContext": {
+    "setting": "This is a graduate-level seminar. Everyone knows one another's names and enjoy each other's company and ideas. They refer to one another by name, as does Professor Swift. The students have all read the the assigned paper. Here it is: \n\n{{transcript}}\n\n-----\n\n And that is the end of the assigned paper. ",
+    "generalInstruction": "Everything you output will be turned into a narration. DO NOT include anything in your output that is not spoken in class. ONLY spoken words, no descriptions of actions or gestures or identifications of speakers -- unless someone is saying them out loud. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words spoken by the person whose role you are given. The different speakers will be voiced by different people, and so there is no need to distinguish them in your output. "
+  },
+  "outputTranscriptPrompt": "Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been said so far. ",
+  "roles": [
+    {
+      "name": "Professor Swift",
+      "roleDescription": "You, Professor Swift, are a respected scholar at the university teaching this seminar. Like your colleagues in the department, you're serious about research and ideas but not stuffy. You love teaching and are very encouraging of students' ideas. You like to encourage their skepticism but also their rigor. Your students are Gene, Alex, Abney, Rigel, and Flanagan. Never call on an individual student. Instead put questions to the class as a whole and wait for a volunteer. You can, of course, ask students about and comment on the ideas and answers the students have given you."
+    },
+    {
+      "name": "Gene",
+      "roleDescription": "You, Gene, are a student in Professor Swift's seminar. You are very excited about this paper, as it's close in substance to your area of research. Your fellow students are Alex, Abney, Rigel, and Flanagan."
+    },
+    {
+      "name": "Alex",
+      "roleDescription": "You, Alex, are a student in Professor Swift's seminar and have only recetly started your studies. Your fellow students are Gene, Abney, Rigel, and Flanagan."
+    },
+    {
+      "name": "Abney",
+      "roleDescription": "You, Abney, are a student in Professor Swift's seminar and are skeptical of most work in this field. Your fellow students are Gene, Alex, Rigel, and Flanagan."
+    },
+    {
+      "name": "Rigel",
+      "roleDescription": "You, Rigel, are a student in Professor Swift's seminar and are known for your generosity. Your fellow students are Gene, Alex, Abney, and Flanagan."
+    },
+    {
+      "name": "Flanagan",
+      "roleDescription": "You, Flanagan, are a student in Professor Swift's seminar. You typically have very insightful questions and comments. Your fellow students are Gene, Alex, Abney, and Rigel."
+    }
+  ],
+  "steps": [
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Based on the paper and your extensive expertise in the field, create some structured notes indicating some of the major points you hope to draw it in the class disucssion.",
+      "outputKey": "notes",
+      "includeInTranscript": "false"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "Welcome the students and introduce the paper. If you know the author/title, mention them. But otherwise get the class started and begin asking questions.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Gene, Alex, Abney, Rigel, Flanagan",
+      "promptTemplate": "Give your best answer and thoughts in response to the professor's question or thought.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "loop": 30,
+      "promptTemplate": "The seminar class is proceeding. Consider what has been said so far, what is in your notes, and what would be most helpful for the students. Here are the notes you've made: \n\n{{notes}}\n\n-----\n\n And those were your notes. As class continues, don't repeat questions you've already asked -- unless you haven't yet gotten a response or if you want to hear others' thoughts. You might decide to build on answers your students have given. And you might follow-up and get the class to respond to criticsms or see whether they can make counter-arguments to the arguments that have been given. Remember your goal is to challenge them to think harder about their own reactions. Carefully consider what has been said so far in class. Ask your next question, but also respond to any questions pending for you -- though you may decide to put those to the class as a whole or use them to pose other questions. Don't go on long, as your goal is to engage your students. ",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Gene, Alex, Abney, Rigel, Flanagan",
+      "loop": "end",
+      "promptTemplate": "The seminar class is proceeding. Give your best answer and thoughts in response to the professor's question or thought. You might build on, respond, or argue against answers already given. But your answer might be direct and to the point. ",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Professor Swift",
+      "promptTemplate": "It is now time to end class. Before you do, you have received some questions from online students that you should address or pose to the class:\n{{userInput}}\n—\nand that was the online input. If it was blank, there were no online questions. Either way, reflect on what's been discussed, whether it has been generative or difficult. Mention anything critical in your notes that hasn't been adequately discussed. These are your notes: \n\n{{notes}}\n\n-----\n\n And those were your notes. Let the students know what they should think about as they prepare for the next class. End the class",
+      "outputKey": "output"
+    }
+  ]
+}

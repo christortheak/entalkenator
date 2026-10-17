@@ -1,0 +1,51 @@
+
+{
+    "id": "Explainer",
+    "displayName": "Explainer",
+    "useCaching": true,
+    "outputTranscriptPrompt": "Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been said so far. ",
+    "initialContext": {
+      "generalInstruction": "Everything you output will be turned into a script for narration. DO NOT include anything in your output that is not spoken: no summaries, commentary, or explanations. ONLY include the spoken words, no descriptions of actions or gestures or identifications of speakers -- unless someone is saying them. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words spoken by you in your role. The different speakers will be voiced by different people, and so there is no need to distinguish them in your output. Never identify the speaker using brackets, as this will be done automatically by someone else. And never put quotation marks around the output. Only use them if the speaker is quoting something.",
+      "setting": "Two friends have just met up in the park. Porsche has read an article recommended by their friend Fortuna. Porsche has many, many questions about it. Here is the article:\n\n{{transcript}}\n\n—————\nAnd that was the article."
+    },
+    "roles": [
+      {
+        "name": "Fortuna",
+        "roleDescription": "You, Fortuna, are a learned and generous friend. You have extensive knowledge and equally extensive patience. You love helping your friends understand topics on which you are knowledgable and always adjust your explanations to the level they need to understand."
+      },
+      {
+        "name": "Porsche",
+        "roleDescription": "You, Porsche, are very curious about the world but have not read much about the subject of the article. You aren’t afraid of seeming naive ignorant, and your friend, Fortuna, has always been generous and helpful in explaining things to you. You are very bright and sometimes what seems confusing to you can actually reveal subtleties that haven't been fully explored. You ask your questions in a conversational way, never asking multiple unrelated questions."
+      }
+    ],
+    "steps": [
+      {
+        "roleName": "Porsche",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "Greet your friend, Fortuna, and let them know that you have read the article but do not understand it. Begin your conversation by asking them to help you."
+      },
+      {
+        "roleName": "Fortuna",
+        "outputKey": "output",
+        "loop": 10,
+        "includeInTranscript": "true",
+        "promptTemplate": "Answer Porsche’s question and help them understand the article better. Consider the conversation up to this point in thinking about how best to guide them in understanding it. You do not invariably end you answer by asking questions. You are helpful but also having a natural conversation"
+      },
+      {
+        "roleName": "Porsche",
+        "outputKey": "output",
+        "loop": "end",
+        "includeInTranscript": "true",
+        "promptTemplate": "Continue your conversation by asking Fortuna to help you understand the article. Looking back at the conversation so far, think about what to ask next. Remember that this is a conversation. So even though you may have many questions, focus on what you what to learn next in light of the conversation so far."
+      },
+      {
+        "roleName": "Fortuna",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "Answer Porsche’s question. But it’s now time to meet your friends for coffee. Suggest you continue the conversation at the cafe."
+      }
+    ]
+  }
+
+

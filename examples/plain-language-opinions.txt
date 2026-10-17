@@ -1,0 +1,16 @@
+Every Opinion Deserves a Plain-Language Summary
+by Dana Whitfield
+
+Courts speak to two audiences at once and serve only one of them well. Judicial opinions are written for lawyers, lower courts, and future judges. They are dense by necessity: they must state the facts the court relied on, the standard of review, the governing precedent, and the reasons the losing side lost. But the people most affected by a decision are rarely lawyers. They are tenants, small-business owners, parents in custody disputes, and defendants who learn their fate from a document they cannot read.
+
+I propose a simple rule. Every appellate court in the country should publish, alongside each precedential opinion, a summary of no more than three hundred words written for a reader with a high-school education. The summary would state who won, what the court decided, and what the decision means for people in the same position. It would carry no precedential weight. The opinion itself would remain the law.
+
+Three objections deserve an answer.
+
+The first is that summaries will distort. Law is precise, and a short summary must leave things out. But courts already leave things out: every headnote, syllabus, and press release is a summary. The Supreme Court's syllabus has appeared at the top of its opinions for more than a century with a standard warning that it is not part of the opinion. The question is not whether summaries will exist but who writes them. Today they are written by journalists on deadline and advocates with an agenda. A summary written by the court, or by staff answerable to it, is more likely to be accurate, not less.
+
+The second objection is cost. Clerks are busy, and a good summary takes time. Yet a summary of a decision the court has already written is the cheapest legal writing the court will ever produce. The reasoning is settled. The facts are found. Translating them is a matter of hours, not weeks. A court that cannot spare those hours is a court that has decided its public does not need to understand it.
+
+The third objection is the most serious: that summaries will be cited as if they were law. Litigants will quote the plain-language version when it helps them and ignore it when it does not. This risk is real, but it is manageable. Courts can state, as the Supreme Court does, that the summary is not part of the opinion, and they can sanction lawyers who rely on it. Courts already police misuse of unpublished opinions in the same way.
+
+The deeper point is legitimacy. Courts have no army and no purse. Their authority rests on the belief that their decisions follow from reasons, and reasons that cannot be understood cannot be believed. A judiciary that explains itself only to insiders invites the suspicion that it has something to hide. Plain-language summaries will not end that suspicion, but they are the least a court owes the people it governs.

@@ -1,0 +1,27 @@
+{
+  "outputTranscriptPrompt" : "  Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been said so far. ",
+  "id" : "reference",
+  "steps" : [
+    {
+      "id" : "8DA3D8A6-D02E-4DC7-B319-BA47563EE617",
+      "outputKey" : "output",
+      "includeInTranscript" : "true",
+      "roleName" : "Researcher",
+      "promptTemplate" : "Produce a clean list of references from the document. It should be organized and helpful to the reader, perhaps indicating particularly important references and otherwise helpfully organized. If you can gather from context or otherwise know the content of a reference, you should very, very, very briefly summarize in a parenthetical. But you never invent such information. It's always far preferable just to give the bare citation than to add a misleading parenthetical. No reference in your list should appear more than once."
+    }
+  ],
+  "useCaching" : true,
+  "roles" : [
+    {
+      "id" : "C912F0C7-078A-4A33-8681-CF09338CED99",
+      "name" : "Researcher",
+      "roleDescription" : "You are an expert researcher in the field, deeply read and aware of the latest research in this and adjacent fields."
+    }
+  ],
+  "id": "ReferenceBuilder",
+  "displayName" : "Reference Builder",
+  "initialContext" : {
+    "setting" : "This document contains references or citations the reader would like to extract and organize:\n{{transcript}}\n\n-------\n And that was the document containing the references.",
+    "generalInstruction" : "Everything you output will be turned into a reference list for use by the reader. DO NOT include anything in your output that is not part of this list: no commentary, or explanations. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words written by you in your role as a research assistant. Do not put quotation marks around your output."
+  }
+}

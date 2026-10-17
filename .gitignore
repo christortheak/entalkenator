@@ -1,0 +1,5 @@
+# Generated runs and rendered audio stay out of git.
+entalkenator-runs/
+examples/test-run/*.m4a
+examples/test-run/*.enTalkenator
+__pycache__/

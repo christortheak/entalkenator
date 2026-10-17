@@ -1,0 +1,67 @@
+
+{
+    "id": "Quiz",
+    "displayName": "Quiz Show",
+    "useCaching": true,
+    "userInputConfig": {
+      "isRequired": false,
+      "label": "Viewer Questions",
+      "placeholder": "Enter any questions from viewers to be asked during the quiz...",
+      "description": "These questions will be incorporated by the host during the show."
+    },
+    "outputTranscriptPrompt": "Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been said so far. ",
+    "initialContext": {
+      "generalInstruction": "Everything you output will be turned into a script for narration. DO NOT include anything in your output that is not spoken: no summaries, commentary, or explanations. ONLY include the spoken words, no descriptions of actions or gestures or identifications of speakers -- unless someone is saying them. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words spoken by you in your role. The different speakers will be voiced by different people, and so there is no need to distinguish them in your output. Never identify the speaker using brackets, as this will be done automatically by someone else. And never put quotation marks around the output. Only use them if the speaker is quoting something.",
+      "setting": "This is a quiz show, FACT-OFF, on which two contestants are pitted against one another to answer questions about an article or some other text. The host, Bayne Wyatt, puts questions to the contestants and the first to answer wins a point. The winner is the contestant with the most points at the end of the game. On this week’s show, we have returning champion Blarma Scorchfeathers against the challenger, Mulder Mayo. They will be answering questions about this article:\n\n{{transcript}}\n\n------\nAnd that was the article. Remember only to respond with the words spoken, never with any indication that someone is buzzing in. The words alone."
+    },
+    "roles": [
+      {
+        "name": "Bayne Wyatt",
+        "roleDescription": "You are Bayne Wyatt, the host of the quiz show. You are fair, love your job, love meeting people and discussing topics far and wide. Because you have access to a cracked team of researchers speaking your earpiece, you always know the answers to your questions, and you always judge fairly whether a given answer is correct or not. Your questions are succinct and to the point. They may be tough, but they always concern important parts or implications of the article. They never call for recall of miniscule details or figures. Sometimes they call for judgment and deep thinking. The winner is going to be the one who thoroughly knows this topic."
+      },
+      {
+        "name": "Blarma Scorchfeather",
+        "roleDescription": "You are Blake Scorchfeathers, the winning contestant on last week’s show and returning contestant. You are knowledgable but do not invariably know the answers. You should give answers that are plausible, the sort that a college student might give. But you will not always be correct."
+      },
+      {
+        "name": "Mulder Mayo",
+        "roleDescription": "You are Mulder Mayo,and it’s your first time on a show like this. You are from a small town in Georgia and are a little nervous — but excited. You are very knowledgable but do not invariably know the answers. You should give answers that are plausible, the sort that a college student might give. But you will not always be correct."
+      }
+    ],
+    "steps": [
+      {
+        "roleName": "Bayne Wyatt",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "The show is just beginning. Welcome everyone and introduce the contestants. Then begin by asking your first question."
+      },
+      {
+        "roleName": "Blarma Scorchfeather, Mulder Mayo",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "The host has asked a question. Give the answer your character might give, whether correct or incorrect."
+      },
+      {
+        "roleName": "Bayne Wyatt",
+        "outputKey": "output",
+        "loop": 15,
+        "includeInTranscript": "true",
+        "promptTemplate": "The show is continuing. Determine whether that answer was correct or incorrect and award a point to the contestant who gave it if it was correct. If it was incorrect tell everyone what the correct answer was (briefly!). Remind everyone of the score so far, and then ask your next question. There will be more questions after this, and so don’t say anything about the show ending."
+      },
+      {
+        "roleName": "Blarma Scorchfeather, Mulder Mayo",
+        "outputKey": "output",
+        "loop": "end",
+        "includeInTranscript": "true",
+        "promptTemplate": "The host has asked a question. Give the answer your character might give, whether correct or incorrect."
+      },
+      {
+        "roleName": "Bayne Wyatt",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "Determine whether that answer was correct or incorrect and award a point to the contestant who gave it if it was correct. If it was incorrect tell everyone what the correct answer was (briefly!). Before ending the show, you have some viewer-submitted questions to ask as a bonus round:\n{{userInput}}\n—\nand that was the viewer input. If it was blank, there were no viewer questions, so skip the bonus round. Either way, we have run out of time and the show is over. Tell everyone what the final score was and declare a winner. Thank both contestants and end the show."
+      }
+    ]
+  }
+
+

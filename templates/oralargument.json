@@ -1,0 +1,105 @@
+{
+    "id": "OralArgument",
+    "displayName": "Oral Argument",
+    "useCaching": true,
+    "outputTranscriptPrompt": "Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been said so far. ",
+    "initialContext": {
+      "generalInstruction": "Everything you output will be turned into a script for narration. DO NOT include anything in your output that is not spoken: no summaries, commentary, or explanations. ONLY include the spoken words, no descriptions of actions or gestures or identifications of speakers -- unless someone is saying them. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words spoken by you in your role. The different speakers will be voiced by different people, and so there is no need to distinguish them in your output. Never identify the speaker using brackets, as this will be done automatically by someone else. And never put quotation marks around the output. Only use them if the speaker is quoting something.",
+      "setting": "This is an oral argument in the federal circuit court of appeals. Two lawyers are arguing before a panel of three federal judges: judges Holland, Patterson, and Maralla. The case is being heard after the submission of the briefs: \n{{transcript}}\n\n——\n\nAnd those were the briefs. (If there was only brief there, then the appellant will be arguing that side, and the appellee will be arguing against them. If that was only a description of some arguable issue, then the appellant should be in favor of the position of the article, and the appellee will oppose them.)"
+    },
+    "roles": [
+      {
+        "name": "Judge Holland",
+        "roleDescription": "You, Judge Holland, are a federal judge who has served on the court of appeals for a long time. You are known as a conservative judge, prone to making originalist arguments."
+      },
+      {
+        "name": "Judge Patterson",
+        "roleDescription": "You, Judge Patterson, are a federal judge. You were appointed to the bench last year after fifteen years of practice as a human rights lawyer."
+      },
+      {
+        "name": "Judge Maralla",
+        "roleDescription": "You, Judge Maralla, are a federal judge known for your skepticism of recent Supreme Court jurisprudence. You are a creative and thoughtful judge. You are the senior judge on the panel."
+      },
+      {
+        "name": "Appellant's Attorney",
+        "roleDescription": "You are the lawyer for the appellant. You have prepared long and hard for this argument, scouring the briefs and case. Your brief was the product of many weeks of work."
+      },
+      {
+        "name": "Appellee's Attorney",
+        "roleDescription": "You are the lawyer for the appellee. You have prepared long and hard for this argument, scouring the briefs and case. Your brief was the product of many weeks of work."
+      }
+    ],
+    "steps": [
+      {
+        "roleName": "Judge Maralla",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "The argument is beginning, and you, in your role as senior judge, announce the case and call the appellant’s attorney to the podium. You welcome them and ask them to proceed."
+      },
+      {
+        "roleName": "Appellant's Attorney",
+        "outputKey": "appellantNotes",
+        "includeInTranscript": "false",
+        "promptTemplate": "Having worked for weeks, you have produced notes and an outline of sorts, recognizing that the argument will likely go to places you hadn’t considered. But the notes highlight the main points of the brief, expected counterarguments, and things you believe need to be emphasized to this panel of judges."
+      },
+      {
+        "roleName": "Appellee's Attorney",
+        "outputKey": "appelleeNotes",
+        "includeInTranscript": "false",
+        "promptTemplate": "Having worked for weeks, you have produced notes and an outline of sorts, recognizing that the argument will likely go to places you hadn’t considered. But the notes highlight the main points of the brief, expected counterarguments, and things you believe need to be emphasized to this panel of judges."
+      },
+      {
+        "roleName": "Appellant's Attorney",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "You have just taken the podium. Begin your argument. You may find it useful to refer to your notes when considering what to say. Here they are:\n{{appellantNotes}}\nAnd those were your notes. Your goal is to frame what you think the argument should be, how the judges should view the stakes and issues in this case."
+      },
+      {
+        "roleName": "Judge Holland, Judge Patterson, Judge Maralla",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "loop": 10,
+        "promptTemplate": "The appellant’s attorney is at the podium, and the oral argument is proceeding. Ask a question of the attorney, remembering that the goal of oral argument is to help frame the argument for your colleagues, to speak to one another using the lawyers’ arguments and answers to do so."
+      },
+      {
+        "roleName": "Appellant's Attorney",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "loop": "end",
+        "promptTemplate": "The argument is underway and you have been answering questions and making your argument. Answer the question that is now pending. Remember that your goal is to represent your client to the best of your ability and to defend the positions you took in the brief. You may refer to your notes here:\n{{appellantNotes}}\n—\nThose were your notes. Consider where the argument has gone so far, and how your answer might help you frame the rest of your time and appeal to the judges. Try to be succinct in order to leave plenty of time for the judges to ask their questions."
+      },
+      {
+        "roleName": "Judge Maralla",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "The time for the appellant’s argument has expired. Thank the appellant’s attorney and call the appellee’s attorney to the podium."
+      },
+      {
+        "roleName": "Appellee's Attorney",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "You have just taken the podium. Begin your argument. You may find it useful to refer to your notes when considering what to say. Here they are:\n{{appelleeNotes}}\nAnd those were your notes. Your goal is to frame what you think the argument should be, how the judges should view the stakes and issues in this case."
+      },
+      {
+        "roleName": "Judge Holland, Judge Patterson, Judge Maralla",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "loop": 10,
+        "promptTemplate": "The appellee’s attorney is at the podium, and the oral argument is proceeding. Ask a question of the attorney, remembering that the goal of oral argument is to help frame the argument for your colleagues, to speak to one another using the lawyers’ arguments and answers to do so."
+      },
+      {
+        "roleName": "Appellee's Attorney",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "loop": "end",
+        "promptTemplate": "The argument is underway and you have been answering questions and making your argument. Answer the question that is now pending. Remember that your goal is to represent your client to the best of your ability and to defend the positions you took in the brief. You may refer to your notes here:\n{{appelleeNotes}}\n—\nThose were your notes. Consider where the argument has gone so far, and how your answer might help you frame the rest of your time and appeal to the judges. Try to be succinct in order to leave plenty of time for the judges to ask their questions."
+      },
+      {
+        "roleName": "Judge Maralla",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "The time for the appellee’s argument has expired. Thank the attorney and indicate that the case is submitted."
+      }
+    ]
+  }
+

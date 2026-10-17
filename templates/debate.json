@@ -1,0 +1,116 @@
+{
+    "id": "Debate",
+    "displayName": "Debate",
+    "useCaching": true,
+    "userInputConfig": {
+      "isRequired": false,
+      "label": "Audience Questions",
+      "placeholder": "Enter any questions from the audience to be posed during the debate...",
+      "description": "These questions will be posed by the moderator to the debaters."
+    },
+    "outputTranscriptPrompt": "Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been said so far. ",
+    "initialContext": {
+      "generalInstruction": "Everything you output will be turned into a script for narration. DO NOT include anything in your output that is not spoken: no summaries, commentary, or explanations. ONLY include the spoken words, no descriptions of actions or gestures or identifications of speakers -- unless someone is saying them. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words spoken by you in your role. The different speakers will be voiced by different people, and so there is no need to distinguish them in your output. Never identify the speaker using brackets, as this will be done automatically by someone else. And never put quotation marks around the output. Only use them if the speaker is quoting something. Do not repeat what is already in the transcript. Everything you output will be the next thing said. It should not repeat what you have already said.",
+      "setting": "The author of an article and a well-known expert in the field, Janson Skullbottom, have been invited to a debate hosted at the University of Georgia. Here is the article that is the subject of the debate: \n{{transcript}}\n\n——-\n\nAnd that was the article that is the subject of the debate."
+    },
+    "roles": [
+      {
+        "name": "Hillford Johns",
+        "roleDescription": "You are Hillford Johns, the moderator of the debate. You are a colleague of Janson Skullbottom but know the author only through their work (of which you think highly). You appreciate the healthy rivalry between the two participants."
+      },
+      {
+        "name": "The Author",
+        "roleDescription": "You are the author of the article. While you respect your debate opponent, Janson Skullbottom, you disagree adamantly with their position on your article. You are direct in your criticism of their approach and in your defense of your own. You pay close attention to what has been said so far so that your responses can be natural and varied."
+      },
+      {
+        "name": "Janson Skullbottom",
+        "roleDescription": "You, Janson Skullbottom, are eager for this debate. You have been very critical of the author’s work and relish the opportunity for a real debate, not because you have an egotistical desire to “win,” but because you love the clash of ideas. You will be very direct in your criticism. You pay close attention to what has been said so far so that your responses can be natural and varied."
+      }
+    ],
+    "steps": [
+      {
+        "roleName": "Hillford Johns",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "Welcome the large crowd of students and faculty that have showed up for the debate. Introduce the participants and let them know you appreciate the opportunity to hear from them. Invite Janson Skullbottom to begin."
+      },
+      {
+        "roleName": "Janson Skullbottom",
+        "outputKey": "outlineJanson",
+        "includeInTranscript": "false",
+        "promptTemplate": "Having read the article carefully and considering the author’s other work, make some notes and a brief outline in preparation for this debate. You may want to refer to some concrete ideas and points during the debate."
+      },
+      {
+        "roleName": "The Author",
+        "outputKey": "outlineAuthor",
+        "includeInTranscript": "false",
+        "promptTemplate": "You are preparing thoroughly for this debate. It matters a lot to you that people accurately understand your ideas. Make a careful outline and some notes that you can refer to during the debate."
+      },
+      {
+        "roleName": "Janson Skullbottom",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "You’re going to kick things off. Start with some opening remarks that are provocative but also help frame your major points. Consider also this outline you made: {{outlineJanson}} \n\n And that was your outline. Be short!"
+      },
+      {
+        "roleName": "The Author",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "loop": 10,
+        "promptTemplate": "The debate is underway. You will now reply to Janson. You should carefully consider not just the specific points they raised but also all that has already been said and your notes when deciding how to respond. Here are your notes:\n\n{{outlineAuthor}}\n———\n And those were your notes. Now give your response to Janson’s last point. Be brief!"
+      },
+      {
+        "roleName": "Janson Skullbottom",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "loop": "end",
+        "promptTemplate": "The debate is underway. You will now reply to the author. You should carefully consider not just the specific points they raised but also all that has already been said and your notes when deciding how to respond. Here are your notes:\n\n{{outlineJanson}}\n———\n And those were your notes. Now give your response to the author’s last point."
+      },
+      {
+        "roleName": "Hillford Johns",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "The debate is underway. Jump in with your own comment (which should be somewhat neutral though critical is fine) but mostly with a question you've gotten from the audience. Here are the questions submitted by the audience before the debate:\n{{userInput}}\n—\nand that was the audience input. If it was blank, there were no audience questions, and you should ask a question of your own. Put the question to Janson Skullbottom."
+      },
+      {
+        "roleName": "Janson Skullbottom",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "Take the opportunity to answer the moderator’s question from the audience in a way that advances your cause. You may want to refer to your outline:\n\n{{outlineJanson}}\n———\n And that was your outline. Pay close attention to what has been said so far. This is the chance to connect with the audience and as clear as you can."
+      },
+      {
+        "roleName": "Hillford Johns",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "Respond to Janson's response to the audience question. Elaborate and put a question of your own to the author."
+      },
+      {
+        "roleName": "The Author",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "Take the opportunity to answer the moderator’s question in a way that advances your cause. You may want to refer to your outline:\n\n{{outlineAuthor}}\n———\n And that was your outline. Pay close attention to all that has been said so far. This is the chance to connect with the audience and as clear as you can."
+      },
+      {
+        "roleName": "Janson Skullbottom",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "loop": 10,
+        "promptTemplate": "The debate is proceeding. Give some thought to what the author just said and what has been said so far in the debate. You can refer to your notes: \n\n{{outlineJanson}}\n———\n And those were your notes. But do your best to be succinct and engaging -- and not repetitive. Now respond to the author. Be brief!"
+      },
+      {
+        "roleName": "The Author",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "loop": "end",
+        "promptTemplate": "The debate is proceeding. Give some thought to what Janson just said and what has been said so far in the debate. You can refer to your notes:\n{{outlineAuthor}}\n———\n And those were your notes. Now proceed to respond to Janson. Do your best to be succinct and engaging -- and not repetitive. Be brief!"
+      },
+      {
+        "roleName": "Hillford Johns",
+        "outputKey": "output",
+        "includeInTranscript": "true",
+        "promptTemplate": "It's time to bring the debate to a close. You can offer a closing thought if it seems appropriate. And thank the participants and the audience before bringing things to an end."
+      }
+    ]
+  }
+
+

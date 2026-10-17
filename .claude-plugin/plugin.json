@@ -1,0 +1,10 @@
+{
+  "name": "entalkenator",
+  "displayName": "enTalkenator",
+  "version": "0.1.0",
+  "description": "Turn a document into an enTalkenator audio program (debate, podcast, seminar, oral argument...) inside Claude Code: each template role is voiced by its own subagent, audio is rendered locally with Kokoro, and the result is packaged as an .enTalkenator bundle the app imports.",
+  "author": {
+    "name": "Christian Turner"
+  },
+  "keywords": ["podcast", "debate", "tts", "kokoro", "audio", "entalkenator"]
+}

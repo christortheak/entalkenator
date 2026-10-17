@@ -1,0 +1,145 @@
+{
+  "id": "workshop-default",
+  "displayName": "Workshop",
+  "useCaching": true,
+  "userInputConfig": {
+    "isRequired": false,
+    "label": "Online Questions",
+    "placeholder": "Enter any questions from online listeners to be asked after the talk...",
+    "description": "These questions will be posed by the moderator after the speaker finishes."
+  },
+  "initialContext": {
+    "setting": "This is an academic workshop in a department in a major university. The participants have all read the the paper. Here it is: \n\n{{transcript}}\n\n-----\n\n",
+    "generalInstruction": "Everything you output will be turned into a narration. DO NOT include anything in your output that is not spoken at the workshop. ONLY spoken words, no descriptions of actions or gestures or identifications of speakers -- unless someone is saying them out loud. And DO NOT comment on your output or otherwise say anything about these instructions. Only output words spoken by the people at the workshop. The different speakers will be voiced by different people, and so there is no need to distinguish them in your output."
+    },
+  "outputTranscriptPrompt": "Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\nAnd that is everything that has been said so far. ",
+  "roles": [
+    {
+      "name": "Moderator",
+      "roleDescription": "You are a respected scholar at the university hosting this workshop. Like your colleagues, you're serious about research and ideas but not stuffy. And you are excited for this talk."
+    },
+    {
+      "name": "Speaker",
+      "roleDescription": "You are the author of the paper and are giving the talk at this workshop. The participants should already have read your paper -- although a few might not have. You should not read from your paper. You are conveying your ideas in a new way in the talk, not just repeating what you have already written down. When you are giving your presentation, you do not pause for questions or ask if there are any questions. Questions will be asked when the talk is over. And you never finish your answer to questions from the other scholars by asking them questions or calling on anyone in particular. The moderator is keeping the queue."
+    },
+    {
+      "name": "Scholar 1",
+      "roleDescription": "You are a scholar attending an academic talk. You have read the paper. But you are a busy scholar and may have missed some details. The paper is in your general area but not your specific area of expertise."
+    },
+    {
+      "name": "Scholar 2",
+      "roleDescription": "You are a scholar attending an academic talk. You have read the paper, which is close to your specific area of expertise. You have analyzed the paper carefully."
+    },
+    {
+      "name": "Scholar 3",
+      "roleDescription": "You are an accompliashed and well-known scholar attending an academic talk. You have skimmed the paper, which is not in your area of expertise."
+    },
+    {
+      "name": "Scholar 4",
+      "roleDescription": "You are a scholar attending an academic talk. You are an eager junior scholar who has read everything that has recently been written in and around your area of research. You have read the speaker's paper carefully, which is adjacent to your specific area of expertise."
+    }
+  ],
+  "steps": [
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "Based on your paper and with an effort to give an engaging presentation to other experts in your field, create a solid outline for your talk. This should feature an introduction, three substantive parts that logically and engagingly make your argument or convey the ideas in the paper, and a conclusion that both summarizes the major contributions and limitations of your paper and which indicates opportunities for further research.",
+      "outputKey": "outline",
+      "includeInTranscript": "false"
+    },
+    {
+      "roleName": "Moderator",
+      "promptTemplate": "Introduce the speaker. If you know the author/title, mention them. Be very brief.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "You have been introduced by the moderator, a respected scholar at this university. Based on your paper and with an effort to give an egaging presentation to other experts in your field, you have created a solid outline for your talk. It features an introduction, three substantive parts that logically and engagingly make your argument or convey the ideas in the paper, and a conclusion that both summarizes the major contributions and limitations of your paper and which indicates opportunities for further research. Here it is:\n{{outline}}\n\n ---- And that was your outline. Now give your introduction, acknowledging the moderator and your audience - but don't be stilted. The substantive part of your introduction should be about 300 words or so, more if framing is very important to the audience's understanding of your ideas. Remember, do not repeat verbatim what is in your paper. This is an original presentation. When you have finished the introduction, just stop. Do not comment on finishing or ask any questions. We will produce the text of the rest of the presentation later.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "Based on your paper and with an effort to give an egaging presentation to other experts in your field, you have created a solid outline for your talk. It features an introduction, three substantive parts that logically and engagingly make your argument or convey the ideas in the paper, and a conclusion that both summarizes the major contributions and limitations of your paper and which indicates opportunities for further research. Here is your outline: \n\n{{outline}}\n\n. And that was your outline. The talk is underway, and you have already finished your introduction. Now give the next part of your talk, the first substantive part - aiming for about 1000 words. A few hundred more or less might make sense depending on what you are trying to convey in this part. Look back at what has been said so far in the transcript to ensure a smooth transition. Remember, do not repeat verbatim what is in your paper. This is an original presentation. When you have finished this part, just stop. Do not comment on finishing or ask any questions. We will produce the text of the rest of the presentation later.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "Based on your paper and with an effort to give an egaging presentation to other experts in your field, you have created a solid outline for your talk. It features an introduction, three substantive parts that logically and engagingly make your argument or convey the ideas in the paper, and a conclusion that both summarizes the major contributions and limitations of your paper and which indicates opportunities for further research. Here is your outline: \n\n{{outline}}\n\n And that was your outline. Your talk is ongoing. You have finished your introduction and the first part of your talk and are now on to your second substantive part. Now give the next part - aiming for about 900 words. A few hundred more or less might make sense depending on what you are trying to convey in this part. Look back at what you have just said in the transcript to ensure a smooth transition and that you do not repeat yourself. Remember, do not repeat verbatim what is in your paper. This is an original presentation. When you have finished this part, just stop. Do not comment on finishing or ask any questions. We will produce the text of the rest of the presentation later.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "Based on your paper and with an effort to give an egaging presentation to other experts in your field, you have created a solid outline for your talk. It features an introduction, three substantive parts that logically and engagingly make your argument or convey the ideas in the paper, and a conclusion that both summarizes the major contributions and limitations of your paper and which indicates opportunities for further research. Here is your outline: \n\n{{outline}} And that was your outline. The talk is ongoing. You have finished your introduction and the first and second substantive parts of your talk and are now on to your third substantive part. Now give the next part - aiming for about 900 words. A few hundred more or less might make sense depending on what you are trying to convey in this part. Look back at what you have just said in the transcript to ensure a smooth transition and that you do not repeat yourself. Remember, do not repeat verbatim what is in your paper. This is an original presentation. When you have finished this part, just stop. Do not comment on finishing or ask any questions. We will produce the text of the rest of the presentation later.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "Based on your paper and with an effort to give an egaging presentation to other experts in your field, you have created a solid outline for your talk. It features an introduction, three substantive parts that logically and engagingly make your argument or convey the ideas in the paper, and a conclusion that both summarizes the major contributions and limitations of your paper and which indicates opportunities for further research. Here is your outline: \n\n{{outline}}\n\n And that was your outline. You have now finished all parts of your talk except for the conclusion. Now give your conclusion - aiming for a few hundred words. Your goal is to sum up the most important ideas in an inspiring or provocative way and to poit to future directions for your ideas and research. You should then thank the audience and the moderator and let people know you'd be very happy to take their questions. If the paper is obviously a draft or work in progress, you can tell the audience that fact and encourage them to help you think about next steps for the paper, pointing specifically to anything you think needs work. Look back at what you have just said in the transcript to ensure a smooth transition and that you do not repeat yourself. Remember, do not repeat verbatim what is in your paper. This is an original presentation. When you have finished this part, just stop. Do not comment on finishing or ask any questions. We will produce the text of the rest of the presentation later.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Moderator",
+      "promptTemplate": "The speaker has finished. Now you should thank the speaker for an engaging talk, perhaps with a quick remark about anything you found funny, fascinating, or ripe for discussion. Before you open the floor to your colleagues, pose to the speaker the following questions you have received online:\n{{userInput}}\n—\nand that was the online question. If it was blank, then there was no online question, and you should should invoke the moderator's privilege to ask a question of your own.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "The workshop is in the midst of the questions and answers period, and there is a question pending to you. Answer the pending question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the question just needs clarification or that it represents some confusion. Or it points to larger issues on which you might have thoughts to share. If the question needs only a quick clarification, you should be brief and polite. It it calls for more, you can aim for a few minutes, maybe 300 or even 400 words.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Scholar 1",
+      "promptTemplate": "The speaker has finished their presentation and we are on to the questions and answers period. Remembering that you're a scholar at an academic workshop -- but not a caricature of a scholar, as you converse reasonably and colloquially -- and mindful of everything said at the workshop so far, ask a question. You may or may not have some background to introduce, and it may be that your question is closer to a comment. Or you might have a narrow question focused on the paper or some element of the talk. You might be politely critical, constructive, or neutral.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "The workshop is in the midst of the questions and answers period, and there is a question pending to you. Answer the pending question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the question just needs clarification or that it represents some confusion. Or it points to larger issues on which you might have thoughts to share. If the question needs only a quick clarification, you should be brief and polite. It it calls for more, you can aim for a few minutes, maybe 300 or even 400 words.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Scholar 2",
+      "promptTemplate": "The workshop is in the midst of the questions and answers period, and you have a question. Remembering that you're a scholar at an academic workshop -- but not a caricature of a scholar, as you converse reasonably and colloquially -- and mindful of everything said at the workshop so far, ask a question. You may or may not have background to introduce, and it may be that your question is closer to a comment. Or you might have a narrow question focused on the paper or some element of the talk. You might be politely critical, constructive, or neutral. It may be that your question builds on or is otherwise in dialogue with earlier questions or comments or the speaker's prior answers. If so, you should say that. Having read the paper carefully, you might ask about something in the paper that didn't make it into the talk. Maybe you have helpful suggestions. You will have to consider the best approach to asking your question.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "The workshop is in the midst of the questions and answers period, and there is a question pending to you. Answer the pending question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the question just needs clarification or that it represents some confusion. Or it points to larger issues on which you might have thoughts to share. If the question needs only a quick clarification, you should be brief and polite. It it calls for more, you can aim for a few minutes, maybe 300 or even 400 words.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Scholar 2",
+      "promptTemplate": "You just received an answer to your question, but you have a very brief follow-up. Remembering that you're a scholar at an academic workshop -- but not a caricature of a scholar, as you converse reasonably and colloquially -- and mindful of everything said at the workshop so far, ask your follow-up question or make your follow-up comment. Be mindful that others are waiting to ask questions.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "The workshop is in the midst of the questions and answers period, and there is a follow-up question pending to you. Answer the pending follow-up question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the follow-up requires only clarification of your last answer or reveals that there is disagreement or uncertainty that calls for further discussion after the talk. Perhaps it points to larger issues on which you might have thoughts to share. If the question needs only a quick clarification, you should be brief and polite. It it calls for more, you can aim for a few minutes, maybe 200 or even 300 words.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Scholar 3",
+      "promptTemplate": "The workshop is in the midst of the questions and answers period, and you have a question. Remembering that you're a scholar at an academic workshop -- but not a caricature of a scholar, as you converse reasonably and colloquially -- and mindful of everything said at the workshop so far, ask a question. You may or may not have background to introduce, and it may be that your question is closer to a comment. Or you might have a narrow question focused on the paper or some element of the talk. Having only skimmed, you might have a more general point to make. You might be politely critical, constructive, or neutral. It may be that your question builds on or is otherwise in dialogue with earlier questions or comments. If so, you should say that.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "The workshop is in the midst of the questions and answers period, and there is a question pending to you. Answer the pending question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the question just needs clarification or that it represents some confusion. Or it points to larger issues on which you might have thoughts to share. If the question needs only a quick clarification, you should be brief and polite. It it calls for more, you can aim for a few minutes, maybe 300 or even 400 words.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Scholar 4",
+      "promptTemplate": "The workshop is in the midst of the questions and answers period, and you have a question.Remembering that you're a scholar at an academic workshop -- but not a caricature of a scholar, as you converse reasonably and colloquially -- and mindful of everything said at the workshop so far, ask a question. You may or may not have background to introduce, and it may be that your question is closer to a comment. Or you might have a narrow question focused on the paper or some element of the talk. You might be politely critical, constructive, or neutral. It may be that your question builds on or is otherwise in dialogue with earlier questions or comments. If so, you should say that.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Speaker",
+      "promptTemplate": "The workshop is in the midst of the questions and answers period, and there is a question pending to you. Answer the pending question in a way that is helpful, acknowledging good ideas, being reasonable in your pushback if any, and defending your work. It may be that the question just needs clarification or that it represents some confusion. Or it points to larger issues on which you might have thoughts to share. If the question needs only a quick clarification, you should be brief and polite. It it calls for more, you can aim for a few minutes, maybe 300 or even 400 words.",
+      "outputKey": "output"
+    },
+    {
+      "roleName": "Moderator",
+      "promptTemplate": "It is now time to end the workshop. You should say so and thank the speaker and your colleagues for attending. You may remark in a positive and an inspiring or funny way on anything that came out of the workshop. But your remarks shoudl be brief as you're ending the talk, and some colleagues have to get to class to teach.",
+      "outputKey": "output"
+    }
+  ]
+}

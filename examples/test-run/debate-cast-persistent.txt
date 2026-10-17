@@ -1,0 +1,122 @@
+[Hillford Johns]: Good evening, everyone, and welcome. I have to say, I've moderated a fair number of these over the years, and I don't think I've ever seen this room so full. We have students standing along the back wall, faculty who swore to me they had grading to do, and, if I'm not mistaken, a few members of the law school who wandered over to see whether the rest of the university can keep up with them. Thank you all for coming out to the University of Georgia tonight.
+
+Our subject is an article by Dana Whitfield titled Every Opinion Deserves a Plain-Language Summary. The proposal is simple to state. Every appellate court in the country would publish, alongside each precedential opinion, a short summary of no more than three hundred words, written for a reader with a high-school education. It would say who won, what the court decided, and what it means for people in the same position, and it would carry no precedential weight. Simple to state, yes. Whether it's simple to defend is what we're here to find out.
+
+Let me introduce our participants. Dana Whitfield, the author of the piece, I know only through the writing, and I'll confess I'm an admirer. It's rare to find an argument about the courts that is this clear and this short, which, given the topic, may be the whole point. Dana, thank you for making the trip and for being willing to defend your work in front of a crowd like this one.
+
+Across from Dana is Janson Skullbottom, whom many of you already know. Janson is a colleague of mine down the hall, a well-known expert in the field, and a man who has never once let a proposal pass through a faculty meeting without at least three objections. I mean that as the highest compliment. Janson, it's good to have you here.
+
+I'll admit I'm looking forward to this one. There's a healthy rivalry on this stage tonight, and I suspect both of our guests will keep each other honest. I'm grateful to both of you for giving us the chance to hear it.
+
+With that, Janson, the floor is yours. Please begin.
+
+[Janson Skullbottom]: Thank you, Hillford. You said I never let a proposal through without three objections. Dana has saved me some trouble by answering three in advance. My trouble is that her answers are weaker than the objections, and she skipped the ones that matter.
+
+Let me start with a concession. Dana is right that courts talk past the people they govern. I'm not here to defend dense opinions. I'm here to argue that her cure makes the disease worse.
+
+Here's why. Her summary would tell readers what a decision means for people in the same position. But who counts as "in the same position" is precisely what the next ten lawsuits will fight about. So the court would be issuing a second, simpler, broader version of its own holding, with its seal on it, and then telling everyone to ignore it. Nobody will. Her own premise is that nobody reads the opinion.
+
+Second, her best argument is legitimacy. Courts earn trust by giving reasons. Fine. Then look at what she proposes: three hundred words on who won and what happens next. The reasons are the first thing that gets cut. That isn't an explanation, it's a box score. And box scores are exactly how the public learns to see judges as players on a team.
+
+So my claim tonight is simple. Courts owe the public clearer opinions, not a shorter rival version of their own law.
+
+[The Author]: Janson, I agree with half of your last line. Courts should write clearer opinions. But a clearer opinion is still thirty pages written for the next judge, and it has to be. The tenant facing eviction won't read thirty clear pages any more than thirty murky ones. You're offering her a better book when what she needs is a note on the door.
+
+And the rival version you're worried about already exists. It's the news story, the losing side's press release, the post going around on her phone. Those are the box scores, and they're what teach people that judges play for teams. I'm not adding a rival. I'm replacing an unaccountable one with one the court has to stand behind.
+
+As for the reasons getting cut, three hundred words is plenty of room for one honest sentence of why, and I'd expect every summary to have one. The landlord won because the notice met the deadline the statute sets. A high-school reader can follow that.
+
+And who counts as being in the same position? The court decides that every time it writes a holding. The summary should be no broader than the holding. If the holding is narrow, the summary says so.
+
+[Janson Skullbottom]: A note on the door. I like that image, Dana, so let's follow it. Who writes the note on that tenant's door? Not an appellate court. Her eviction is decided in a trial court, often in an afternoon, often with a form order. Appellate opinions never reach her door. If you want to help her, rewrite the notice, the summons, and the order she's actually holding. Your proposal puts the effort in the one building she'll never walk into.
+
+Now your one honest sentence. The landlord won because the notice met the deadline the statute sets. Sounds clear. But that sentence is the conclusion, not the reason. The real fight in a case like that is whether the clock starts when the notice is mailed or when it's received, or whether a holiday counts. That's the part your sentence leaves out. The tenant reads it and thinks, my landlord sent a notice too, so I lose. Maybe she doesn't. You've given her confidence in the wrong answer, and this time the court signed it.
+
+And no, the court doesn't settle the reach of its holding when it writes it. Later courts do, by reading the opinion against new facts. That's how common law works. So here's your dilemma. Either the summary says plainly whom the decision covers, and it reaches further than the holding does. Or it hedges honestly, and it says this may or may not apply to you. The first is dangerous. The second is useless to the reader you're writing for.
+
+As for replacing the press release: you won't replace it. You'll give it something to quote.
+
+[The Author]: Something to quote? Good. That's the point. The press release already has something to quote: a line pulled from page twenty-three of the opinion, stripped of everything around it. I'd rather it quote a sentence the court wrote to be read on its own. And when it stretches that sentence, any reporter can set the two side by side and catch it in a minute.
+
+On the tenant, you're right that her eviction happens in a trial court in an afternoon. Fix those forms too. I'll sign that petition with you. But what that afternoon looks like is set by the appellate ruling. The legal aid lawyer, the tenant organizer, and the trial judge working through a crowded docket all need to know what changed, and fast.
+
+And your dilemma is a false one. If the fight was over mailing versus receipt, the summary says so. The court held that the clock starts when the notice is mailed. It did not decide what happens when the notice is handed over in person. That isn't "this may or may not apply to you." It tells her what was settled and what wasn't, which is what any good lawyer tells a client every day.
+
+[Janson Skullbottom]: Listen to who just walked onto the stage, Dana. The legal aid lawyer, the tenant organizer, the trial judge. Your article promised a summary for a reader with a high-school education. Now the readers are professionals who can read the opinion and already get case alerts the day it comes down. You've changed the audience to save the proposal.
+
+And look at what you've just pictured: a busy trial judge in a crowded courtroom ruling from the three hundred words because there's no time for the thirty pages. That's not a summary being read. That's a summary being applied. The disclaimer says it has no precedential weight, and in that afternoon it decides the case. You told us courts can police that the way they police unpublished opinions. They couldn't. The no-citation rules fell apart, and the federal rules gave up and allowed citation in 2006. And nobody is going to sanction a trial judge.
+
+I'll grant that your mailing-versus-receipt sentence is a good one. But you made my point when you compared it to what a good lawyer tells a client. A lawyer asks first. How did you get the notice? When? Where's the envelope? The summary can't ask the tenant anything. It's advice broadcast to thousands of strangers whose facts the court has never seen.
+
+And you wrote that sentence alone. Courts don't. On a three-judge panel with a concurrence that reads the holding more narrowly, whose version of "what was settled" goes in the box? Now you have a second opinion to fight over, in three hundred words, with no room for a dissent.
+
+[Hillford Johns]: Let me step in here, if only to give you both a moment to catch your breath. We didn't get any questions from the audience ahead of time, so I'm afraid you're stuck with mine.
+
+First, an observation. Janson, that point about the audience shifting from the tenant to the legal aid lawyer was a fair hit, and Dana will want to answer it. But I notice we've spent most of the evening on harms that are predicted, and very little on harms that have actually happened.
+
+Which brings me to my question, and it's for you, Janson. Dana's article points out that the Supreme Court has printed a syllabus at the top of its opinions for more than a century. It's written by the Reporter of Decisions, not the justices, and it carries a warning that it isn't part of the opinion. It has sat on top of fractured pluralities, narrow concurrences, and holdings whose reach later courts spent decades arguing over. That's every risk you've described, running for a hundred years. So where is the damage? Have trial judges been deciding cases off the syllabus? And if they haven't, what makes you so sure a plain-language version would go any differently?
+
+[Janson Skullbottom]: That's a fair question, Hillford, and I'll give you the honest answer first. No, the syllabus hasn't done much damage. Though it's worth remembering the warning is there because of a 1906 case where the Court had to remind everyone that a headnote is the reporter's understanding, not the Court's decision. The confusion came first and the disclaimer followed.
+
+But ask why the syllabus has been so harmless, because the reasons are exactly what Dana's proposal removes.
+
+First, nobody thinks the justices wrote it. It's the Reporter's work, and everyone knows it. Dana wants the court to write hers, or staff answerable to it, and she counts that extra authority as a selling point. The syllabus is safe because it has no authority.
+
+Second, look at who reads it. Lawyers and judges, trained to treat it as a map and then go read the territory. I'd invite the law students along the back wall: has anyone here ever cited a syllabus in a brief? Your professors would have something to say about it. The readers police themselves.
+
+Third, and this one matters most: the syllabus never tells you what the decision means for people in your position. It reports what the Court held, in the Court's own terms. That clause, what it means for you, is the new thing, and it's the dangerous thing.
+
+And fourth, it's one court, about sixty cases a year, with a dedicated office of professionals. Dana proposes every appellate court in the country.
+
+Now your real point, that I'm describing predicted harms. You're right, and here's why they won't show up in the case reports. The tenant who misreads a summary doesn't file a bad brief. She doesn't file anything. She packs up. The parent decides an appeal is hopeless. That damage never reaches a courtroom, which is exactly why we should think hard about it before we build the thing.
+
+[Hillford Johns]: I appreciate the candor, Janson. It isn't every night a debater concedes the moderator's point in his first sentence. And I notice what you did with it. You took the syllabus, which Dana offered as her best evidence, and turned it into an argument against her. It's safe, you say, because nobody important wrote it, because only professionals read it, and because it never tells anyone what to do.
+
+Your last point is the one that will stay with this room, I suspect. The tenant who misreads a summary doesn't show up in the case reports. She just packs up. That's a serious point. But I'd gently note that it cuts both ways. The tenant who packs up today because of a headline, or a rumor in the hallway of her building, doesn't show up in the case reports either. Silent harm is the one thing neither of you can count, and I don't think it belongs to either side.
+
+So, Dana, let me put Janson's distinctions to you as a choice. Suppose we offered you the syllabus model, in plain language. It's written by a reporter's office rather than the judges, and it says only what the court held, with no clause about what the decision means for people in the same position. Would you take that deal? Or is that last clause, the part that speaks directly to the reader about her own situation, the whole reason you wrote the article?
+
+[The Author]: Hillford, I'll take half that deal right now, because it's already in the article. I wrote that the summary should come from the court or from staff answerable to it. A reporter's office is exactly that. If the judges want to hand the pen to professionals who do nothing else, good. I never asked for their signatures. I asked for accountability, and the syllabus has it. It's published by the court, at the top of the court's opinion, by an officer the court appoints. And when a panel splits, the summary does what the syllabus has done for a century. It says what the majority held, and that one judge read it more narrowly. That's one sentence.
+
+The other half I won't give up, but I'll tell you what I'd change. Janson keeps hearing "what it means for people in your position" as advice. It isn't, and if my wording invites that reading, I'll fix the wording. Call it what changed and what didn't. Tenants in this state now have their notice period counted from the day the notice is mailed. The court did not decide what happens when the notice is handed over in person. That isn't advice. It's the holding, in terms a person can recognize herself in. A plain-language syllabus that sticks to the court's own terms is still written for lawyers, just with shorter words.
+
+And notice what Janson's defense of the syllabus actually was. It's safe, he says, because only professionals read it. That's exactly my complaint. A court summary stays harmless only as long as it's written for the people who need it least. Meanwhile the people who need it most get their law from a headline, a rumor in the hallway, or nowhere at all.
+
+Janson says I changed my audience when I mentioned the legal aid lawyer. I didn't. I write for the tenant. But clear writing doesn't come with a velvet rope. If she can read it, so can the organizer down the hall and the volunteer at the courthouse help desk, and they're the people she'll ask.
+
+Last, the silent harm. The parent who decides an appeal is hopeless never shows up in the case reports. Janson is right about that. But she doesn't show up today either. She's making that decision right now, with nothing from the court at all. I'm not asking you to compare my proposal to a perfect world. I'm asking you to compare it to her kitchen table tonight.
+
+[Janson Skullbottom]: Dana, notice what's happened in the last ten minutes. The judges have handed off the pen, and "what it means for people in your position" has become "what changed and what didn't." That's a better proposal than the one in the article, and I'll happily take a little credit for it.
+
+But let's sit at that kitchen table honestly. She doesn't need to know that the notice period now runs from mailing. She needs to know whether her notice was mailed, whether anyone missed something, and whether it's worth fighting. No summary answers that. A person does. The volunteer at the courthouse help desk you just mentioned does.
+
+So here's my question. A reporter's office for every appellate court in the country, writing up every precedential opinion. Those hours and that money come from somewhere, and court budgets aren't growing. If you had them in hand tonight, would you really spend them on summaries rather than one more person at that help desk? I know which one gets to the kitchen table.
+
+[The Author]: Take the credit, Janson. Sharpening an idea in public is what tonight is for. But look at what survived. A plain summary from the court, published with every precedential opinion, written for the person the case is actually about.
+
+Now your trade. I don't think it's a real one. You're picturing a new office in every courthouse. I'm picturing the clerk who helped draft the opinion spending an afternoon on three hundred words. That isn't a salary. It's an afternoon.
+
+And think about what your help-desk volunteer does when an appellate court changes the notice rule. Often she isn't a lawyer either. Before she can tell anyone whether it's worth fighting, she has to find out what changed. One summary reaches every help desk in the state the day the opinion comes down. One more volunteer reaches the people standing in one line.
+
+So yes, hire your volunteer. And on her first morning, hand her my summary.
+
+[Janson Skullbottom]: I see two problems with that afternoon. Five minutes ago the pen belonged to a reporter's office of professionals who do nothing else. Now it belongs to a law clerk a year out of school, the afternoon after the opinion comes down. Writing three hundred words a high-school reader can't misread isn't the cheapest writing in the building, it's the hardest. Pascal apologized for a long letter because he didn't have time to write a short one.
+
+And that clerk works for the judge. Here in Georgia, that judge runs for election. A summary that reaches every help desk in the state on the day of the opinion also reaches every campaign mailer. Who checks it for spin, when the person who wrote it answers to the person on the ballot?
+
+So yes, hand the volunteer something on her first morning. Just make sure it was written by someone with nothing to gain from how it reads.
+
+[The Author]: Janson, I don't much mind whose hand holds the pen. A reporter's office where a court has one, a clerk where it doesn't, and a judge who reads it before it goes out. What matters is that the court answers for it.
+
+I'll grant you Pascal. Short is hard. But the hardest part of a short version is knowing exactly what the case decided, and the court is the one place where that work is already done. Somebody is going to write three hundred words about that opinion by dinnertime. Pascal's problem is far worse for the reporter on deadline who read it once.
+
+Now the ballot. Yes, Georgia elects its appellate judges. The same judge writes the opinion, the thing that actually decides the case. If we trust her with the law, we can trust her with the summary of it. And go looking for your author with nothing to gain. The advocate wants donors. The losing lawyer wants to save face. The headline wants clicks. Nobody who writes about a decision is disinterested. The court is the only author with something to lose, because its summary sits right beside its own opinion, where any opponent with a mailer can quote both.
+
+[Hillford Johns]: And I'm afraid that's where we have to leave it. With Pascal hanging over all of us, I'll try to keep this short, though I can't promise I've had the time.
+
+Here's one thought before you go. When we started, these two sounded about as far apart as two people can be. Over the evening they've agreed on more than either would probably like to admit. The trial court forms should be rewritten. The courthouse help desk deserves another volunteer. And whatever the court publishes should say what changed and what didn't, rather than telling anyone what to do. What's left is the hard part, and it's a real disagreement. Dana sees the court's authority as the reason to trust its summary. Janson sees that same authority as the reason to fear it. I don't think that one gets settled tonight. I suspect it gets settled the first time some court actually tries this and we get to see what happens at the kitchen table.
+
+Dana, thank you for coming all this way and for defending your article with good humor, and for improving it in real time, which takes more nerve than defending it. Janson, thank you for living up to your reputation. You've been relentless and fair, which is the best thing I can say about an opponent.
+
+And to all of you, the students along the back wall and the faculty who really should be grading, thank you for filling this room and staying with us to the end. Good night, everyone.
+
