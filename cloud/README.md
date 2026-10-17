@@ -1,0 +1,360 @@
+# enTalkenator library on Cloudflare
+
+This is a private library for the programs the enTalkenator plugin makes. It runs as one
+Cloudflare Worker on **your own** account, on the free plan, and doesn't need the Mac or iOS
+app. You get:
+
+- **A private podcast feed.** You can add it to Apple Podcasts, Overcast, or Pocket Casts.
+  Each tag also gets a feed of its own. Feeds include chapters and transcripts.
+- **A web library at `/app`.** It has search, filters by template and tag, and a player with
+  speed control and resume. The transcript follows the audio and highlights who's speaking.
+  You can rename, retag, delete, and download `.enTalkenator` bundles. Phones can install it
+  as an app.
+- **An upload API** that `scripts/publish.py` and the `/entalkenator:entalkenate` skill use.
+
+Storage is R2 for the audio and files and D1 for the index. Everything is reached through the
+Worker. Nothing is public, and every response asks search engines to stay away.
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/OWNER/REPO/tree/main/plugin/cloud)
+
+The button needs this repository to be public, and `OWNER/REPO` above is a placeholder (see
+[Open decisions](#open-decisions)). The Wrangler route below works either way.
+
+## What's here
+
+```
+plugin/cloud/
+├── wrangler.jsonc            Worker config: R2 and D1 bindings, static assets, AUTH_MODE and other vars
+├── package.json              `npm run deploy`, plus the Deploy button's setting descriptions
+├── .dev.vars.example         the three secrets (copy to .dev.vars for local dev)
+├── migrations/0001_init.sql  D1 schema (the Worker also applies it on first use)
+├── src/
+│   ├── index.ts              routing: /api, /feed, /media, /app
+│   ├── api.ts                items: create, upload, edit, tag, publish, delete
+│   ├── auth.ts               bearer token, passphrase cookie, Cloudflare Access JWT
+│   ├── feed.ts               RSS 2.0 + iTunes + Podcasting 2.0
+│   ├── media.ts              R2 objects with HTTP Range, HEAD, ETag, If-Range
+│   ├── transcript.ts         turns + chapter times -> WebVTT and JSON transcripts
+│   ├── db.ts, pages.ts, util.ts
+├── public/app/               the web app (no build step): index.html, app.js, app.css, sw.js, manifest, icons
+├── tools/make_icons.py       draws the icons and podcast cover (stdlib Python)
+└── test/
+    ├── local_test.py         91 end-to-end checks against `wrangler dev`
+    ├── browser_check.mjs     headless Chrome: service worker, installability, player, phone layout, offline
+    └── access_check.mjs      AUTH_MODE "access" with a stand-in Access team and signed test tokens
+```
+
+The folder is self-contained, which the Deploy button requires: it needs nothing from the rest
+of the repository.
+
+## Set up
+
+### The easy way: let the plugin do it
+
+```
+/entalkenator:setup-library
+```
+
+The skill asks two things: how to deploy (Wrangler from your computer, or the Deploy button)
+and how to sign in to the web app (passphrase or Cloudflare Access). Then it does the steps
+below.
+- It generates the upload and feed tokens and sets them on the Worker, so they never appear in
+  the chat.
+- It checks the result from outside (`publish.py check`).
+- It ends with the steps for adding the feed to your podcast app.
+
+### By hand, with Wrangler
+
+You need Node.js 18+ and a free Cloudflare account. Copy this folder somewhere you own, so a
+plugin update can't overwrite it, then:
+
+```bash
+npm install
+```
+
+```bash
+npx wrangler login
+```
+
+```bash
+npm run deploy
+```
+
+```bash
+npx wrangler secret put UPLOAD_TOKEN
+```
+
+```bash
+npx wrangler secret put FEED_TOKEN
+```
+
+```bash
+npx wrangler secret put APP_PASSPHRASE
+```
+
+Notes:
+- `npm install` installs `wrangler`, about 225 MB, mostly the local Workers runtime.
+- `npm run deploy` runs `wrangler deploy` and then applies the D1 migration. On the first
+  deploy, Wrangler creates the R2 bucket and D1 database from the names in `wrangler.jsonc`.
+- If R2 isn't enabled on your account yet, enable it once in the dashboard. Cloudflare may ask
+  for a payment method; use within the free allowance costs nothing.
+- If you have no workers.dev subdomain yet, choose one under Workers & Pages.
+- Make `UPLOAD_TOKEN` and `FEED_TOKEN` long and random, for example with
+  `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`. The Worker refuses tokens
+  under 32 characters.
+- `scripts/publish.py setup-secrets --cloud-dir . --url <address>` does both token steps for
+  you without showing the values. It also saves the upload token for the plugin.
+- Then give the plugin the address and upload token: the **library_url** and
+  **library_token** plugin settings, or `publish.py configure`.
+
+Your library is at `https://entalkenator-library.<your-subdomain>.workers.dev`. Change `name`
+in `wrangler.jsonc` before deploying for a different address.
+
+### With the Deploy to Cloudflare button
+
+The button copies this folder into a new repository in your GitHub or GitLab account. It
+creates the R2 bucket and D1 database and asks for the three secrets, described in
+`package.json` and `.dev.vars.example`. Then it builds and deploys with Workers Builds, so
+pushes to your copy redeploy. Afterwards, put the address and `UPLOAD_TOKEN` in the plugin's
+**library_url** and **library_token** settings.
+
+### Secrets and settings
+
+| Name | Kind | What it does |
+| :- | :- | :- |
+| `UPLOAD_TOKEN` | secret, 32+ chars | Bearer token for `/api`, used by `publish.py`. It also keys the web app's session cookies, so changing it signs everyone out |
+| `FEED_TOKEN` | secret, 32+ chars | The secret part of every feed and media address. Change it to revoke every old link |
+| `APP_PASSPHRASE` | secret, 10+ chars | Web app sign-in when `AUTH_MODE` is `passphrase` |
+| `AUTH_MODE` | var | `passphrase` (default) or `access` |
+| `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | vars | For `access` mode: `https://<team>.cloudflareaccess.com` and the Access application's AUD tag |
+| `LIBRARY_TITLE` | var | The library's name in podcast apps and the web app |
+
+A missing or short secret switches its feature off with a clear message. It never falls open.
+
+On the plugin side, `.claude-plugin/plugin.json` declares two settings. **library_url** is
+plain. **library_token** is marked sensitive, so Claude Code keeps it in the system keychain.
+
+Claude Code doesn't substitute sensitive values into skill text, and doesn't export plugin
+settings to Bash commands. So a SessionStart hook (`hooks/hooks.json` →
+`publish.py sync-config`) copies both into `${CLAUDE_PLUGIN_DATA}/library.json` (mode 600).
+Skills then pass that file to `publish.py --config`. A change to the settings takes effect in
+the next session. `publish.py configure` or `setup-secrets` write the same file directly.
+
+## Signing in to the web app
+
+`AUTH_MODE` chooses how `/app` is protected. Feeds and the upload API are unaffected either
+way. Podcast apps can't sign in to anything, so feeds always carry `FEED_TOKEN` in the
+address.
+
+**Passphrase** (the default):
+- The Worker shows a sign-in page and sets an HttpOnly, SameSite=Lax cookie that lasts 180
+  days. It's signed with a key derived from both `APP_PASSPHRASE` and `UPLOAD_TOKEN`.
+- After 10 wrong attempts from one IP address, sign-in is blocked for 15 minutes.
+- The app's own API calls need a custom header and same-origin `Sec-Fetch-Site`, which
+  guards against cross-site requests.
+
+**Cloudflare Access:**
+1. In Zero Trust (the free plan covers 50 users), add a **self-hosted application** for your
+   Worker's hostname with the path **`app`**, and a policy allowing your email address.
+2. Copy the application's AUD tag and your team domain into `wrangler.jsonc`, set
+   `AUTH_MODE` to `access`, and redeploy.
+3. The Worker verifies the `Cf-Access-Jwt-Assertion` token on every `/app` request:
+   - an RS256 signature against the team's published keys, cached and refetched when they
+     rotate
+   - the audience, issuer, expiry, and not-before time
+
+   If Access isn't in front of `/app`, the Worker answers 403.
+
+Don't switch on Access for the whole hostname: the Worker's "All traffic" option, or the
+one-click workers.dev switch. Podcast apps would be locked out. If you already did, add a
+second application for the same hostname with the paths `feed`, `media`, and `api` and a
+**Bypass** policy. `publish.py check` warns if the feed redirects to Access.
+
+To switch modes, change `AUTH_MODE` and redeploy. Nothing else in the library changes.
+
+## Adding the feed to a podcast app
+
+Open the web app's **Podcast feeds** page. It shows the all-programs feed and one per tag,
+each with a Copy button and an "Open in Overcast" link.
+
+- **Apple Podcasts:**
+  - iPhone or iPad: Library → ⋯ → **Follow a Show by URL**
+  - Mac: **File → Follow a Show by URL**
+- **Overcast:** + → **Add URL**. Overcast keeps `itunes:block` feeds out of its search.
+- **Pocket Casts:** submit the address at pocketcasts.com/submit and choose **Private**, then
+  search for the short link it gives you. Without Private, the show may become searchable.
+
+## Publishing
+
+`/entalkenator:entalkenate` asks at the end of each run, if a library is configured. By
+hand:
+
+```bash
+python3 plugin/scripts/publish.py push entalkenator-runs/debate-20261017-101500 --tag "Supreme Court"
+```
+
+- It uploads the `.m4a`, `transcript.txt`, the chapters file (`<name>.chapters.json`, which
+  `render_audio.py` writes next to the `.m4a`), and the `.enTalkenator` bundle.
+- Then it publishes the item. Re-pushing the same run updates the same item; the id comes from
+  the run.
+- Other options: `--draft` keeps it out of the feeds, and `--no-bundle` saves storage.
+- Other commands: `info`, `check`, `list`, `edit ID --title/--tags/--publish/--unpublish`,
+  `delete ID --yes`, and `status`. Every command prints JSON.
+- `info` masks feed addresses unless you pass `--show-feed-urls`.
+
+## How it works
+
+| Route | Access | What |
+| :- | :- | :- |
+| `GET /feed/<FEED_TOKEN>.xml` | token | Every published item, newest first |
+| `GET /feed/<FEED_TOKEN>/<tag>.xml` | token | Items with that tag |
+| `GET /media/<FEED_TOKEN>/<id>/audio.m4a` | token | Audio, with Range, HEAD, ETag, If-None-Match and If-Range |
+| `GET /media/<FEED_TOKEN>/<id>/transcript.{vtt,json,txt}` | token | WebVTT with `<v Speaker>` cues, Podcasting 2.0 JSON, plain text |
+| `GET /media/<FEED_TOKEN>/<id>/chapters.json` | token | Podcasting 2.0 chapters, one per turn |
+| `/api/...` | `Authorization: Bearer <UPLOAD_TOKEN>` | `GET/POST items`, `GET/PUT/PATCH/DELETE items/<id>`, `PUT/DELETE items/<id>/files/<audio\|transcript\|chapters\|bundle>`, `POST items/<id>/publish`, `GET items/<id>/transcript`, `GET tags`, `GET library` |
+| `/app/` | passphrase or Access | The web app. The same API is mounted at `/app/api/`, and files (bundle downloads too) at `/app/media/<id>/...` |
+
+- **Uploads.** `publish.py` sends each file as the raw body of its own `PUT`, streamed
+  straight into R2. That keeps the Worker's memory and CPU use flat, and the per-request limit
+  becomes 100 MB per file. `POST /api/items` also accepts one `multipart/form-data` request:
+  a `metadata` JSON field plus `audio`, `transcript`, `chapters`, and `bundle` files. That's
+  handy for `curl -F`, but it buffers in memory.
+- **Feeds.**
+  - The channel carries `itunes:block Yes`, `googleplay:block`, `podcast:block`, and
+    `podcast:locked`.
+  - Each item has an `enclosure` (`audio/x-m4a`) and `itunes:duration`, plus
+    `podcast:transcript` (VTT with `rel="captions"`, JSON, text) and `podcast:chapters`.
+  - Every URL carries the token. The cover is a generated 1400×1400 PNG.
+  - Feeds send an ETag, so podcast apps get a 304 when nothing changed.
+- **Transcripts that follow the audio.** `render_audio.py` knows each clip's length, so it
+  writes a chapter per turn with its start time, end time, and speaker. The Worker pairs
+  chapter *n* with turn *n* of `transcript.txt`, using the same turn pattern as the renderer.
+  - The web app uses those times to highlight the current turn and speaker.
+  - VTT and JSON transcripts split each turn into sentence-sized cues and spread its time
+    across them by length.
+  - Without a chapters file, only the plain-text transcript is offered.
+- **Headers.** Every response has `X-Robots-Tag: noindex, nofollow, noarchive`,
+  `Referrer-Policy: no-referrer` (so token URLs never leak in a Referer), and
+  `X-Content-Type-Options: nosniff`. Pages also get a strict CSP. `/robots.txt` disallows
+  everything.
+- **Storage.**
+  - R2 keys: `items/<id>/{audio.m4a, transcript.txt, chapters.json, bundle.enTalkenator}`.
+  - D1 tables: `items`, `files`, `tags`, and `login_failures`.
+  - The Worker creates the tables on first use, so a missed migration can't break the library.
+
+## Limits on the free plan
+
+From Cloudflare's pricing pages as of October 2026:
+
+| | Free allowance | What it means here |
+| :- | :- | :- |
+| Worker requests | 100,000 a day | Podcast apps poll feeds and fetch audio in ranges; a personal library uses a tiny fraction |
+| Worker CPU | 10 ms a request | Plenty for feeds and transcripts; uploads stream instead of buffering |
+| Request body | 100 MB | Per uploaded file. A 1-hour program at 48 kbps is about 22 MB |
+| R2 storage | 10 GB-month | A 20-minute program is about 7 MB of audio plus a 7 MB bundle: roughly 650 programs, or about 1,300 with `--no-bundle` |
+| R2 operations | 1M Class A, 10M Class B a month | Uploads are Class A; each audio range request is two Class B |
+| R2 egress | free | Listening costs nothing |
+| D1 | 5 GB, 5M rows read and 100k written a day | Far beyond a personal library |
+
+## Privacy and copyright
+
+- **Personal use only.** The programs are generated from other people's documents. Keep the
+  library for your own listening.
+  - Don't share feed addresses, and don't submit them to podcast directories.
+  - Only share the web app's passphrase with people you'd give the documents to anyway.
+  - Bundles contain the original document, so only the signed-in web app offers them; the
+    feed token can't fetch them.
+- **A feed address works like a password.**
+  - Overcast and Pocket Casts fetch feeds from their own servers, so those services see it.
+  - If an address leaks, change `FEED_TOKEN` and re-add the feed in your apps.
+- **Nothing is listable.**
+  - The feeds opt out of every directory.
+  - The bucket has no public access; the Worker is the only way in.
+  - Preview URLs are off (`preview_urls: false`), so no second hostname can bypass the login.
+- **Generated, not quoted.** Speakers paraphrase and can be wrong; check the source before
+  relying on a claim.
+
+## Local development and tests
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+```bash
+npx wrangler dev
+```
+
+Fill in `.dev.vars` with local test values before starting `wrangler dev`. It runs with local
+R2 and D1 under `.wrangler/`. Then, with a rendered run (render with `--engine say` for
+a quick one), run the checks:
+
+```bash
+python3 test/local_test.py --run <run dir>
+```
+
+```bash
+node test/browser_check.mjs
+```
+
+```bash
+node test/access_check.mjs
+```
+
+Results on 2026-10-17 (wrangler 4.124.0, workerd 2026-08-15, macOS, Chrome headless):
+
+- **local_test.py: 91 passed**, on a fresh local database with no migration applied (the
+  Worker created its own tables). It ran against a five-turn debate rendered with `say`
+  (36 s, 221 KB), pushed with `publish.py`, and checked:
+  - the feed parses as XML (xmllint agrees) and has every channel and item tag above
+  - enclosure lengths match, every URL carries the token, and a wrong token or a bundle
+    through the feed token gets a 404
+  - Range requests: `0-1`, `100-`, `-500`, a mid slice, past the end (clipped), a start past
+    the end (416), multiple ranges (whole file), HEAD, HEAD + Range, If-None-Match, and
+    If-Range both ways
+  - VTT cue ordering
+  - API auth and edits, multipart upload, sign-in, cookie tampering, the CSRF guard, the
+    login throttle, and that deleting removes all four R2 objects
+- **browser_check.mjs: 15 passed.**
+  - The service worker activates and controls the page.
+  - Chrome's own installability check reports no errors.
+  - Audio plays, with the transcript highlighting the current turn; next-speaker works.
+  - At 390 px there's no sideways scrolling and the player fits.
+  - The app shell opens offline.
+- **access_check.mjs: 21 passed.**
+  - A valid token gets in.
+  - Wrong audience, wrong issuer, expired, not-yet-valid, wrong key, unknown key id,
+    `alg: none`, and garbage tokens get 403.
+  - Feeds and the upload API work without Access.
+- **Types.** `tsc --noEmit` passes, run with TypeScript 5.9 against the types from
+  `wrangler types` (`npm run types` regenerates `worker-configuration.d.ts`, which is
+  git-ignored). `wrangler deploy --dry-run` bundles cleanly (59 KB).
+
+**Not tested:**
+- Nothing was deployed to a real Cloudflare account, so these are untested against
+  production:
+  - the Deploy button flow
+  - automatic R2 and D1 creation
+  - an Access application on a workers.dev path
+  - podcast apps fetching a live feed
+- The SessionStart hook hasn't run inside a live Claude Code session. Its script was tested
+  with the same environment variables.
+- The desktop app's built-in browser refuses to register service workers (a limitation of
+  that browser). Real Chrome registers it fine.
+
+## Open decisions
+
+1. **Should the repository be public?** The Deploy button only works from a public GitHub or
+   GitLab repository, and this folder is ready for one.
+   - The Wrangler route needs nothing public, because the plugin ships this folder.
+   - If the app's source should stay private, publish just the plugin, or just
+     `plugin/cloud`, as its own small public repository. Then put its URL in the button link
+     above. That's the smallest change that enables the button.
+2. **Cloudflare Access or a passphrase?** Both are built in, and `AUTH_MODE` switches between
+   them without touching the data.
+   - **Passphrase** is the default. It needs no extra setup and works on any device for 180
+     days. But it's one shared secret, protected only by its length and the login throttle.
+   - **Access** gives each person their own sign-in (email code, Google, GitHub), can be
+     revoked per person, and can require MFA. But it needs a Zero Trust team and a path-scoped
+     application that's easy to misconfigure; `publish.py check` catches the usual mistakes.
+   - A sensible default: passphrase for one person, Access when sharing the library with
+     family or a class.

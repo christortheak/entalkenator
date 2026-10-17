@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1b264f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Library">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>enTalkenator Library</title>
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <a href="#/" class="brand"><img src="icons/icon-192.png" alt="" width="28" height="28"><span id="library-title">Library</span></a>
+  <nav class="topnav" aria-label="Main">
+    <a href="#/" data-nav="library">Library</a>
+    <a href="#/feeds" data-nav="feeds">Podcast feeds</a>
+    <form method="post" action="logout"><button type="submit" class="link">Sign out</button></form>
+  </nav>
+</header>
+
+<main id="view" tabindex="-1" aria-live="polite"><p class="muted center pad">Loading…</p></main>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<footer id="player" class="player" hidden>
+  <audio id="audio" preload="metadata"></audio>
+  <div class="player-row">
+    <button id="player-title" class="player-title link" type="button" title="Show transcript"></button>
+    <span id="player-speaker" class="player-speaker"></span>
+  </div>
+  <div class="player-row seek-row">
+    <span id="time-cur" class="time">0:00</span>
+    <input id="seek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Position">
+    <span id="time-left" class="time">-0:00</span>
+  </div>
+  <div class="player-row controls">
+    <button id="prev-turn" type="button" class="icon" aria-label="Previous speaker" title="Previous speaker">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>
+    </button>
+    <button id="back" type="button" class="icon" aria-label="Back 15 seconds" title="Back 15 seconds">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/><text x="12" y="16.5" text-anchor="middle" font-size="7" font-weight="700">15</text></svg>
+    </button>
+    <button id="playpause" type="button" class="icon play" aria-label="Play">
+      <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+    </button>
+    <button id="fwd" type="button" class="icon" aria-label="Forward 30 seconds" title="Forward 30 seconds">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V2l5 4-5 4V7a6 6 0 1 0 6 6h2a8 8 0 1 1-8-8z"/><text x="12" y="16.5" text-anchor="middle" font-size="7" font-weight="700">30</text></svg>
+    </button>
+    <button id="next-turn" type="button" class="icon" aria-label="Next speaker" title="Next speaker">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>
+    </button>
+    <label class="speed" title="Playback speed">
+      <span class="sr-only">Speed</span>
+      <select id="speed">
+        <option value="0.75">0.75×</option>
+        <option value="0.9">0.9×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.1">1.1×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+        <option value="1.75">1.75×</option>
+        <option value="2">2×</option>
+        <option value="2.5">2.5×</option>
+      </select>
+    </label>
+  </div>
+</footer>
+</body>
+</html>

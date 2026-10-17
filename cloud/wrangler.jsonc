@@ -1,0 +1,55 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Your library's address is https://<name>.<your-subdomain>.workers.dev
+  "name": "entalkenator-library",
+  "main": "src/index.ts",
+  // Tested with the workerd bundled in wrangler 4.124 (supports up to 2026-08-15).
+  "compatibility_date": "2026-08-15",
+  "workers_dev": true,
+  // Preview URLs would be extra hostnames for the same library; keep them off.
+  "preview_urls": false,
+  "upload_source_maps": true,
+  "observability": { "enabled": true },
+
+  // The library web app (/app). The Worker runs first on every request so it
+  // can check the login before any file is served.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+
+  // Audio, transcripts, chapters and .enTalkenator bundles.
+  "r2_buckets": [
+    { "binding": "BUCKET", "bucket_name": "entalkenator-library" }
+  ],
+
+  // The library index. The Worker also creates the tables on first use, so a
+  // missed migration can't leave the library broken.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "entalkenator-library",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
+
+  "vars": {
+    // How the web app at /app is protected:
+    //   "passphrase"  the Worker shows a login page; set the APP_PASSPHRASE secret
+    //   "access"      Cloudflare Access in front of /app; set ACCESS_TEAM_DOMAIN and ACCESS_AUD
+    // Feeds never use either: podcast apps can't log in, so feeds carry FEED_TOKEN in the URL.
+    "AUTH_MODE": "passphrase",
+    // For AUTH_MODE "access": https://<team>.cloudflareaccess.com and the application's AUD tag.
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
+    // Shown in podcast apps and the web app.
+    "LIBRARY_TITLE": "enTalkenator Library"
+  }
+  // Secrets (never in this file): UPLOAD_TOKEN, FEED_TOKEN, APP_PASSPHRASE.
+  // See .dev.vars.example and README.md.
+}

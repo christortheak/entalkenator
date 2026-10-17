@@ -2,9 +2,22 @@
   "name": "entalkenator",
   "displayName": "enTalkenator",
   "version": "0.1.0",
-  "description": "Turn a document into an enTalkenator audio program (debate, podcast, seminar, oral argument...) inside Claude Code: each template role is voiced by its own subagent, audio is rendered locally with Kokoro, and the result is packaged as an .enTalkenator bundle the app imports.",
+  "description": "Turn a document into an enTalkenator audio program (debate, podcast, seminar, oral argument...) inside Claude Code: each template role is voiced by its own subagent, audio is rendered locally with Kokoro, and the result is packaged as an .enTalkenator bundle the app imports. Optionally publishes to your own private library and podcast feed on Cloudflare.",
   "author": {
     "name": "Christian Turner"
   },
-  "keywords": ["podcast", "debate", "tts", "kokoro", "audio", "entalkenator"]
+  "keywords": ["podcast", "debate", "tts", "kokoro", "audio", "entalkenator", "cloudflare"],
+  "userConfig": {
+    "library_url": {
+      "type": "string",
+      "title": "Library URL",
+      "description": "Your enTalkenator library Worker, e.g. https://entalkenator-library.<you>.workers.dev. Leave empty if you don't have one; /entalkenator:setup-library sets one up."
+    },
+    "library_token": {
+      "type": "string",
+      "title": "Library upload token",
+      "description": "The Worker's UPLOAD_TOKEN secret. Stored in your system keychain, not in settings.json.",
+      "sensitive": true
+    }
+  }
 }

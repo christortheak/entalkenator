@@ -1,0 +1,11 @@
+# Secrets for the enTalkenator library Worker. For local development copy this
+# file to .dev.vars (never commit .dev.vars). For a deployed Worker, set each one
+# with `npx wrangler secret put NAME` or in the dashboard.
+# Generate random values with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# The plugin's upload token (32+ characters). Same value as the plugin's library_token setting.
+UPLOAD_TOKEN=replace-with-32-or-more-random-characters
+# Secret part of the private feed address (32+ characters). Changing it revokes old feed links.
+FEED_TOKEN=replace-with-32-or-more-random-characters
+# Web app passphrase (10+ characters), used when AUTH_MODE is "passphrase".
+APP_PASSPHRASE=replace-with-a-long-passphrase

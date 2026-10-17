@@ -1,7 +1,7 @@
 ---
 name: entalkenate
 description: Turn a document (PDF, text, or pasted text) into an enTalkenator audio program, such as a debate, podcast, seminar, oral argument, or quiz show. It runs one of the enTalkenator app's templates inside Claude Code, voices each role with its own subagent, renders a multi-voice .m4a locally with Kokoro, and packages an .enTalkenator bundle the app can import. Use when asked to "entalkenate" something or to make a debate, podcast, or similar audio conversation from a paper.
-argument-hint: <document.pdf|.txt> [template] [--model opus|fable|sonnet|haiku] [--single|--fresh] [--loop-scale 0.3] [--engine kokoro|gemini|say] [--voices "Role=voice;..."] [--user-input "..."] [--no-audio]
+argument-hint: <document.pdf|.txt> [template] [--model opus|fable|sonnet|haiku] [--single|--fresh] [--loop-scale 0.3] [--engine kokoro|gemini|say] [--voices "Role=voice;..."] [--user-input "..."] [--no-audio] [--publish|--no-publish] [--tag "..."]
 allowed-tools: Read Write Bash(python3 *)
 ---
 
@@ -21,6 +21,8 @@ Scripts (always quote the paths, which may contain spaces):
   transcript into one .m4a.
 - `SETUP` = `bash "${CLAUDE_PLUGIN_ROOT}/scripts/setup_tts.sh"` installs the local
   Kokoro voices, but only with the user's permission.
+- `PUBLISH` = `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/publish.py"` uploads the result to
+  the user's own library, if they have one (section 5).
 
 ## 1. Set up the run
 
@@ -42,6 +44,7 @@ Scripts (always quote the paths, which may contain spaces):
      - `--language`: output language.
      - `--no-audio`: stop after the transcript.
      - `--no-director`: leave director's notes out of the turn sheets (see section 2).
+     - `--publish` / `--no-publish` / `--tag T`: see section 5.
      - `--form F`: override the guessed form (debate, hearing, conversation, workshop,
        class, quiz, written).
 2. **Settings menu.** Skip any question whose answer the arguments already give. If
@@ -286,7 +289,10 @@ dropped, duplicated, or out of order. If it isn't `ok`, report the turns it list
 3. Run, with a 10-minute timeout (run long transcripts in the background):
    `RENDER --transcript <dir>/transcript.txt --out "<dir>/<Template displayName>.m4a" [--engine ...] --voices "Role=voice;Role=voice"`
    Clips are cached by text and voice, so a re-run after a failure, or with one role's
-   voice changed, only renders what's missing.
+   voice changed, only renders what's missing. Next to the .m4a it writes
+   `<Template displayName>.chapters.json`: one chapter per turn, with its start time and
+   speaker. The library uses it to follow the transcript, and podcast apps show it as
+   chapters.
 
 ## 4. Package for the app
 
@@ -295,13 +301,45 @@ dropped, duplicated, or out of order. If it isn't `ok`, report the turns it list
 `info.txt`, the source file, `<base>-transcript.txt`, and `<base>-<Template>.txt/.m4a`.
 With `--no-audio`, run `package` without `--audio`.
 
-## 5. Report
+## 5. Publish to your library (only if one is configured)
+
+The user may have their own enTalkenator library: a Cloudflare Worker with a web player and
+a private podcast feed, set up with `/entalkenator:setup-library`. Check, without network:
+
+`PUBLISH status --config "${CLAUDE_PLUGIN_DATA}/library.json" --url "${user_config.library_url}"`
+
+- If `configured` is false, skip this section and don't mention the library.
+- Skip it with `--no-audio` too. The library needs audio.
+- With `--no-publish`, skip. With `--publish`, publish without asking.
+- Otherwise ask with AskUserQuestion (header "Library"):
+  - "Publish to my library (Recommended)": it goes into their private podcast feeds
+  - "Upload as a draft": it's in the web app but not the feeds
+  - "Not this time"
+
+  Tags are optional. Each tag also gets its own feed. Take them from `--tag`, or from the
+  user's words through "Other" (e.g. "publish, tagged Supreme Court").
+
+Then run:
+
+`PUBLISH push "<dir>" --config "${CLAUDE_PLUGIN_DATA}/library.json" --url "${user_config.library_url}" [--tag "..."]... [--draft]`
+
+- It uploads the .m4a, `transcript.txt`, the chapters file, and the bundle, then adds the
+  program to the feeds. Pushing the same run again updates the same item.
+- It prints the program's `appUrl` in the web app. That address is safe to show.
+- Never print feed addresses: they contain the feed's secret token. The user finds them on the
+  web app's Podcast feeds page.
+- If it fails, show the error. The run's files are untouched, and the same command can be
+  re-run later.
+- If it reports `warnings` (chapters that don't match the transcript), pass them on.
+
+## 6. Report
 
 Tell the user:
 - the bundle path, the .m4a path, and the audio duration
 - which voice each role got
 - the template and mode
 - how long generation and rendering took
+- whether it was published to their library, with its `appUrl`
 - anything that went wrong
 
 To import, the user opens the `.enTalkenator` file with the enTalkenator app: double-click

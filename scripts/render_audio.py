@@ -14,7 +14,11 @@ an MLX crash can't take the finished clips or the stitching with it. Clips are s
 in Python, loudness-matched, and encoded to AAC (24 kHz mono, like the app) with
 afconvert, or ffmpeg when afconvert is missing.
 
-Prints JSON: output path, duration, engine, voice map, timings.
+Next to the .m4a it writes <name>.chapters.json: one Podcasting 2.0 chapter per turn
+(start and end time, speaker), which the enTalkenator library uses to follow the
+transcript and podcast apps show as chapters.
+
+Prints JSON: output path, duration, engine, voice map, timings, chapters file.
 """
 
 import argparse
@@ -405,21 +409,71 @@ def clip_path(work, prefix, engine_name, voice, speed, text):
 
 
 def stitch(paths, gap, out, bitrate, work):
-    """Join 16-bit mono clips with silence between them and encode to .m4a. Returns seconds."""
+    """Join 16-bit mono clips with silence between them and encode to .m4a.
+
+    Returns (total seconds, [(start, end) seconds of each clip in the output]).
+    """
     pcm = [silence(0.3)]
+    spans = []
+    samples = len(pcm[0]) // 2
     for path in paths:
         rate, clip = read_wav(path)
         if rate != SAMPLE_RATE:
             raise SystemExit("Clip %s is %d Hz, expected %d" % (path, rate, SAMPLE_RATE))
-        pcm.append(normalize_pcm16(clip))
+        clip = normalize_pcm16(clip)
+        spans.append((samples / SAMPLE_RATE, (samples + len(clip) // 2) / SAMPLE_RATE))
+        pcm.append(clip)
         pcm.append(silence(gap))
+        samples += len(clip) // 2 + len(pcm[-1]) // 2
     pcm.append(silence(0.3))
     joined = b"".join(pcm)
     full_wav = os.path.join(work, "full-%s.wav" % os.getpid())
     write_wav(full_wav, joined)
     encode_m4a(full_wav, out, bitrate)
     os.remove(full_wav)
-    return len(joined) / 2.0 / SAMPLE_RATE
+    return len(joined) / 2.0 / SAMPLE_RATE, spans
+
+
+def chapter_title(role, text, limit=60):
+    """A chapter title like "Role: opening words…" for a podcast app's chapter list."""
+    words = " ".join(text.split())
+    if len(words) > limit:
+        words = words[:limit].rsplit(" ", 1)[0].rstrip(",;:.-") + "…"
+    return "%s: %s" % (role, words) if words else role
+
+
+def write_chapters(path, turns, spans, seconds, engine_name, voices, transcript):
+    """One Podcasting 2.0 chapter per turn, in transcript order.
+
+    The enTalkenator library pairs chapter N with turn N of the transcript to show
+    who is speaking. Chapters start where each clip starts (the first at 0) and end
+    where its speech ends; the silence between turns belongs to no chapter.
+    """
+    chapters = []
+    for i, ((role, text), (start, end)) in enumerate(zip(turns, spans)):
+        chapters.append({
+            "startTime": 0 if i == 0 else round(start, 3),
+            "endTime": round(end, 3),
+            "title": chapter_title(role, speakable(text)),
+            "speaker": role,
+            "turn": i + 1,
+        })
+    doc = {
+        "version": "1.2.0",
+        "chapters": chapters,
+        # Extra fields for the library; podcast apps ignore them.
+        "entalkenator": {
+            "durationSeconds": round(seconds, 3),
+            "engine": engine_name,
+            "voices": voices,
+            "transcript": os.path.basename(transcript),
+            "turns": len(chapters),
+        },
+    }
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
 
 
 def sample_line(text, min_words=18, max_words=40):
@@ -459,7 +513,7 @@ def audition(args, engine_name, pool, turns, roles):
     rendered = render_jobs(engine_name, jobs, args.speed, work)
     for entry in plan:
         f = os.path.join(out_dir, "audition-%s.m4a" % re.sub(r"[^A-Za-z0-9]+", "-", entry["role"]).strip("-").lower())
-        entry["seconds"] = round(stitch([o.pop("path") for o in entry["order"]], 0.9, f, args.bitrate, work), 1)
+        entry["seconds"] = round(stitch([o.pop("path") for o in entry["order"]], 0.9, f, args.bitrate, work)[0], 1)
         entry["file"] = f
     emit({"engine": engine_name, "rendered": rendered, "auditions": plan,
           "note": "Each file plays the candidates in the listed order, about a second apart."})
@@ -560,7 +614,9 @@ def main():
     t1 = time.time()
     rendered = render_jobs(engine_name, jobs, args.speed, work)
     render_s = time.time() - t1
-    seconds = stitch([j["path"] for j in jobs], args.gap, out, args.bitrate, work)
+    seconds, spans = stitch([j["path"] for j in jobs], args.gap, out, args.bitrate, work)
+    chapters = os.path.splitext(out)[0] + ".chapters.json"
+    write_chapters(chapters, turns, spans, seconds, engine_name, voices, args.transcript)
 
     emit({
         "out": out,
@@ -571,6 +627,7 @@ def main():
         "rendered": rendered,
         "durationSeconds": round(seconds, 1),
         "renderSeconds": round(render_s, 1),
+        "chapters": chapters,
         "clips": work,
     })
 

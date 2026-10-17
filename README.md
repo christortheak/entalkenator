@@ -4,7 +4,9 @@ This plugin runs enTalkenator's generation inside your own Claude Code session
 instead of the Swift app's direct API calls. Your Claude subscription writes the
 conversation, with each template role voiced by its own subagent. A local model
 renders the audio for free. The output is an `.enTalkenator` bundle the existing app
-imports, so the app stays the library and player.
+imports, so the app stays the library and player. If you don't use the app, you can publish
+to [your own library on Cloudflare](#your-own-library-on-cloudflare) and listen in any
+podcast app or browser.
 
 ```
 /entalkenator:entalkenate paper.pdf debate --loop-scale 0.3
@@ -15,15 +17,20 @@ imports, so the app stays the library and player.
 ```
 plugin/
 ├── .claude-plugin/
-│   ├── plugin.json          manifest (name: entalkenator)
+│   ├── plugin.json          manifest (name: entalkenator); userConfig library_url, library_token
 │   └── marketplace.json     single-plugin local marketplace, for `claude plugin install`
-├── skills/entalkenate/SKILL.md   the showrunner: arguments, generation loop, render, package
+├── skills/
+│   ├── entalkenate/SKILL.md      the showrunner: arguments, generation loop, render, package, publish
+│   └── setup-library/SKILL.md    deploys your own library on Cloudflare and connects the plugin
 ├── agents/speaker.md        one persistent agent per role (Read + Write tools only)
+├── hooks/hooks.json         SessionStart: copies the library settings where publish.py can read them
 ├── scripts/
 │   ├── engine.py            template state machine (stdlib Python 3.9+)
-│   ├── render_audio.py      transcript -> one .m4a, a voice per role (kokoro | gemini | say)
+│   ├── render_audio.py      transcript -> one .m4a + per-turn chapters, a voice per role (kokoro | gemini | say)
+│   ├── publish.py           uploads a run to your library (stdlib Python 3.9+)
 │   ├── setup_tts.sh         installs the Kokoro engine into a private venv (asks first)
 │   └── requirements-kokoro.{in,txt}   pinned dependency set for that venv
+├── cloud/                   the library Worker (TypeScript, R2 + D1); see cloud/README.md
 ├── templates/               snapshot of enTalkenator/Templates/*.json, used outside this repo
 └── examples/
     ├── plain-language-opinions.txt   ~500-word sample used for the test run
@@ -311,6 +318,55 @@ cast members "listen". I tried the idea on paper and left it out:
 
 The template's hidden prep steps are the right place for speakers to think ahead, and
 they already run in parallel.
+
+## Your own library on Cloudflare
+
+You may not want the app at all, or you may want to listen on a phone without it. For that,
+the plugin can publish each program to a private library that **you** host. It's one
+Cloudflare Worker on your own account, on the free plan, built in [`cloud/`](cloud/README.md).
+- **Feeds.** It serves a private RSS feed for Apple Podcasts, Overcast, or Pocket Casts, plus
+  one feed per tag. Feeds include chapters and synced transcripts.
+- **Web app.** `/app` is a web library: search, a player with speed and resume, a transcript
+  that highlights who's speaking, and bundle downloads. Phones can install it as an app.
+
+```
+/entalkenator:setup-library
+```
+
+The skill deploys the Worker with Wrangler (or the Deploy to Cloudflare button) and sets its
+secrets without showing them. It connects the plugin and checks the feed from outside. After
+that, `/entalkenator:entalkenate` asks at the end of each run whether to publish; it only asks
+when a library is configured. To publish an earlier run:
+
+```bash
+python3 scripts/publish.py push entalkenator-runs/<run> --tag "Supreme Court"
+```
+
+What changed in the plugin for this:
+- **`render_audio.py`** also writes `<name>.chapters.json`, one Podcasting 2.0 chapter per
+  turn. It has the start time, end time, and speaker, computed from the clip lengths it
+  already has. The library uses it to follow the transcript, and podcast apps show it as
+  chapters.
+- **`publish.py`** (stdlib only) has `push`, `info`, `check`, `list`, `edit`, `delete`,
+  `status`, `configure`, and `setup-secrets`. `push` streams each file in its own request
+  and uses an id derived from the run, so re-pushing updates the same item.
+- **`plugin.json` `userConfig`** declares `library_url` and `library_token`, with the token
+  marked sensitive.
+  - Claude Code doesn't substitute sensitive values into skill text, so a SessionStart hook
+    (`publish.py sync-config`) copies the settings into
+    `${CLAUDE_PLUGIN_DATA}/library.json` (mode 600).
+  - The skills pass that file to `publish.py`, so the token never enters the conversation.
+
+Privacy: the feeds opt out of every directory (`itunes:block`, `podcast:block`,
+`podcast:locked`), and every response is `noindex` and `no-referrer`. Feed addresses carry a
+long secret token, and the source document (inside bundles) is only offered in the signed-in
+web app. These are personal copies of other people's work: don't share feed addresses or
+submit them anywhere. [`cloud/README.md`](cloud/README.md) covers setup, limits, privacy, the
+tests (91 end-to-end, 15 in headless Chrome, 21 for Access mode, all passing locally), and the
+two open decisions:
+1. Whether the repository goes public, which the Deploy button needs.
+2. Cloudflare Access or a passphrase for the web app. Both are built in, switched by
+   `AUTH_MODE`.
 
 ## Bundle format
 

@@ -1,0 +1,46 @@
+{
+  "name": "entalkenator-library",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A private, self-hosted library and podcast feed for enTalkenator programs, on one Cloudflare Worker (R2 + D1, free plan).",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy && wrangler d1 migrations apply DB --remote",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "types": "wrangler types"
+  },
+  "devDependencies": {
+    "wrangler": "^4.124.0"
+  },
+  "cloudflare": {
+    "bindings": {
+      "UPLOAD_TOKEN": {
+        "description": "Lets the enTalkenator plugin upload and edit items. Use a long random value (32+ characters), for example the output of `python3 -c \"import secrets; print(secrets.token_urlsafe(32))\"`. Put the same value in the plugin's **library_token** setting."
+      },
+      "FEED_TOKEN": {
+        "description": "The secret part of your private podcast feed address (32+ random characters, made the same way). Anyone with the feed address can listen, so don't share it. Change it to revoke every old address."
+      },
+      "APP_PASSPHRASE": {
+        "description": "Passphrase for the web library at `/app` (10+ characters) when **AUTH_MODE** is `passphrase`. Leave any value if you use Cloudflare Access instead."
+      },
+      "AUTH_MODE": {
+        "description": "`passphrase` (the Worker shows a sign-in page) or `access` (Cloudflare Access protects `/app`; see the README)."
+      },
+      "ACCESS_TEAM_DOMAIN": {
+        "description": "Only for `access` mode: `https://<team>.cloudflareaccess.com`."
+      },
+      "ACCESS_AUD": {
+        "description": "Only for `access` mode: the Access application's **Application Audience (AUD) Tag**."
+      },
+      "LIBRARY_TITLE": {
+        "description": "The library's name in podcast apps and the web app."
+      },
+      "BUCKET": {
+        "description": "R2 bucket for audio, transcripts, chapters and .enTalkenator bundles. The free plan includes 10 GB."
+      },
+      "DB": {
+        "description": "D1 database holding the library index."
+      }
+    }
+  }
+}
