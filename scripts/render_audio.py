@@ -359,23 +359,110 @@ def kokoro_worker(jobs_file, speed):
     os._exit(0)
 
 
-def render_kokoro_in_child(todo, voices, speed, work):
+def render_kokoro_in_child(todo, speed, work):
+    """todo: dicts with text, voice, path, label."""
     jobs_file = os.path.join(work, "jobs.json")
     with open(jobs_file, "w", encoding="utf-8") as f:
-        json.dump([{"text": text, "voice": voices[role], "path": path,
-                    "label": "turn %d (%s)" % (i + 1, role)} for i, role, text, path in todo], f)
+        json.dump(todo, f)
     cmd = [kokoro_python(), "-X", "faulthandler", os.path.abspath(__file__), "--worker", jobs_file,
            "--speed", str(speed)]
     missing = todo
     for attempt in (1, 2):
         rc = subprocess.run(cmd, stdout=subprocess.DEVNULL).returncode
-        missing = [j for j in todo if not os.path.exists(j[3])]
+        missing = [j for j in todo if not os.path.exists(j["path"])]
         if not missing:
             break
         log("Kokoro worker exited with code %s and %d clip(s) missing%s" %
             (rc, len(missing), "; retrying once" if attempt == 1 else ""))
     if missing:
         raise SystemExit("Kokoro could not render %d clip(s). Re-run to retry; finished clips are kept." % len(missing))
+
+
+def render_jobs(engine_name, jobs, speed, work):
+    """Render every job whose clip isn't cached yet. Returns how many were rendered."""
+    todo = [j for j in jobs if not os.path.exists(j["path"])]
+    if todo and engine_name == "kokoro":
+        render_kokoro_in_child(todo, speed, work)
+    elif todo:
+        engine = make_engine(engine_name, speed)
+
+        def run(job):
+            engine.render(job["text"], job["voice"], job["path"])
+            log("  %s done" % job["label"])
+
+        if engine.workers > 1 and len(todo) > 1:
+            with ThreadPoolExecutor(engine.workers) as ex:
+                list(ex.map(run, todo))
+        else:
+            for j in todo:
+                run(j)
+    return len(todo)
+
+
+def clip_path(work, prefix, engine_name, voice, speed, text):
+    key = hashlib.sha1(("%s|%s|%s|%s" % (engine_name, voice, speed, text)).encode("utf-8")).hexdigest()[:12]
+    return os.path.join(work, "%s-%s.wav" % (prefix, key))
+
+
+def stitch(paths, gap, out, bitrate, work):
+    """Join 16-bit mono clips with silence between them and encode to .m4a. Returns seconds."""
+    pcm = [silence(0.3)]
+    for path in paths:
+        rate, clip = read_wav(path)
+        if rate != SAMPLE_RATE:
+            raise SystemExit("Clip %s is %d Hz, expected %d" % (path, rate, SAMPLE_RATE))
+        pcm.append(normalize_pcm16(clip))
+        pcm.append(silence(gap))
+    pcm.append(silence(0.3))
+    joined = b"".join(pcm)
+    full_wav = os.path.join(work, "full-%s.wav" % os.getpid())
+    write_wav(full_wav, joined)
+    encode_m4a(full_wav, out, bitrate)
+    os.remove(full_wav)
+    return len(joined) / 2.0 / SAMPLE_RATE
+
+
+def sample_line(text, min_words=18, max_words=40):
+    """The opening sentence or two of a turn, for auditioning a voice."""
+    out = []
+    for sent in re.split(r"(?<=[.!?])\s+", " ".join(text.split())):
+        out.append(sent)
+        if len(" ".join(out).split()) >= min_words:
+            break
+    words = " ".join(out).split()
+    return " ".join(words[:max_words])
+
+
+def audition(args, engine_name, pool, turns, roles):
+    """Per role, one short .m4a: each candidate voice reads the role's first line."""
+    out_dir = os.path.abspath(args.out)
+    work = os.path.abspath(args.work_dir or os.path.join(out_dir, "audition.clips"))
+    os.makedirs(work, exist_ok=True)
+    wanted = {}
+    for part in re.split(r"[;\n]", args.candidates or ""):
+        if "=" in part:
+            role, vs = part.split("=", 1)
+            wanted[role.strip()] = [v.strip() for v in vs.split(",") if v.strip()]
+    first_line = {}
+    for role, text in turns:
+        first_line.setdefault(role, sample_line(speakable(text)))
+    plan, jobs = [], []
+    for role in roles:
+        cands = wanted.get(role) or pool.voices[:4]
+        entry = {"role": role, "sample": first_line[role], "order": []}
+        for n, voice in enumerate(cands, 1):
+            path = clip_path(work, "aud", engine_name, voice, args.speed, first_line[role])
+            jobs.append({"text": first_line[role], "voice": voice, "path": path,
+                         "label": "%s in %s" % (role, voice)})
+            entry["order"].append({"n": n, "voice": voice, "sounds": describe_voice(engine_name, voice), "path": path})
+        plan.append(entry)
+    rendered = render_jobs(engine_name, jobs, args.speed, work)
+    for entry in plan:
+        f = os.path.join(out_dir, "audition-%s.m4a" % re.sub(r"[^A-Za-z0-9]+", "-", entry["role"]).strip("-").lower())
+        entry["seconds"] = round(stitch([o.pop("path") for o in entry["order"]], 0.9, f, args.bitrate, work), 1)
+        entry["file"] = f
+    emit({"engine": engine_name, "rendered": rendered, "auditions": plan,
+          "note": "Each file plays the candidates in the listed order, about a second apart."})
 
 
 def assign_voices(roles, engine, overrides):
@@ -432,6 +519,10 @@ def main():
     ap.add_argument("--bitrate", type=int, default=48000)
     ap.add_argument("--work-dir", help="clip cache (default: <out>.clips/)")
     ap.add_argument("--list-voices", action="store_true")
+    ap.add_argument("--audition", action="store_true",
+                    help="instead of the show, write audition-<role>.m4a files into --out (a directory)")
+    ap.add_argument("--candidates", help='audition voices, e.g. "Janson Skullbottom=bm_george,am_fenrir;..." '
+                                         "(default: the engine's first four voices for every role)")
     args = ap.parse_args()
 
     engine_name = pick_engine(args.engine)
@@ -451,6 +542,9 @@ def main():
     for r, _ in turns:
         if r not in roles:
             roles.append(r)
+    if args.audition:
+        audition(args, engine_name, pool, turns, roles)
+        return
     voices = assign_voices(roles, pool, parse_overrides(args.voices))
 
     out = os.path.abspath(args.out)
@@ -460,44 +554,13 @@ def main():
     jobs = []
     for i, (role, text) in enumerate(turns):
         spoken = speakable(text)
-        key = hashlib.sha1(("%s|%s|%s|%s" % (engine_name, voices[role], args.speed, spoken)).encode("utf-8")).hexdigest()[:12]
-        jobs.append((i, role, spoken, os.path.join(work, "%03d-%s.wav" % (i + 1, key))))
-
-    todo = [j for j in jobs if not os.path.exists(j[3])]
-    log("%s: %d turns, %d to render, voices %s" % (engine_name, len(jobs), len(todo), voices))
+        jobs.append({"text": spoken, "voice": voices[role], "label": "turn %d/%d (%s)" % (i + 1, len(turns), role),
+                     "path": clip_path(work, "%03d" % (i + 1), engine_name, voices[role], args.speed, spoken)})
+    log("%s: %d turns, voices %s" % (engine_name, len(jobs), voices))
     t1 = time.time()
-
-    if todo and engine_name == "kokoro":
-        render_kokoro_in_child(todo, voices, args.speed, work)
-    elif todo:
-        engine = make_engine(engine_name, args.speed)
-
-        def run(job):
-            i, role, text, path = job
-            engine.render(text, voices[role], path)
-            log("  turn %d/%d (%s) done" % (i + 1, len(jobs), role))
-
-        if engine.workers > 1 and len(todo) > 1:
-            with ThreadPoolExecutor(engine.workers) as ex:
-                list(ex.map(run, todo))
-        else:
-            for j in todo:
-                run(j)
+    rendered = render_jobs(engine_name, jobs, args.speed, work)
     render_s = time.time() - t1
-
-    pcm = [silence(0.3)]
-    for i, role, text, path in jobs:
-        rate, clip = read_wav(path)
-        if rate != SAMPLE_RATE:
-            raise SystemExit("Clip %s is %d Hz, expected %d" % (path, rate, SAMPLE_RATE))
-        pcm.append(normalize_pcm16(clip))
-        pcm.append(silence(args.gap))
-    pcm.append(silence(0.3))
-    joined = b"".join(pcm)
-    full_wav = os.path.join(work, "full.wav")
-    write_wav(full_wav, joined)
-    encode_m4a(full_wav, out, args.bitrate)
-    os.remove(full_wav)
+    seconds = stitch([j["path"] for j in jobs], args.gap, out, args.bitrate, work)
 
     emit({
         "out": out,
@@ -505,8 +568,8 @@ def main():
         "model": KOKORO_MODEL if engine_name == "kokoro" else (GEMINI_MODEL if engine_name == "gemini" else "macOS say"),
         "voices": voices,
         "turns": len(jobs),
-        "rendered": len(todo),
-        "durationSeconds": round(len(joined) / 2 / SAMPLE_RATE, 1),
+        "rendered": rendered,
+        "durationSeconds": round(seconds, 1),
         "renderSeconds": round(render_s, 1),
         "clips": work,
     })

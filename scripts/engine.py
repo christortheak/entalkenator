@@ -397,6 +397,7 @@ def cmd_init(args):
     write_text(os.path.join(run, "document.txt"), text)
 
     title = args.title or os.path.splitext(os.path.basename(src))[0]
+    models = parse_models(args.model, args.models, template)
     st = {
         "version": 1,
         "run_dir": run,
@@ -411,6 +412,7 @@ def cmd_init(args):
         "loop_scale": args.loop_scale,
         "max_turns": args.max_turns,
         "mode": args.mode,
+        "models": models,   # role -> "" (session model), an alias, or a full model ID
         "seed": uuid.uuid4().hex,
         "current_index": 0,
         "loop_start_index": None,
@@ -443,6 +445,7 @@ def cmd_init(args):
         "documentWords": doc_words,
         "title": title,
         "author": st["author"],
+        "models": {r: (m or "session") for r, m in models.items()},
         "documentHead": text[:800],
     })
 
@@ -457,8 +460,11 @@ def cmd_meta(args):
         st["author"] = args.author.strip() or "Unknown Author"
     if args.user_input is not None:
         st["user_input"] = args.user_input
+    if args.model is not None or args.models is not None:
+        st["models"] = parse_models(args.model, args.models, template_of(st))
     save_state(args.run_dir, st)
-    emit({"title": st["title"], "author": st["author"], "userInput": st["user_input"]})
+    emit({"title": st["title"], "author": st["author"], "userInput": st["user_input"],
+          "models": {r: (m or "session") for r, m in st.get("models", {}).items()}})
 
 
 def build_prompt(st, template, step, role, variables):
@@ -594,7 +600,54 @@ def describe(st, pend, mode="cast"):
         # gets the full sheet.
         d["action"] = "spawn"
         d["sheet"] = pend["prompt_file"]
+        d.update(speaker_for(st.get("models", {}).get(pend["role"], "")))
     return d
+
+
+MODEL_ALIASES = ("fable", "opus", "sonnet", "haiku")
+SESSION_MODEL = ("", "session", "inherit", "default")
+
+
+def pinned_agent_name(model_id):
+    return "entalkenator-speaker-" + re.sub(r"[^a-z0-9]+", "-", model_id.lower()).strip("-")
+
+
+def speaker_for(model):
+    """How the showrunner spawns a speaker on this model.
+
+    The Agent tool's per-call `model` takes only the four aliases (a continued
+    agent keeps it). Older versions need a full model ID in an agent definition's
+    frontmatter, so they use a pinned project agent written by `pin-agent`.
+    """
+    model = (model or "").strip()
+    if model.lower() in SESSION_MODEL:
+        return {"agentType": "entalkenator:speaker"}
+    if model.lower() in MODEL_ALIASES:
+        return {"agentType": "entalkenator:speaker", "model": model.lower()}
+    return {"agentType": pinned_agent_name(model), "pinnedModel": model}
+
+
+def parse_models(single, per_role, template):
+    """--model applies to every role; --models "Role=model;*=model" overrides per role."""
+    names = [r["name"] for r in template["roles"]]
+    models = {n: (single or "").strip() for n in names}
+    if per_role:
+        for part in re.split(r"[;\n]", per_role):
+            if "=" not in part:
+                continue
+            role, model = [x.strip() for x in part.split("=", 1)]
+            if role == "*":
+                for n in names:
+                    models[n] = model
+            elif role in models:
+                models[role] = model
+            else:
+                fail("--models names role %r; the template's roles are: %s" % (role, ", ".join(names)))
+    for n, m in models.items():
+        if m and m.lower() not in MODEL_ALIASES + SESSION_MODEL and not m.startswith("claude-"):
+            fail("Model %r for %s isn't fable, opus, sonnet, haiku, session, or a full model ID like "
+                 "claude-opus-4-8." % (m, n))
+    return models
 
 
 def progress(st, template):
@@ -835,6 +888,7 @@ def cmd_status(args):
         "title": st["title"],
         "author": st["author"],
         "done": st["done"],
+        "models": {r: (m or "session") for r, m in st.get("models", {}).items()},
         "pending": [describe(st, p, st.get("mode", "cast")) for p in st["pending"]],
         "progress": progress(st, template),
         "elapsedSeconds": round((st["finished_at"] or now()) - (st["first_issue_at"] or now())),
@@ -999,6 +1053,46 @@ def simulate_import(bundle):
             "libraryEntries": {k: sorted(v) for k, v in sorted(content.items())}}
 
 
+def cmd_pin_agent(args):
+    """Write a project agent that runs the speaker on a full (older) model ID."""
+    model = args.model.strip()
+    if not model.startswith("claude-"):
+        fail("pin-agent takes a full model ID such as claude-opus-4-8. Aliases (fable, opus, sonnet, "
+             "haiku) need no pinned agent.")
+    src = os.path.join(PLUGIN_ROOT, "agents", "speaker.md")
+    text = read_text(src)
+    m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+    if not m:
+        fail("Couldn't read the frontmatter of %s" % src)
+    body = text[m.end():]
+    name = pinned_agent_name(model)
+    front = "\n".join([
+        "---",
+        "name: %s" % name,
+        "description: enTalkenator speaker pinned to %s. Written by the entalkenate skill; "
+        "safe to delete." % model,
+        "tools: Read, Write",
+        "model: %s" % model,
+        "maxTurns: 8",
+        "---",
+        "",
+    ])
+    agents_dir = os.path.join(os.path.abspath(args.project_dir), ".claude", "agents")
+    existed = os.path.isdir(agents_dir)
+    os.makedirs(agents_dir, exist_ok=True)
+    path = os.path.join(agents_dir, name + ".md")
+    write_text(path, front + body)
+    emit({
+        "agentType": name,
+        "file": path,
+        "model": model,
+        "restartNeeded": not existed,
+        "note": ("Claude Code only watches .claude/agents/ if it existed when the session started, so "
+                 "this agent loads after a restart." if not existed else
+                 "Claude Code picks up new agent files within a few seconds."),
+    })
+
+
 def cmd_verify(args):
     try:
         emit({"bundle": os.path.abspath(args.bundle), "ok": True, "appImport": simulate_import(args.bundle)})
@@ -1029,6 +1123,9 @@ def main():
     p.add_argument("--loop-scale", type=float, default=1.0,
                    help="multiply every loop's target minutes (0.3 turns a 10-minute loop into 3)")
     p.add_argument("--max-turns", type=int, default=300)
+    p.add_argument("--model", help="speaker model for every role: fable, opus, sonnet, haiku, session "
+                                   "(default), or a full ID such as claude-opus-4-8")
+    p.add_argument("--models", help='per-role overrides, e.g. "Hillford Johns=haiku;*=opus"')
     p.add_argument("--mode", choices=["cast", "fresh", "single"], default="cast",
                    help="cast: one persistent speaker agent per role (default); fresh: a new speaker "
                         "agent every turn; single: the showrunner writes every turn")
@@ -1041,6 +1138,8 @@ def main():
     p.add_argument("--title")
     p.add_argument("--author")
     p.add_argument("--user-input")
+    p.add_argument("--model")
+    p.add_argument("--models")
     p.set_defaults(func=cmd_meta)
 
     for name, fn in (("next", cmd_next), ("advance", cmd_advance)):
@@ -1070,6 +1169,11 @@ def main():
     p.add_argument("--keep-hyphens", action="store_true",
                    help="keep ASCII hyphens in the display name (the app then shows a stray content entry)")
     p.set_defaults(func=cmd_package)
+
+    p = sub.add_parser("pin-agent", help="write a project speaker agent pinned to a full model ID")
+    p.add_argument("--model", required=True)
+    p.add_argument("--project-dir", default=".")
+    p.set_defaults(func=cmd_pin_agent)
 
     p = sub.add_parser("verify", help="replay the app's import logic on an .enTalkenator file")
     p.add_argument("bundle")

@@ -1,7 +1,7 @@
 ---
 name: entalkenate
 description: Turn a document (PDF, text, or pasted text) into an enTalkenator audio program, such as a debate, podcast, seminar, oral argument, or quiz show. It runs one of the enTalkenator app's templates inside Claude Code, voices each role with its own subagent, renders a multi-voice .m4a locally with Kokoro, and packages an .enTalkenator bundle the app can import. Use when asked to "entalkenate" something or to make a debate, podcast, or similar audio conversation from a paper.
-argument-hint: <document.pdf|.txt> [template] [--single|--fresh] [--loop-scale 0.3] [--engine kokoro|gemini|say] [--voices "Role=voice;..."] [--user-input "..."] [--no-audio]
+argument-hint: <document.pdf|.txt> [template] [--model opus|fable|sonnet|haiku] [--single|--fresh] [--loop-scale 0.3] [--engine kokoro|gemini|say] [--voices "Role=voice;..."] [--user-input "..."] [--no-audio]
 allowed-tools: Read Write Bash(python3 *)
 ---
 
@@ -35,16 +35,54 @@ Scripts (always quote the paths, which may contain spaces):
        for comparison.
      - `--loop-scale X`: shortens or lengthens every loop. 0.3 turns the debate's
        10-minute loops into 3-minute loops.
+     - `--model M` / `--models "Role=M;*=M"`: speaker model(s). M is fable, opus,
+       sonnet, haiku, session, or a full model ID.
      - `--engine` and `--voices`: passed to RENDER.
      - `--user-input`: fills `{{userInput}}`.
      - `--language`: output language.
      - `--no-audio`: stop after the transcript.
-2. Choose a run directory in the current project: `entalkenator-runs/<template>-<YYYYmmdd-HHMMSS>`.
-3. Run `ENGINE init --template <t> --source <path> --run-dir <dir> [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh]`.
-4. From `documentHead`, work out the document's title and author, as the app does.
+2. **Settings menu.** Skip any question whose answer the arguments already give. If
+   they settle everything, or the user said to just go, skip the menu entirely. Otherwise
+   ask with AskUserQuestion (load it with ToolSearch if it's deferred), in one call:
+   - **Settings** (header "Settings"):
+     - "Use the best (Recommended)": your session's model for every speaker, voices cast
+       automatically, full template length, cast mode
+     - "Customize"
+   If they choose Customize, ask these together in one more call:
+   - **Speaker model** (header "Model"): "Opus", "Fable", "Sonnet", and "Haiku". Put
+     "(Recommended)" on whichever matches the session's model.
+     - Opus is the default model on Pro and Max, and strong at this.
+     - Fable is Anthropic's top tier, but on some plans it bills to usage credits
+       instead of included limits.
+     - Sonnet is faster and lighter on limits.
+     - Haiku is fastest and cheapest, and best kept for minor roles.
+     - "Other" covers two cases: a past version as a full model ID (e.g.
+       `claude-opus-4-8`), or a per-role mix such as `Hillford Johns=haiku; *=opus`.
+   - **Length** (header "Length"): "Full (Recommended)", "Short, about 30%", "Medium,
+     about 60%". These map to `--loop-scale` 1, 0.3, and 0.6. Loops set the length, so a
+     template without loops is unaffected. "Other" takes a custom scale.
+   - **Voices** (header "Voices"): "Cast them for me (Recommended)" or "Let me audition
+     and choose". The second means section 3, step 2, plays samples and asks.
+   - **Writers** (header "Writers"): "One agent per role (Recommended)", "Single writer
+     (fastest; one agent writes every role)", "Fresh agent every turn (the app's way;
+     most tokens)". These map to modes cast, single, and fresh.
+
+   The menu choices override the matching flags.
+
+   **Past versions.** For each full model ID, run `ENGINE pin-agent --model <id>`.
+   This writes `.claude/agents/entalkenator-speaker-<id>.md` in the project.
+   - If it reports `restartNeeded`, Claude Code won't see the new agent this session.
+     Tell the user, and offer the nearest alias (opus, sonnet, or haiku) for this run.
+     The file stays for next time.
+   - The user's organization may restrict models. If a spawn on a pinned model fails,
+     say so and fall back to an alias.
+3. Choose a run directory in the current project: `entalkenator-runs/<template>-<YYYYmmdd-HHMMSS>`.
+4. Run `ENGINE init --template <t> --source <path> --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh]`.
+   Its `models` field echoes each role's speaker model ("session" means inherit).
+5. From `documentHead`, work out the document's title and author, as the app does.
    Use the title if one is evident, otherwise a concise title-case title. Use the author's
    name, or "Unknown Author". Save them with `ENGINE meta <dir> --title "..." --author "..."`.
-5. If the template's `userInputConfig.isRequired` is true and no `--user-input` was given,
+6. If the template's `userInputConfig.isRequired` is true and no `--user-input` was given,
    ask the user for it (use its `label` and `description`) and save it with `meta --user-input`.
    An optional input stays empty unless the user supplied one.
 
@@ -66,9 +104,12 @@ so far, loop target).
 continued on every later turn, so it keeps the document, its notes, and the
 conversation in its own context:
 
-- `action: "spawn"` means this role has no speaker yet. Call the Agent tool with
-  `subagent_type: "entalkenator:speaker"`, `description: "<role> · turn <turn>"`, and
-  this prompt:
+- `action: "spawn"` means this role has no speaker yet. Call the Agent tool with:
+  - `subagent_type: <agentType>`. This is `entalkenator:speaker`, or a pinned agent for
+    a past model version.
+  - `model: <model>`, only when the item has one.
+  - `description: "<role> · turn <turn>"`.
+  - This prompt:
   ```
   You are <role>, turn <turn>.
   Turn sheet: <sheet>
@@ -140,6 +181,19 @@ user which turns those were.
    pronouns, or words like "a man" or "she". Never go by the name alone. If the
    transcript gives no cue, the default order is fine. Contrast neighbouring roles, for
    example by accent.
+
+   **If the user chose to audition voices**, shortlist three or four candidates per role
+   (the transcript-matched ones first). Then run:
+   `RENDER --audition --transcript <dir>/transcript.txt --out <dir> --candidates "Role=v1,v2,v3;Role=..."`
+   This writes `audition-<role>.m4a` per role: the candidates read that role's first
+   line, in order, about a second apart. It takes roughly 30 seconds of audio per role.
+   Let the user hear them:
+   - with SendUserFile if you have it
+   - otherwise with `open <file>` on macOS
+   - or by giving the paths
+   Then ask with AskUserQuestion, one question per role (up to four per call). Make each
+   option a candidate labelled with its number, voice, and how it sounds, for example
+   "2: am_fenrir (American male)". Use the picks as `--voices`.
 3. Run, with a 10-minute timeout (run long transcripts in the background):
    `RENDER --transcript <dir>/transcript.txt --out "<dir>/<Template displayName>.m4a" [--engine ...] --voices "Role=voice;Role=voice"`
    Clips are cached by text and voice, so a re-run after a failure, or with one role's

@@ -1,0 +1,112 @@
+[Hillford Johns]: Good evening, everyone, and welcome to the University of Georgia. I'm Hillford Johns, and it's my pleasure to moderate tonight's debate. Looking out at this room, students and faculty filling every seat, I think we've already proved one thing: people do care about how courts speak to the public.
+
+Tonight's question is deceptively simple. Should every appellate court publish, alongside each precedential opinion, a plain-language summary of no more than three hundred words? That is the proposal in a recent article by Dana Whitfield, titled Every Opinion Deserves a Plain-Language Summary. I've read it more than once, and I'll say plainly that I admire the work. It is clear, it is fair to its critics, and it makes you feel the weight of what is at stake.
+
+Defending a very different view of the matter is my colleague, Janson Skullbottom, a well-known expert in the field, whose judgment I have relied on for years. I'll confess I've rarely seen Janson more eager for a debate.
+
+Ms. Whitfield and Mr. Skullbottom, thank you both for being here. I expect a rivalry that is sharp, good-humored, and useful to all of us. Janson, the floor is yours.
+
+[Janson Skullbottom]: Thank you, Hillford. I notice you admired the article before I'd said a word. I'll try to spoil that.
+
+Let me be fair first. Ms. Whitfield is right that courts could write more clearly, and right that public trust matters. I have no quarrel with the goal. My quarrel is that her rule fails on its own terms, in three ways.
+
+First, it misses the people she names. The tenant and the defendant in her opening paragraph mostly get short unpublished orders, and her rule covers only precedential opinions. It serves readers who are already served.
+
+Second, it gives the most authority to the one document nobody can check. Her reader can't read the opinion, so her reader can't catch the summary being wrong. And an error with the court's name on it is worse than an error from a journalist on deadline.
+
+Third, her own legitimacy argument turns on her. Three hundred words give you results, not reasons. And reasons were the whole point.
+
+Good goal, wrong tool. Ms. Whitfield, I'd love to hear you defend it.
+
+[The Author]: Janson, I'll take your three in order, and I'll spoil your spoiling.
+
+First, yes, many tenants get unpublished orders. But a precedential opinion is the one that decides the rule for the next tenant, and the one after that. That is exactly who I named. And unpublished orders are a separate question. My rule is a floor, not a ceiling.
+
+Second, you say the reader can't check the summary. Neither can she check the journalist, and nobody answers for the journalist. A summary sits right beside the opinion, where the losing party, the press, and every lawyer in the case can catch an error on day one. An error with the court's name on it can be fixed with the court's name on it.
+
+Third, results versus reasons. Fair hit. But three hundred words are enough to say why in a sentence or two, and the full reasons sit one click away. A court that can say why in plain words is already showing its work. Right now, it isn't showing it to anyone but lawyers.
+
+[Janson Skullbottom]: Well played on the spoiling. I'll take your three in reverse, because the last one is where you gave ground.
+
+You said a sentence or two can say why. Fine. Whose sentence? Picture a panel where three judges agree on the outcome for two different reasons, or a dissent that says the majority decided something far narrower than it claims. The summary has to pick one account of why, and the lay reader will never know it picked. You say the full reasons are one click away. The reader you built this for is the reader least likely to make that click.
+
+On checking: the journalist doesn't speak for the court. Nobody treats the journalist's version as the law. Yes, lawyers and the press will catch an error on day one. The tenant who read the wrong version on day one and moved out on day two won't. And you want to sanction lawyers who rely on the summary. So the court invites the public to rely on it, then punishes the lawyer who does the same.
+
+Now the tenant. Your opening paragraph was about defendants who learn their fate from a document they cannot read. That's the person in this case. Today, it's the next tenant, a hypothetical one. I'd like to know which reader you're writing for, because a floor that skips the people in your first paragraph isn't a floor. It's a different building.
+
+[The Author]: Start with your tenant, because you've made her hypothetical and she isn't. A precedential opinion has parties. The tenant who lost that appeal is a real reader, holding a real document she cannot read. She's in my first paragraph, and she's covered. The next tenant is a bonus.
+
+Whose sentence? The court's, the same as the opinion. And a split panel is not a trap. A good summary says so: three judges agreed on the result, for different reasons, and one dissented. That is plain English. Hiding the split is what the lay reader gets today.
+
+On sanctions, you've landed a fair blow. I'd rather give up the stick than the summary. Honest reliance by an ordinary person should never be punished. The label does the work: this explains the decision, but it is not the law. A lawyer citing it as authority is simply citing the wrong document.
+
+And your tenant who moved out on day two? Today she gets a headline. I'd rather she get the court's own words, with the court's name on the correction.
+
+[Janson Skullbottom]: Fair on the tenant. She's real, and I overreached when I called her hypothetical. I'll leave that one with you.
+
+Now the sanctions. Thank you for the concession, but look at what it costs you. With the stick gone, the label is your only protection, and the label says this explains the decision but is not the law. To a lawyer, that's a clear distinction. To the tenant, it's no distinction at all. If the court's own words tell her what the decision means, she will act on them. That is the whole point of the thing. And you said honest reliance should never be punished. Agreed. But who bears the loss when the honest reliance was on a wrong summary? Still her.
+
+Which brings me to the headline. A headline may be wrong, but nobody treats it as authoritative, so the tenant asks someone. The court's own words she trusts, and trust is exactly what you're building. The better the summary works, the more it costs when it fails. The benefit and the risk come from the same place.
+
+Last, the split panel. Plain English, you say, and I believe you for an easy case. Now fit who won, what it means for people in the same position, three judges, two reasons, and a dissent into three hundred words. Then ask the dissenting judge whether the summary gets the dissent right. I'd like to be in that chambers.
+
+[Hillford Johns]: Let me step in here, because I think we've reached a useful fork in the road. Both of you have given ground, and I'd say honestly. The tenant is real, and the stick is gone.
+
+One observation, and I mean it as a gentle challenge to you, Janson. Your sharpest line was that the benefit and the risk come from the same place. I think that's true. But it's also true of every clear sentence a court has ever written. If trust is the danger, we seem to be arguing for opacity.
+
+The audience cards came up empty tonight, so the question is mine. You've told us, twice now, good goal, wrong tool. Ms. Whitfield has put a tool on the table, and you've pressed hard on it. So what is your tool? If a tenant is holding an opinion she cannot read tomorrow morning, what should the court hand her?
+
+[Janson Skullbottom]: Hillford, that's a fair challenge, and I'll answer it directly. I am not arguing for opacity. I'm arguing about where the clarity lives. A clear sentence inside the opinion is bound by the opinion. It faces the dissent, it faces review, and it is part of the reasons. A summary is a second text, sitting beside the first, with the court's name on it and nobody's reasoning behind it. I want more clarity, in the one text that counts.
+
+So here is my tool, and it has three parts.
+
+First, the tenant gets a letter. Addressed to her, from the court, in plain words. Here is what happened. Here is what happens next. Here is your deadline, and here is the number for the self-help center. That is about her case, it covers published and unpublished decisions alike, and it makes no promises about the law.
+
+Second, every opinion opens with a short statement, in plain English, of the question and the answer. Written by the judge who wrote the opinion, and part of the opinion, so it is accountable like everything else in it.
+
+Third, let a few courts try Ms. Whitfield's summaries voluntarily, and measure it. Do readers understand them? How often are they wrong? Evidence first, mandate second.
+
+Because what that tenant needs tomorrow morning is not a summary of the law. It is whether she has to move out, and by when.
+
+[Hillford Johns]: Thank you, Janson. I'll accept the correction, you are not arguing for opacity, and you've done what I asked, which is to put a real alternative on the table.
+
+I want to point out something for the room. Listen to what his tool does. A letter to the person in the case, for every decision, published or not. A plain-English statement of question and answer, written by the judge, inside the opinion. And a measured trial of Ms. Whitfield's idea before anyone mandates it. That is not a rejection of her goal. It is a disagreement about who writes the words, where they live, and how much we know before we require them.
+
+So, Ms. Whitfield, my question is for you. Janson's second proposal sounds close to your summary, except that it sits inside the opinion and answers to the judge's own reasoning. What does a separate text give the public that an opening statement in the opinion cannot? And if you're not sure, why not run his pilot first?
+
+[The Author]: Thank you, Hillford. Janson has offered three tools, and I'll take all three, which I suspect is not what he had in mind. They are layers, not rivals. The letter to the tenant is a good idea, and I'd gladly sign it.
+
+But notice what that letter is. It is a second text, with the court's name on it, that a tenant will trust and act on, and no judge's reasoning stands behind it. Every objection Janson has made to my summary applies to his letter. If that risk is acceptable for her, and I think it is, then risk was never the argument. Accuracy is the work.
+
+Now, your question. What does a separate text give the public that a statement inside the opinion cannot? It gives freedom. A statement inside the opinion is law. The next lawyer reads every word of it as a holding, so the judge will write it in careful lawyer's language, the question presented, the standard of review, because that is the safe way to write law. The summary works precisely because it carries no weight. It can say, in plain words, what the result means for someone standing where she stands, and no judge has to worry that the sentence hardens into a rule. Judges decide the case in front of them. They shouldn't have to advise strangers inside the opinion. A labeled, separate text lets the court do that safely.
+
+As for the pilot, I'll meet him halfway. Start with willing courts, set a date, measure the errors. But the Supreme Court has been running a century-long version of this experiment with its syllabus, and the law has survived it. Run the pilot, yes. Just don't make it a reason to wait.
+
+[Janson Skullbottom]: Credit where due: you found the weak spot in my letter, and I'll take the hit. Any second text carries risk. But a letter that says you lost, here's your deadline, here's who to call, has a failure I can live with. It states facts about her own case. Your summary has to say what the result means for everyone standing where she stands, and that is where errors grow.
+
+And that is the most revealing thing you've said tonight. The summary works, you tell us, because it carries no weight. No judge has to worry that the sentence hardens into a rule. Think about that. The sentence a judge is afraid to put into the law is the sentence you want the tenant to act on. Careful is not a hazard to engineer around. Careful is what we want from a court.
+
+As for the syllabus, it's written for lawyers by the Reporter of Decisions. A century of surviving that tells us nothing about handing one to the tenant.
+
+[The Author]: Janson, you've turned my line into a confession, so let me take it back from you. A judge isn't afraid of the sentence being wrong. A judge is afraid of it binding strangers, with different facts, before a different panel. That is why law must be careful. The summary binds no one, so it can be careful and still speak plainly: if your landlord did what this landlord did, here is what the court said. That's what any decent lawyer would tell her at the counter. Careful and non-binding aren't opposites.
+
+On the syllabus, you're right that it's written for lawyers. That's my point. The mechanism, staff drafting under the court's name with a warning label, has worked for a century. My proposal changes the reader, not the machinery. Other courts abroad already write theirs for the public. Mine would simply be the American version.
+
+[Janson Skullbottom]: Careful and non-binding aren't opposites. I'll grant you that. But look at your own picture, the decent lawyer at the counter. What does that lawyer do first? Asks questions. When was the notice served? What does your lease say? And then says, it depends. A summary can't ask anything. It says, if your landlord did what this landlord did, and every tenant who reads it decides that's mine. The lawyer's value is the questions, and the lawyer answers for the advice. The court's text answers to no one.
+
+On the syllabus, you say you're changing the reader, not the machinery. But the reader was the safety. A century of syllabi worked because the people reading them could check them against the opinion. Change the reader, and you've removed the check.
+
+And the courts abroad that write for the public are volunteers. That's a pilot. You want a mandate.
+
+[The Author]: Janson, your lawyer at the counter is a lovely picture, but most of these tenants never reach the counter. The alternative to my summary isn't a lawyer asking good questions. It's a neighbor, a headline, or nothing. And a good summary can do the lawyer's first move in advance: this ruling applies when notice was served this way, and not otherwise. That turns "it depends" into "here's what it depends on." It can end with the self-help number, too.
+
+On the safety of the reader, I'd say the check was never the tenant. It was the court that approves the text, the lawyers who read it, and the losing party who has every reason to complain. Those readers don't disappear. And by your logic, she should trust no one who writes for her at all. Yet she's reading unchecked versions today.
+
+Fine, call the foreign courts volunteers. They prove it can be done. I'll accept a mandate with a runway.
+
+[Hillford Johns]: And on that note, I think we should stop, because you have each said what you came to say, and a little more besides.
+
+Let me offer one closing thought. Notice how far apart you began, and how close you've ended up. Neither of you doubts that a tenant deserves to understand what her court did. Both of you now accept some kind of trial, a letter to the person in the case, and a plain text beside the law. What remains is a real question, and I suspect it will outlast this evening: when a court speaks plainly to someone who cannot check its work, who answers for it, and how soon? That is a question for judges, for scholars, and for the students in this room.
+
+Dana Whitfield, thank you for an article worth arguing with. Janson, thank you for arguing with it so well. And thank you to everyone here at the University of Georgia for listening so closely. Good night.
+

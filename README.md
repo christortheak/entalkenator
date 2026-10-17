@@ -27,7 +27,7 @@ plugin/
 ├── templates/               snapshot of enTalkenator/Templates/*.json, used outside this repo
 └── examples/
     ├── plain-language-opinions.txt   ~500-word sample used for the test run
-    └── test-run/                     transcripts from the three modes (+ .m4a and bundle, not committed)
+    └── test-run/                     transcripts from the four test runs (+ .m4a files and bundle, not committed)
 ```
 
 There's no top-level `bin/`, because Cowork and claude.ai refuse plugins that have one.
@@ -64,7 +64,33 @@ Then run, from the project where you want the output:
 ```
 
 The template name can be a file stem (`oralargument`), id, or display name
-(`"Oral Argument"`). With no template, the skill lists them and asks. Runs go to
+(`"Oral Argument"`). With no template, the skill lists them and asks.
+
+**Settings menu.** Unless the arguments already settle everything, the skill opens with
+one question: **Use the best (Recommended)** or **Customize**. "Best" means your
+session's model for every speaker, voices cast automatically, full length, and one agent
+per role. Customize asks four things at once:
+
+| Question | Choices |
+| :- | :- |
+| Speaker model | Opus, Fable, Sonnet, Haiku. "Other" takes a past version as a full model ID (`claude-opus-4-8`) or a per-role mix (`Hillford Johns=haiku; *=opus`) |
+| Length | Full, Short (~30%), Medium (~60%), or a custom loop scale |
+| Voices | Cast them for me, or audition: each role's first line read in 3–4 candidate voices, then you pick |
+| Writers | One agent per role, single writer, or a fresh agent every turn |
+
+The same choices are available as flags: `--model`, `--models`, `--loop-scale`,
+`--voices`, `--single` / `--fresh`.
+
+How models reach the speakers:
+- The four aliases go straight to the Agent tool's per-spawn `model`, and a continued
+  speaker keeps it for the whole run.
+- Claude Code only accepts older versions as a full ID in an agent's frontmatter, so
+  `engine.py pin-agent --model <id>` writes
+  `.claude/agents/entalkenator-speaker-<id>.md` in your project.
+- Claude Code hot-loads that file only if `.claude/agents/` existed when the session
+  started. Otherwise the skill says a restart is needed and offers the nearest alias.
+- Fable may bill to usage credits rather than plan limits on some plans, and an
+  organization's `availableModels` list can block any of these. Runs go to
 `./entalkenator-runs/<template>-<timestamp>/`, which holds the turn sheets, every turn's
 text, `transcript.txt`, the `.m4a`, and the bundle.
 
@@ -165,19 +191,28 @@ voices from how the transcript refers to each role, not from names.
 
 This was the `debate` template on `examples/plain-language-opinions.txt`, a ~500-word
 op-ed, with `--loop-scale 0.3`. That makes two 3-minute loops instead of 10-minute ones.
-There were no audience questions. The run used Opus 5.5 (speakers inherit the session
-model) on an M5 Pro with 64 GB. The outputs are in `examples/test-run/`: the three
-transcripts are committed, and the `.m4a` and `.enTalkenator` stay on disk only, via
-`.gitignore`.
+There were no audience questions. The hardware was an M5 Pro with 64 GB. The speakers
+ran on Opus 5.5 (inherited from the session), except in the Sonnet column, where every
+speaker was spawned with `model: sonnet`. The showrunner was Opus throughout. The
+outputs are in `examples/test-run/`: the transcripts are committed, and the `.m4a` files
+and `.enTalkenator` stay on disk only, via `.gitignore`.
 
-| | Cast, persistent (default) | Cast, fresh agent each turn | Single writer |
-| :- | :- | :- | :- |
-| Spoken turns + private prep | 15 + 2 | 11 + 2 | 13 + 2 |
-| Spoken words / audio | 3,662 / 21.0 min | 3,712 / 20.8 min | 3,438 / ~19.6 min (not rendered) |
-| Average spoken turn | 244 words (157–414) | 337 words (244–478) | 264 words (176–360) |
-| Generation wall time | **9.5 min** (568 s) | 10.6 min (635 s) | **4.3 min** (255 s) |
-| Speaker agents | 3 (cast once, then 14 `SendMessage` turns) | 13 | 1 |
-| Turn-sheet words the speakers had to read | **10,802** (3 full sheets + 14 deltas) | 40,833 | one full sheet + short per-step instructions |
+| | Cast, persistent, Opus (default) | Cast, persistent, **Sonnet** | Cast, fresh agent each turn (Opus) | Single writer (Opus) |
+| :- | :- | :- | :- | :- |
+| Spoken turns + private prep | 15 + 2 | 15 + 2 | 11 + 2 | 13 + 2 |
+| Spoken words / audio | 3,662 / 21.0 min | 2,837 / 16.3 min | 3,712 / 20.8 min | 3,438 / ~19.6 min (not rendered) |
+| Average spoken turn | 244 words (157–414) | 189 words (145–290) | 337 words (244–478) | 264 words (176–360) |
+| Speaker time, sum of all turns | 660 s | **326 s** | not measured | n/a |
+| Typical continued turn (median) | 20.5 s | **15.3 s** | (no continuations) | n/a |
+| Generation wall time | 9.5 min (568 s) | 9.9 min (593 s)¹ | 10.6 min (635 s) | **4.3 min** (255 s) |
+| Speaker agents | 3 (cast once, then 14 `SendMessage` turns) | 3 (same pattern) | 13 | 1 |
+| Turn-sheet words the speakers had to read | **10,802** (3 full sheets + 14 deltas) | 9,377 | 40,833 | one full sheet + short per-step instructions |
+
+¹ Wall time isn't a fair comparison for the Sonnet run: the showrunner (me, on Opus) was
+writing the settings menu between turns, so the speakers often sat finished while it
+caught up. Use speaker time instead: Sonnet's speakers took half as long in total. That's
+partly because four Opus turns made extra tool calls after writing (70–143 s each); on
+ordinary turns Sonnet was about 25% faster.
 
 The same 17 turns sent as full sheets would have been 56,673 words, so the deltas cut
 speaker input by 5.2×. Full sheets grow with the square of the conversation length and
@@ -203,6 +238,18 @@ the moderator kept count of the concessions. Images came back across turns: the 
 on the door", Pascal, the parent at the kitchen table. That only works when each speaker
 remembers what it said and hears what the others say. Turns were short and lively, so
 the second loop ran a second pass, giving 15 spoken turns against 11.
+
+**Sonnet speakers** produced a tight, disciplined debate that's clearly usable. Concessions
+are clean ("Fair on the tenant… I overreached"), and lines carry across turns ("good
+goal, wrong tool", the lawyer at the counter). The moderator turned the two sides'
+positions into a concrete closing question. Compared with Opus it's leaner. Sonnet takes
+"Be brief!" literally (189 words a turn against 244), so the same template ran about 23%
+shorter. It also has fewer concrete details: no elected-judge angle, no mailing-versus-
+receipt hypothetical, no Pascal. There's less humour and scene-setting, and more
+"I'll take your three in order" structure. My read: Opus for showcase pieces and Sonnet
+for everyday use. A per-role mix (`--models "Hillford Johns=sonnet;*=opus"`) keeps
+the debaters sharp and saves on the moderator. I haven't tested Haiku, Fable, or past
+versions.
 
 **Fresh-agent cast** turns were good one at a time but long. Speakers that get a fresh
 full sheet ignored "Be brief!" (average 337 words, max 478), so each loop finished after
