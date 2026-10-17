@@ -326,8 +326,7 @@ they already run in parallel.
 
 The content type is the template's `displayName`, as the app uses. `engine.py verify
 <bundle>` replays `LibraryItem.importFromEnTalkenator` and `scanGeneratedContent` in
-Python and lists the library entries the app would show. On the bundled examples it
-reproduces what the app shows.
+Python, as fixed on main in `9ccccaa`, and lists the library entries the app would show.
 
 ## Voice engines and licences
 
@@ -493,11 +492,11 @@ Observations:
   variant of the template (nine justices, petitioner/respondent) would remove that.
 - **The respondents' opening ran 672 words**, against 374 for the petitioners. The
   template puts no brevity cue on openings, so no director's note applied.
-- **App bug, real-world case.** Case names contain periods ("St.", "v."). The bundle
-  imports, because its file names are UUID-based. But once imported, the app makes the
-  display name the item's file prefix, and `importFromEnTalkenator` matches files by
-  `components(separatedBy: ".")[0]`. So exporting this item from the app and importing it
-  again would fail.
+- **App bug, real-world case (since fixed).** Case names contain periods ("St.", "v.").
+  The bundle imported fine, because its file names are UUID-based. But once imported, the
+  app made the display name the item's file prefix, and `importFromEnTalkenator` matched
+  files by `components(separatedBy: ".")[0]`, so exporting the item and importing it again
+  would fail. Fixed on main in `9ccccaa`.
 
 ### What didn't work, and workarounds
 
@@ -523,24 +522,28 @@ Observations:
 - **`say -v ?` changed format mid-session** ("Daniel" became "Daniel (English (UK))"),
   which broke voice discovery. The parser now handles both.
 - **Hyphens in titles.** On import the app makes the display name the file prefix, and
-  `LibraryItem.scanGeneratedContent` names content after the last `-`. So
-  "Plain-Language" would show a bogus "Language Summary" entry. The bundled
-  `default2.enTalkenator` ("Last-Mile …") has the same problem. `package` swaps ASCII
-  hyphens in the display name for U+2011, which looks identical. `--keep-hyphens` turns
-  that off.
+  `LibraryItem.scanGeneratedContent` named content after the last `-`. So
+  "Plain-Language" showed a bogus "Language Summary" entry, as did the bundled
+  `default2.enTalkenator` ("Last-Mile …"). The app is fixed on main in `9ccccaa`, but
+  builds released before that still have the bug. Until the fix ships, `package` swaps
+  ASCII hyphens in the display name for U+2011, which looks identical. `--keep-hyphens`
+  turns that off.
 - **Cowork is untested.** There's no `bin/`, but Kokoro (MLX), PDF extraction (PDFKit
   via `osascript`), and `afconvert` all need macOS on the host. In a Linux sandbox only
   `--engine gemini` plus `ffmpeg` would work.
 
-### App issues noticed (not fixed: the Swift app was out of scope)
+### App issues noticed
 
-- `scanGeneratedContent` treats any `-` in the display name as a content-type separator
+Fixed on main in `9ccccaa`:
+- `scanGeneratedContent` treated any `-` in the display name as a content-type separator
   (see above).
+- `importFromEnTalkenator` found the source by `components(separatedBy: ".")[0] ==
+  baseFileName`, so an item whose title contained a dot couldn't be imported again after
+  export.
+
+Still open:
 - A blank user input leaves the literal `{{userInput}}` in the prompt
   (`Template.generateTranscript` only sets the variable when non-empty).
 - `RawStep.loopDuration` is decoded but never used. The loop minutes come from `loop: N`.
 - Loop word counts use `split(separator: " ")`, so words across line breaks aren't
   counted and loops run a little long.
-- `importFromEnTalkenator` finds the source by `components(separatedBy: ".")[0] ==
-  baseFileName`, so a `baseFileName` containing a dot can never import. The app's own
-  `<UUID>-original` names are safe.

@@ -1447,7 +1447,7 @@ def cmd_package(args):
 
 
 def simulate_import(bundle):
-    """Replay LibraryItem.importFromEnTalkenator and scanGeneratedContent on a bundle.
+    """Replay LibraryItem.importFromEnTalkenator and scanGeneratedContent on a bundle (current app logic).
 
     Returns the library entries the app would show, or raises on what the app
     would reject (it throws LibraryError.sourceFileMissing for all of these).
@@ -1470,11 +1470,14 @@ def simulate_import(bundle):
     base = info.get("baseFileName")
     if not base:
         raise ValueError("info.txt has no baseFileName")
-    source = [f for f in files if f.split(".")[0] == base]
+    # Mirrors LibraryItem as of the period/hyphen fix (main 9ccccaa): the source is the file
+    # whose name minus its extension is the base name, and the base can contain dots.
+    source = [f for f in files if os.path.splitext(f)[0] == base]
     transcript = [f for f in files if f.endswith("-transcript.txt")]
     if not source or not transcript:
         raise ValueError("needs <baseFileName>.<ext> and a *-transcript.txt file")
-    # LibraryItem.init: new base = display name with "/" -> "-"; other files keep their suffix.
+    # LibraryItem.init: new base = display name with "/" -> "-"; other files keep their suffix,
+    # with only the leading "<old base>-" replaced.
     new_base = (info.get("displayName") or "Imported Item").replace("/", "-")
     old_prefix = os.path.splitext(source[0])[0]
     src_ext = os.path.splitext(source[0])[1].lstrip(".")
@@ -1482,24 +1485,22 @@ def simulate_import(bundle):
     if any(f.endswith("-transcript.m4a") for f in files):
         imported.append("%s-transcript.m4a" % new_base)
     for f in files:
-        if f.split(".")[0] == base or f.endswith("-transcript.txt") or f.endswith("-transcript.m4a") or f.endswith("info.txt"):
+        if os.path.splitext(f)[0] == base or f.endswith("-transcript.txt") or f.endswith("-transcript.m4a") \
+                or f.endswith("info.txt"):
             continue
-        imported.append(f.replace(old_prefix, new_base))
-    # scanGeneratedContent
+        imported.append(new_base + f[len(old_prefix):] if f.startswith(old_prefix + "-") else f)
+    # scanGeneratedContent: the original is "<base>.<ext>"; content is "<base>-<type>.<ext>".
     content = {}
-    t_files = [f for f in imported if f.endswith("-transcript.txt")]
-    if t_files:
-        b = os.path.splitext(t_files[0])[0].replace("-transcript", "")
-        if any(os.path.splitext(f)[0] == b for f in imported):
-            content["original"] = {"txt": True}
+    if any(os.path.splitext(f)[0] == new_base for f in imported):
+        content["original"] = {"txt": True}
+    prefix = new_base + "-"
     for f in imported:
         stem, ext = os.path.splitext(f)
-        if "-" not in stem:
+        if not stem.startswith(prefix) or ext.lower() not in (".txt", ".m4a"):
             continue
-        name = [p for p in stem.split("-") if p][-1]
-        if ext.lower() not in (".txt", ".m4a"):
-            continue
-        content.setdefault(name, {})[ext.lower().lstrip(".")] = True
+        name = stem[len(prefix):]
+        if name:
+            content.setdefault(name, {})[ext.lower().lstrip(".")] = True
     return {"folder": folder, "itemFiles": imported,
             "libraryEntries": {k: sorted(v) for k, v in sorted(content.items())}}
 
