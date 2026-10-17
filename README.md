@@ -327,10 +327,36 @@ versions.
 full sheet ignored "Be brief!" (average 337 words, max 478), so each loop finished after
 one exchange. Each turn also starts cold.
 
-**Single writer** was the fastest and cheapest, and the prose is polished. But the agent
-reported, unprompted, that because it wrote both prep outlines it knew each side's plan,
-so the debaters anticipated each other's attacks too neatly, and it had to hold rebuttals
-back on purpose. The register drifted formal ("I will", "do not") for every role.
+**Single writer vs persistent cast (both Opus), judged blind.** Two independent judges
+saw the transcripts anonymized as A and B, in opposite orders. Both rated the
+persistent cast "clearly better" and said they'd rather listen to it. They agreed on
+why:
+- **Movement.** In the cast version the positions move under pressure: Dana rewrites
+  her clause and accepts the forms fix, Janson concedes the syllabus, and Janson
+  catches Dana shifting who holds the pen. In the single writer, Dana says "No
+  concession tonight", so the arguments sharpen but barely move.
+- **Voices.** The single writer's three speakers all use no contractions, and its two
+  opponents share one rhetorical habit, "That is not X. It is Y.". Counted: Janson
+  6, the Author 5, against 1 and 0 for the cast. Both judges said the voices blur,
+  and that it will sound like prose read aloud.
+- **Choreography rather than anticipation.** Neither judge found a true pre-emption,
+  where a speaker answers a point before it's made, so the single writer's
+  self-reported problem didn't show up as literal foreknowledge. It shows up as
+  choreography: Janson explains a rule in three sentences and then says it can't be
+  done in 300 words; the moderator "pounces" and Dana repeats him. Elsewhere there's a
+  too-neat center/edge ladder and frictionless instant answers. Its moderator also
+  announces agreement halfway through and leans Dana's way.
+- **Where the single writer won.** It had the sharpest moderator question ("are you
+  defending the courts' legitimacy, or their privacy?") and the best single exchange
+  ("why are they safe enough for her?").
+- **Where the cast fell short.** Some callbacks get over-tidy ("kitchen table" four
+  times, Pascal three). Turns tend to open by quoting the other side's last line. And
+  the moderator once makes Dana's rebuttal for her ("it cuts both ways"), which she
+  repeats.
+
+Judge scores, cast vs single: responsiveness 9/8 and 8/7; development 9/7 and 8/7;
+distinct voices 8/6 and 7/6; listenability 8/7 and 8/6. One debate and two
+Claude-family judges is a small sample, but the two agreed closely.
 
 **In all three runs**, no speaker labels, stage directions, or markdown leaked into the
 spoken text. With no audience questions, the moderator put a question of their own, as
