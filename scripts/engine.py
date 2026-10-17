@@ -22,6 +22,9 @@ Subcommands (all print JSON on stdout):
                                   extract the document, create the run
   meta     RUN [--title] [--author] [--user-input]
                                   fix title, author, or user input before the first step
+  roles    RUN                    show the characters as they'll be played
+  role     RUN --role R [--description | --sketch | --reset]
+                                  review a character before its first turn
   next     RUN [--batch]          issue the next step(s); writes turn sheets
   commit   RUN                    fold the written outputs of the pending step(s) in
   advance  RUN [--batch] [--cast ROLE=AGENT_ID ...]
@@ -326,6 +329,158 @@ def transcript_block(template, history):
     return prefix + body + suffix + OUTPUT_TRANSCRIPT_PROMPT_ADDITION
 
 
+def effective_role(st, template, name):
+    """The template's role with the user's reviewed character applied.
+
+    A replaced `description` stands in for roleDescription everywhere the app would use
+    it; a `sketch` (voice, background, habits) is added to the speaker's role card only.
+    """
+    role = role_by_name(template, name)
+    if role is None:
+        return None
+    role = dict(role)
+    ov = st.get("role_overrides", {}).get(name, {})
+    if ov.get("description"):
+        role["roleDescription"] = ov["description"]
+    role["sketch"] = ov.get("sketch", "")
+    return role
+
+
+STOPWORDS = set("""a an the of to in on for and or but is are was were be been being it its it's that that's
+this these those with as at by from into about than then so if not no do does did don't doesn't didn't have has
+had i i'm i'll i've i'd you you're you'll you've he she they we me my your our their his her them us what which
+who whom whose when where why how can can't could would should will won't shall may might must just also very
+more most much many some any all each every one two three there here there's let let's get got make made say said
+says go going know think well yes now only even still because like over out up down off same other another own
+again too back way thing things something nothing anything everyone someone people""".split())
+
+STOCK_PHRASES = ["fair hit", "fair point", "fair question", "fair challenge", "fair enough", "i'll grant you",
+                 "i'll take that", "i'll give you that", "take the hit", "credit where due", "let me be clear",
+                 "here's the thing", "make no mistake", "at the end of the day", "to be fair"]
+NOT_IT_IS = re.compile(r"\b(not|n't)\b[^.?!]{0,80}[.?!]\s+(It|That)('s| is| was)\b")
+
+
+def _words(text):
+    return re.findall(r"[a-z][a-z']*", text.lower())
+
+
+def _content_ngrams(text, n):
+    w = _words(text)
+    out = []
+    for i in range(len(w) - n + 1):
+        g = w[i:i + n]
+        if g[0] in STOPWORDS or g[-1] in STOPWORDS or sum(x not in STOPWORDS for x in g) < 2:
+            continue
+        out.append(" ".join(g))
+    return out
+
+
+def _sentences(text):
+    return [x for x in re.split(r"(?<=[.?!])\s+", " ".join(text.split())) if x]
+
+
+COURTESY = set("thank thanks evening morning afternoon welcome good great glad pleasure sure okay right indeed "
+               "hello honored delighted appreciate".split())
+
+
+def _is_echo_opener(turn_text, prev_text, names=()):
+    """Does the turn open by quoting the previous speaker's words back at them?"""
+    sents = _sentences(turn_text)
+    if not sents or not prev_text:
+        return False
+    first = sents[0]
+    if len(first.split()) > 12:
+        return False
+    cw = [x for x in _words(first) if x not in STOPWORDS and x not in names and x not in COURTESY and len(x) > 2]
+    if not cw:
+        return False
+    prev = set(x for x in _words(prev_text) if x not in STOPWORDS)
+    return sum(x in prev for x in cw) / float(len(cw)) >= 0.6
+
+
+def director_notes(st, template, step, role_name):
+    """Short private notes for the speaker about to take a spoken turn.
+
+    Deterministic, high-precision checks for habits blind judges flagged: opening by
+    quoting the other side back, stock concessions, one rhetorical device on repeat,
+    repeating one's own earlier line, and turns running long where the template asks
+    for brevity. (Telling a decorative refrain from a term the argument is about takes
+    judgment, so that is left to the speaker brief.) Each note goes to a speaker once
+    (length notes at most twice). A moderator or host also gets the running time.
+    """
+    if not st.get("director", True) or not is_visible(step):
+        return []
+    hist = st["history"]
+    given = st.setdefault("director_given", {}).setdefault(role_name, [])
+    notes = []
+    role = effective_role(st, template, role_name) or {}
+    desc = (role.get("roleDescription", "") + " " + role.get("sketch", "")).lower()
+    if re.search(r"\b(moderat|host|chair|presiding)", desc):
+        minutes = st["total_words"] / WORDS_PER_MINUTE
+        if minutes >= 1:
+            notes.append("Running time so far: about %d minutes." % round(minutes))
+    mine_idx = [i for i, h in enumerate(hist) if h["role"] == role_name]
+    if not mine_idx:
+        return notes
+    mine = [hist[i]["text"] for i in mine_idx]
+    names = set(_words(" ".join(r["name"] for r in template["roles"])))
+
+    # 1. Echo openers: starting by quoting the other side's words back.
+    recent = mine_idx[-3:]
+    echoes = sum(1 for i in recent if i > 0 and _is_echo_opener(hist[i]["text"], hist[i - 1]["text"], names))
+    if echoes >= 2 and "echo" not in given:
+        notes.append("You've opened %d of your last %d turns by quoting the other side's words back. Start this "
+                     "one somewhere else: your reaction, a question, or your own point." % (echoes, len(recent)))
+        given.append("echo")
+
+    # 2. Stock concessions and set phrases.
+    joined = " ".join(mine).lower().replace("\u2019", "'")
+    used = [ph for ph in STOCK_PHRASES if ph in joined]
+    if sum(joined.count(ph) for ph in STOCK_PHRASES) >= 2 and "stock" not in given:
+        notes.append("You've leaned on set phrases (%s). If you concede or agree, say it in your own words, and "
+                     "only when you mean it." % ", ".join("'%s'" % u for u in used[:3]))
+        given.append("stock")
+
+    # 3. One rhetorical device on repeat.
+    dev = sum(len(NOT_IT_IS.findall(t)) for t in mine)
+    if dev >= 3 and "device" not in given:
+        notes.append("You've used the 'That's not X. It's Y.' construction %d times. Vary how you make a point." % dev)
+        given.append("device")
+
+    # 4. Repeating one's own earlier line.
+    if len(mine) >= 2:
+        def grams(t, n=7):
+            w = _words(t)
+            return set(" ".join(w[i:i + n]) for i in range(len(w) - n + 1))
+        doc = " " + " ".join(_words(read_text(os.path.join(st["run_dir"], "document.txt")))) + " "
+        earlier = set().union(*[grams(t) for t in mine[:-1]])
+        # Quoting the source document twice is fine; repeating your own wording isn't.
+        dup = sorted(g for g in grams(mine[-1]) & earlier if (" %s " % g) not in doc)
+        key = "self:%d" % len(mine)
+        if dup and key not in given:
+            notes.append("Your last turn repeated a line you'd already said (\"%s...\"). Don't make the same point "
+                         "in the same words again." % dup[0])
+            given.append(key)
+
+    # 5. Length where the template asks for brevity.
+    if re.search(r"\b(brief|short|succinct|concise)\b", step["promptTemplate"], re.I):
+        lens = sorted(len(h["text"].split()) for h in hist)
+        median = lens[len(lens) // 2]
+        last = len(mine[-1].split())
+        if last > max(1.5 * median, 220) and given.count("length") < 2:
+            notes.append("Your last turn ran %d words; this part of the program asks for brief replies. Keep this "
+                         "one well under %d." % (last, int(median)))
+            given.append("length")
+    return notes
+
+
+def notes_block(notes):
+    if not notes:
+        return ""
+    return ("Director's notes (private; act on them, never mention them or read them out):\n"
+            + "\n".join("- " + n for n in notes) + "\n\n")
+
+
 def role_by_name(template, name):
     for r in template["roles"]:
         if r["name"] == name:
@@ -416,6 +571,8 @@ def cmd_init(args):
         "max_turns": args.max_turns,
         "mode": args.mode,
         "models": models,   # role -> "" (session model), an alias, or a full model ID
+        "director": not args.no_director,
+        "role_overrides": {},
         "seed": uuid.uuid4().hex,
         "current_index": 0,
         "loop_start_index": None,
@@ -451,6 +608,52 @@ def cmd_init(args):
         "models": {r: (m or "session") for r, m in models.items()},
         "documentHead": text[:800],
     })
+
+
+def role_started(st, name):
+    return any(t["role"] == name for t in st["turns"]) or any(p["role"] == name for p in st["pending"])
+
+
+def cmd_roles(args):
+    st = load_state(args.run_dir)
+    template = template_of(st)
+    out = []
+    for r in template["roles"]:
+        eff = effective_role(st, template, r["name"])
+        out.append({
+            "name": r["name"],
+            "description": eff["roleDescription"],
+            "edited": eff["roleDescription"] != r["roleDescription"],
+            "sketch": eff.get("sketch", ""),
+            "model": st.get("models", {}).get(r["name"]) or "session",
+            "started": role_started(st, r["name"]),
+        })
+    emit({"roles": out})
+
+
+def cmd_role(args):
+    """Review a character before its first turn: replace its description, add a sketch, or reset."""
+    st = load_state(args.run_dir)
+    template = template_of(st)
+    if role_by_name(template, args.role) is None:
+        fail("No role %r. Roles: %s" % (args.role, ", ".join(r["name"] for r in template["roles"])))
+    if role_started(st, args.role):
+        fail("%s has already been cast; characters can only change before their first turn." % args.role)
+    ov = st.setdefault("role_overrides", {}).setdefault(args.role, {})
+    if args.reset:
+        st["role_overrides"].pop(args.role, None)
+    else:
+        if args.description_file:
+            args.description = read_text(args.description_file).strip()
+        if args.sketch_file:
+            args.sketch = read_text(args.sketch_file).strip()
+        if args.description is not None:
+            ov["description"] = args.description.strip()
+        if args.sketch is not None:
+            ov["sketch"] = args.sketch.strip()
+    save_state(args.run_dir, st)
+    eff = effective_role(st, template, args.role)
+    emit({"name": args.role, "description": eff["roleDescription"], "sketch": eff.get("sketch", "")})
 
 
 def cmd_meta(args):
@@ -512,13 +715,14 @@ def delta_sheet(st, template, step, role_name, variables, n, visible):
     else:
         said = "Nothing has been said since your last turn."
     return (
-        "Turn %d. You are still %s. %s\n\n%s\n\nYour instruction for this turn:\n\n%s\n\n%s\n"
+        "Turn %d. You are still %s. %s\n\n%s\n\nYour instruction for this turn:\n\n%s\n\n%s%s\n"
     ) % (
         n, role_name,
         "Your words go into the spoken transcript." if visible
         else "This is a private preparation step: nobody hears it, but your notes are saved for later steps.",
         wrap_long_lines(said),
         wrap_long_lines(step_prompt_for_known_context(st, template, step, role_name, variables)),
+        notes_block(director_notes(st, template, step, role_name)),
         END_MARKER,
     )
 
@@ -526,28 +730,36 @@ def delta_sheet(st, template, step, role_name, variables, n, visible):
 def issue(st, template, index):
     step = template["steps"][index]
     role_name = pick_role(st, step)
-    role = role_by_name(template, role_name)
+    role = effective_role(st, template, role_name)
     if role is None:
         fail("Step %d names role %r, which the template does not define." % (index, role_name))
     variables = variables_of(st, template)
     full_prompt, role_prompt = build_prompt(st, template, step, role, variables)
+    mode = st.get("mode", "cast")
+    use_delta = mode == "cast" and bool(st.get("cast", {}).get(role_name))
+    # Notes for full sheets and the single writer are computed here; delta sheets compute their own.
+    notes = [] if use_delta else director_notes(st, template, step, role_name)
     st["turn_counter"] += 1
     n = st["turn_counter"]
     base = os.path.join(st["run_dir"], "turns", "%03d-%s" % (n, slug(role_name)))
     prompt_file = base + ".prompt.md"
     output_file = base + ".txt"
     visible = is_visible(step)
+    sketch = ("\nCHARACTER SKETCH (how you sound and who you are; stay consistent with it):\n%s\n"
+              % role["sketch"]) if role.get("sketch") else ""
     sheet = (
-        "ROLE CARD: you are %s.\n%s\n\n"
+        "ROLE CARD: you are %s.\n%s\n%s\n"
         "Turn %d. %s\n\n"
-        "=== PROMPT (as the enTalkenator app would send it) ===\n\n%s\n\n%s\n"
+        "=== PROMPT (as the enTalkenator app would send it) ===\n\n%s\n\n%s%s\n"
     ) % (
         role_name,
         role["roleDescription"],
+        sketch,
         n,
         "Your words go into the spoken transcript." if visible
         else "This is a private preparation step: nobody hears it, but your notes are saved for later steps.",
         wrap_long_lines(full_prompt),
+        "" if use_delta else notes_block(notes),
         END_MARKER,
     )
     write_text(prompt_file, sheet)
@@ -563,16 +775,20 @@ def issue(st, template, index):
         "output_file": output_file,
         "issued_at": now(),
     }
-    mode = st.get("mode", "cast")
-    if mode == "cast" and st.get("cast", {}).get(role_name):
+    if use_delta:
         # This role already has a persistent speaker: send only what it missed.
         delta_file = base + ".delta.md"
         write_text(delta_file, delta_sheet(st, template, step, role_name, variables, n, visible))
         pend["delta_file"] = delta_file
         pend["agent"] = st["cast"][role_name]
     elif mode == "single":
-        pend["instruction"] = role["roleDescription"] + "\n\n" + step_prompt_for_known_context(
-            st, template, step, role_name, variables, writer_knows_all=True)
+        first = not any(t["role"] == role_name for t in st["turns"]) and not any(
+            p["role"] == role_name for p in st["pending"])
+        pend["instruction"] = (role["roleDescription"]
+                               + ("\n\nCharacter sketch: " + role["sketch"] if first and role.get("sketch") else "")
+                               + "\n\n" + step_prompt_for_known_context(
+                                   st, template, step, role_name, variables, writer_knows_all=True)
+                               + ("\n\n" + notes_block(notes).strip() if notes else ""))
     return pend, role_prompt
 
 
@@ -1365,12 +1581,27 @@ def main():
     p.add_argument("--model", help="speaker model for every role: fable, opus, sonnet, haiku, session "
                                    "(default), or a full ID such as claude-opus-4-8")
     p.add_argument("--models", help='per-role overrides, e.g. "Hillford Johns=haiku;*=opus"')
+    p.add_argument("--no-director", action="store_true", help="don't add director's notes to turn sheets")
     p.add_argument("--mode", choices=["cast", "fresh", "single"], default="cast",
                    help="cast: one persistent speaker agent per role (default); fresh: a new speaker "
                         "agent every turn; single: the showrunner writes every turn")
     p.add_argument("--templates-dir")
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=cmd_init)
+
+    p = sub.add_parser("roles", help="show the characters as they'll be played")
+    p.add_argument("run_dir")
+    p.set_defaults(func=cmd_roles)
+
+    p = sub.add_parser("role", help="edit a character before its first turn")
+    p.add_argument("run_dir")
+    p.add_argument("--role", required=True)
+    p.add_argument("--description", help="replace the template's role description")
+    p.add_argument("--description-file")
+    p.add_argument("--sketch", help="add a character sketch to the speaker's role card")
+    p.add_argument("--sketch-file")
+    p.add_argument("--reset", action="store_true")
+    p.set_defaults(func=cmd_role)
 
     p = sub.add_parser("meta")
     p.add_argument("run_dir")

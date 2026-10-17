@@ -41,14 +41,16 @@ Scripts (always quote the paths, which may contain spaces):
      - `--user-input`: fills `{{userInput}}`.
      - `--language`: output language.
      - `--no-audio`: stop after the transcript.
+     - `--no-director`: leave director's notes out of the turn sheets (see section 2).
 2. **Settings menu.** Skip any question whose answer the arguments already give. If
    they settle everything, or the user said to just go, skip the menu entirely. Otherwise
    ask with AskUserQuestion (load it with ToolSearch if it's deferred), in one call:
    - **Settings** (header "Settings"):
      - "Use the best (Recommended)": your session's model for every speaker, voices cast
        automatically, full template length, cast mode
-     - "Customize"
-   If they choose Customize, ask these together in one more call:
+     - "Review the characters first": the defaults, plus the character review in step 7
+     - "Customize everything": the questions below, then the character review
+   If they choose Customize everything, ask these together in one more call:
    - **Speaker model** (header "Model"): "Opus", "Fable", "Sonnet", and "Haiku". Put
      "(Recommended)" on whichever matches the session's model.
      - Opus is the default model on Pro and Max, and strong at this.
@@ -85,6 +87,24 @@ Scripts (always quote the paths, which may contain spaces):
 6. If the template's `userInputConfig.isRequired` is true and no `--user-input` was given,
    ask the user for it (use its `label` and `description`) and save it with `meta --user-input`.
    An optional input stays empty unless the user supplied one.
+7. **Character review** (when the user chose to review characters or customize). Run
+   `ENGINE roles <dir>`. Show each character's name and description in a short list,
+   then ask with AskUserQuestion (header "Characters"):
+   - "Use them as written (Recommended)"
+   - "Flesh them out for me": draft a sketch for each role, 60–100 words, grounded in
+     its description and the document. Cover how they talk (rhythm, a verbal habit),
+     their background and temperament, what they want from tonight, what they're
+     touchy about, and the pronouns the transcript should use. Keep every stance the
+     template gives them; don't change who wins an argument. Show the sketches and
+     ask "Use these sketches", "Edit them" (free text through Other), or "Back to the
+     originals". Save each one with `ENGINE role <dir> --role "<name>" --sketch "..."`.
+   - "Let me edit them": take the user's changes in their own words. Rewrites of who
+     someone is or what they believe go in `--description` (it replaces the template's
+     description everywhere the app would use it). Added colour goes in `--sketch`.
+     Confirm the result with `ENGINE roles <dir>`.
+   Characters can only change before their first turn. `--reset` restores the
+   template's version. The sketch's pronouns and description also guide voice casting
+   in section 3.
 
 ## 2. Generate the transcript
 
@@ -132,6 +152,18 @@ conversation in its own context:
 
 When `issue` has several items (parallel private prep steps for different roles),
 launch them all at once.
+
+**Director's notes.** Unless the run used `--no-director`, the engine checks the transcript
+before each spoken turn. If that speaker has picked up a habit, it adds a short private
+note to the end of their sheet. The habits it checks for:
+- opening by quoting the other side back
+- stock concessions
+- one rhetorical device on repeat
+- repeating their own earlier line
+- running long where the template asks for brevity
+
+A moderator or host also gets the running time. You don't need to do anything with the
+notes; speakers act on them silently.
 
 **Waiting: by event, not polling.** After launching or messaging speakers, end your
 response. Don't sleep, poll, or check for the output file. Each speaker's finish
@@ -209,8 +241,9 @@ dropped, duplicated, or out of order. If it isn't `ok`, report the turns it list
      `SETUP` in the background and wait for it to finish.
 2. Cast the voices, unless the user gave `--voices`. Run `RENDER --list-voices [--engine ...]`
    to see the voices and how each one sounds (accent, male or female). Then give each
-   role a distinct voice, and match it to how the transcript itself refers to that role:
-   pronouns, or words like "a man" or "she". Never go by the name alone. If the
+   role a distinct voice. Match it to the pronouns in the character sketch if there is
+   one, and otherwise to how the transcript itself refers to that role (pronouns, or
+   words like "a man" or "she"). Never go by the name alone. If the
    transcript gives no cue, the default order is fine. Contrast neighbouring roles, for
    example by accent.
 

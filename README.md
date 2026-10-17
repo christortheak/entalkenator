@@ -166,6 +166,67 @@ issued together (`--batch`) and run in parallel.
 `--mode fresh` keeps the app's stateless behaviour: a new agent with a full sheet on
 every turn. `--mode single` has the showrunner write every role itself.
 
+### Characters and director's notes
+
+**Character review.** The opening menu offers "Review the characters first". The
+showrunner lists each role's description from the template, then offers three choices:
+- **Use them as written.**
+- **Flesh them out:** a 60–100-word sketch per role covering voice, background,
+  temperament, what they want, what they're touchy about, and pronouns. You approve or
+  edit the sketches.
+- **Edit them yourself.**
+
+Under the hood, `engine.py role --role R --sketch "..."` adds a sketch to that speaker's
+role card. `--description "..."` replaces the template's description everywhere the
+app would use it. Both lock once the character's first turn is issued. The sketch's
+pronouns also steer voice casting.
+
+**Director's notes.** Before each spoken turn, the engine checks the transcript. If the
+speaker about to talk has picked up a habit, it appends a private one-line note to the
+end of their sheet. It checks for:
+- opening by quoting the other side back (2 of their last 3 turns)
+- stock concessions ("fair hit", "credit where due"…)
+- the "That's not X. It's Y." device three or more times
+- repeating their own earlier line word for word
+- a turn that ran long where the template asks for brevity
+
+A moderator or host also gets the running time. Each note goes to a speaker once. No
+model calls are involved. `--no-director` turns notes off.
+
+Replayed against the four earlier test transcripts, every flag was a real instance:
+- "A note on the door." opening by echoing the previous turn
+- the Author repeating "did not decide what happens when the notice is handed over in
+  person" word for word
+- the single writer's "not X. It is Y." habit
+
+A "refrain" check (phrases reused across turns) was tried and dropped. Word counts
+can't tell a decorative image ("kitchen table") from a term the argument is about
+("trial judge", "help desk"), and a director that tells debaters to stop saying "trial
+judge" does harm. The speaker brief handles callbacks instead ("use a memorable image
+once").
+
+**Probe.** I rebuilt the Opus debate as it stood before the Author's 14th turn, when
+two notes would have fired: she had just repeated an earlier line word for word, and run
+414 words in a "Be brief!" stretch. A fresh Sonnet speaker, with the new brief and a
+character sketch, wrote the turn from that point:
+- **It followed both notes silently:** 173 words, no repeated line, and no mention of
+  notes or a director.
+- **It used its sketch:** "here's what I saw in legal aid", "I'll put it on your tab".
+- **It still opened by echoing Janson** ("Take the credit, Janson."), just as the
+  original Opus speaker did. The brief alone didn't stop that, and the echo note only
+  fires after a speaker has done it twice.
+
+This is one probe, not a measured improvement. The original Opus turn at that point was
+short too.
+
+The brief also now asks for live speech:
+- react before you argue
+- let the moment set the length
+- one or two points per turn
+- concede in your own words
+- contractions, and no scripted "um"
+- moderators steer, and don't argue either side's case
+
 ### Waiting and stall recovery
 
 The showrunner never polls. After it launches a speaker (in the background) or
