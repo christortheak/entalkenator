@@ -10,6 +10,7 @@ page changes. Researched on 17 October 2026.
 |---|---|---|---|---|---|
 | Kokoro-82M | Mac (mlx-audio) | Apache-2.0; espeak-ng fallback GPL-3.0 | Artificial Analysis Elo 1061, 7th of 17 open models; TTS Arena V2 ties Chatterbox | 1× (0.07) | free |
 | Qwen3-TTS 1.7B (VoiceDesign + Base, 8-bit) | Mac (mlx-audio), 16 GB+ | Apache-2.0, not gated | Not on the arenas; Seed-TTS English WER 1.24 (maker's figure) | about 7× (0.5) | free |
+| Qwen3-TTS 1.7B CustomVoice (8-bit), "preset voices" | Mac (mlx-audio), 16 GB+ (5.3 GB in use) | Apache-2.0 | Nine presets; only Ryan and Aiden are native English (male) | about 3× (0.19, batched with a voice and note per line) | free |
 | Breeze TTS 2 (3B, MLX build) | Mac (mlx-audio), 24 GB+ (13 GB in use) | BreezeBlue Research and Non-Commercial License: personal, educational and research use; outputs not for commercial use; no unconsented cloning | Elo 1215, top open-weights model (reported Sept 2026); preferred in our listening test | about 12× undirected (0.85), 20× with a note per line (1.5) | free |
 | macOS `say` | Mac | Apple system voices | Clearly synthetic | about 1× | free |
 | Gemini 3.8 Flash TTS | Google | Free tier may use prompts for training; EEA/UK/CH paid only | Elo 1275, #5 overall | cloud | $0.41 (≈$0.81 from Jan 2027) |
@@ -48,9 +49,19 @@ a delivery note per turn and two turns marked as cutting in):
 | Breeze TTS 2 (designed voices, a note per line) | 1.4, plus about 100 s to design three voices | preferred |
 | Sesame CSM-1B (each line conditioned on the last two turns' audio) | 0.5 | dropped and mangled words in places |
 
-Breeze became an option. Its MLX build doesn't batch, and a delivery note runs the model
+Breeze and the Qwen3 preset voices became options. The presets were good, but the
+first voice, a native Chinese speaker reading English, sounded like a caricature, so only
+the two native English voices are offered unless the person asks for another by name.
+
+The preset voices batch (each line carries its own voice and note), which took them from
+1.3× real time one line at a time to 0.19×. Breeze's MLX build doesn't batch, and a delivery note runs the model
 twice (with and without the note) to strengthen the direction, so a note on every line
-nearly doubles the work: notes are for turns that need one.
+nearly doubles the work: notes are for turns that need one. Running several Breeze
+processes at once barely helps: on the same 12 lines, one process took 1.45× the audio's
+length, two 1.26×, three 1.24×, each using about 13 GB. One process already keeps the GPU
+busy; the time goes to the two guided passes run one after the other and a CPU round trip
+for every sound token. Batching inside Breeze's MLX code (the two passes together, several
+lines at once) is the real fix.
 
 ## Why these, and not others
 

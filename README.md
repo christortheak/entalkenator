@@ -109,15 +109,20 @@ needs relative to Kokoro instead of times:
 |---|---|---|---|---|
 | **Kokoro** | your Mac | free | light | Natural and even. Any Apple Silicon Mac; 660 MB download. |
 | **Qwen3-TTS** | your Mac | free | heavy: about 7× Kokoro | More expressive: each character's voice is designed from a description. 16 GB of memory or more; 6.2 GB download. |
+| **Qwen3 preset voices** | your Mac | free | medium: about 3× Kokoro | Directed line by line ("amused, pressing"). Only two native English voices, both men; the other seven speak English with an accent. 16 GB of memory or more; 3.1 GB download. |
 | **Breeze TTS 2** | your Mac | free | very heavy: about 12–20× Kokoro | The most natural local voices: designed from descriptions, directed line by line, and they laugh and sigh. 24 GB of memory or more; 7.6 GB download. Personal, educational and research use only (BreezeBlue's licence). English and Chinese. |
 | **macOS voices** | your Mac | free | light | Built in, nothing to install, robotic. |
 | **Google Gemini** | cloud | about $0.19–$0.28 | none | Best value; excellent quality. Needs a Google AI Studio key. |
 | **OpenAI** | cloud | about $0.30–$0.65 | none | gpt-4o-mini-tts, tts-1 and tts-1-hd. Needs an OpenAI key with credit. |
 | **ElevenLabs** | cloud | about $0.85–$1.75 | none | The best-sounding voices. Needs an ElevenLabs key. |
 
-Claude checks what your Mac can run before offering anything. After a voice's first
-program it knows how fast that voice is on your Mac, and it tells you how long the next one
-will take before starting. If a heavy voice would take too long for a long program, or your
+None of these is bundled: the download is just enTalkenator's code, and each voice is
+downloaded only when you choose it, with its size stated first. Claude checks what your Mac
+can run before offering anything, and suggests what's worth trying: Kokoro first, then one
+richer voice that fits your memory. After your first program it can play you its opening in
+each voice you've installed, so you can choose by ear. Once a voice has rendered on your
+Mac, Claude knows how fast it is there, and tells you how long a program will take before
+starting. If a heavy voice would take too long for a long program, or your
 Mac doesn't have the memory, it suggests a lighter voice or a cloud one, with what that
 would cost.
 

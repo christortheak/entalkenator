@@ -65,13 +65,27 @@ and that the first program will show how long it takes. Help them choose what wi
 - For someone who wants the best sound on long programs but has a modest Mac, recommend a
   cloud voice: Gemini is about $0.20–$0.30 for 20 minutes and takes no compute here.
 
+**What's worth trying here**, from `machine`:
+- No Apple Silicon (an Intel Mac): the macOS voices, or a cloud voice.
+- Apple Silicon with 8 GB: Kokoro. For more expressive voices, a cloud voice.
+- 16 GB: Kokoro, plus Qwen3-TTS (designed voices, heavy) and the Qwen3 preset voices
+  (directed, medium; two native English voices, both men).
+- 24 GB or more: all of those, plus Breeze TTS 2, the most natural (very heavy).
+- A base M1 or M2 (no Pro, Max or Ultra): the heavy voices will be slow, so suggest them
+  for short programs and a cloud voice for long ones.
+Kokoro is always the first install: the others build on it, and it's the everyday choice.
+Suggest one richer local voice that fits, not all of them; they can add more later.
+
 Explain the kinds in a sentence each:
 - **Free, on this Mac.** Kokoro is natural-sounding and light. Qwen3-TTS is more
   expressive: each character's voice is designed from a description and kept the same
-  throughout (heavy, 16 GB or more). Breeze TTS 2 is the most natural: designed voices
-  that can be directed line by line and that laugh and sigh (very heavy, 24 GB or more;
-  its licence allows personal, educational and research use only, and it speaks English
-  and Chinese). The built-in macOS voices need no install but sound robotic.
+  throughout (heavy, 16 GB or more). The Qwen3 preset voices follow a delivery note on
+  every line and are quicker (medium, 16 GB or more), but only two are native English
+  speakers, both men; the other presets speak English with a Chinese, Japanese or Korean
+  accent. Breeze TTS 2 is the most natural: designed voices that can be directed line by
+  line and that laugh and sigh (very heavy, 24 GB or more; its licence allows personal,
+  educational and research use only, and it speaks English and Chinese). The built-in
+  macOS voices need no install but sound robotic.
 - **Cloud, with their own key.** Better voices, paid per program to the provider, never
   to enTalkenator: Google Gemini (best value), OpenAI, and ElevenLabs (best quality,
   about 5× Gemini's price).
@@ -82,6 +96,8 @@ here (an option whose `needs` say `unsupported`) and saying what's already insta
 - "Kokoro: free, on this Mac (Recommended)": about 660 MB to download, light work
 - "Expressive voices (Qwen3-TTS): free, on this Mac": 6.2 GB more, about 10 GB of memory,
   heavy work (about 7× Kokoro)
+- "Directed preset voices (Qwen3): free, on this Mac": 3.1 GB more, about 6 GB of memory,
+  medium work (about 3× Kokoro); two English voices, both men
 - "Most natural voices (Breeze TTS 2): free for personal use": 7.6 GB more, about 13 GB of
   memory, very heavy work (about 12–20× Kokoro); non-commercial licence
 - "Cloud voices with my own key": Gemini, OpenAI or ElevenLabs, about $0.20–$1.75 for a
@@ -95,6 +111,8 @@ Picking an option whose size is stated is the go-ahead to install it. Then:
   installer (https://docs.astral.sh/uv/getting-started/installation/). Carry on with the
   next step while it runs.
 - **Qwen3-TTS:** after Kokoro, `VOICE_OPTIONS install qwen3` in the background.
+- **Qwen3 preset voices:** after Kokoro, `VOICE_OPTIONS install qwen3-preset` in the
+  background.
 - **Breeze TTS 2:** after Kokoro, `VOICE_OPTIONS install breeze` in the background. Mention
   its licence in a sentence: free for personal, educational and research use, not for
   commercial use, and no cloning a real person's voice without their consent.
@@ -148,6 +166,12 @@ it's done:
   The web app's library page shows it, and the podcast app picks it up within a few
   minutes.
 - Otherwise `open` the `.m4a` so it plays on the Mac.
+- **If more than one local voice is ready**, offer to hear the start of this program in
+  each, so they can choose by ear: `RENDER --transcript <dir>/transcript.txt --out
+  "<dir>/sample-<id>.m4a" --engine <id> --sample 90` per voice (with the same `--voices`,
+  `--lines` and `--styles` you'd use for a full program), then `open` each. Each sample also
+  times that voice on this Mac, so later estimates are this Mac's own. Then ask which to
+  keep as the default.
 
 ## 6. Wrap up
 

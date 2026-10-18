@@ -9,6 +9,7 @@ Commands (each prints JSON):
                      rendered here so far
   install kokoro     the free local voices (about 660 MB to download): runs setup_tts.sh
   install qwen3      the expressive local voices (Qwen3-TTS 1.7B, two models, 6.2 GB)
+  install qwen3-preset  Qwen3-TTS's nine preset voices, directed line by line (3.1 GB)
   install breeze     the most natural local voices (Breeze TTS 2, 7.6 GB; non-commercial licence)
 
 How long a local voice takes depends on the Mac, so the catalog gives each one's work
@@ -62,6 +63,7 @@ KOKORO_REPO = "mlx-community/Kokoro-82M-bf16"
 QWEN_DESIGN_REPO = "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-8bit"
 QWEN_BASE_REPO = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit"
 BREEZE_REPO = "mlx-community/Breeze-TTS-2-mlx"
+QWEN_PRESET_REPO = "mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-8bit"
 SPEEDS_FILE = os.path.join(ENT_HOME, "speeds.json")
 
 KEY_ENV = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "elevenlabs": "ELEVENLABS_API_KEY"}
@@ -91,6 +93,15 @@ OPTIONS = [
                 "a turn's last words, so listen to the ends of turns.",
      "voices": "any voice you can describe: age, accent, temperament, pace",
      "work": 7, "compute": "heavy", "download": "6.2 GB (two models), plus Kokoro's install", "memory": "about 10 GB",
+     "requires": ["apple-silicon", "16gb"], "license": "Apache-2.0", "cost": "free"},
+    {"id": "qwen3-preset", "engine": "qwen3-preset", "label": "Qwen3-TTS preset voices (directed)", "where": "this Mac",
+     "summary": "Free preset voices on this Mac that follow a delivery note on every line (\"amused, pressing\"). "
+                "Only two are native English speakers, both male, so it suits programs with one or two men's "
+                "voices. Medium: about 3 times Kokoro's work, since it voices several lines at once.",
+     "quality": "Lively and directable in our listening test; the other seven presets speak English with a "
+                "Chinese, Japanese or Korean accent.",
+     "voices": "ryan and aiden (native English, male); seven more with other native languages",
+     "work": 3, "compute": "medium", "download": "3.1 GB, plus Kokoro's install", "memory": "about 6 GB",
      "requires": ["apple-silicon", "16gb"], "license": "Apache-2.0", "cost": "free"},
     {"id": "breeze", "engine": "breeze", "label": "Breeze TTS 2 (most natural)", "where": "this Mac",
      "summary": "Free, the most natural local voices: each character's voice is designed from a description, "
@@ -309,6 +320,11 @@ def needs_for(opt, hw):
             out.append({"what": "install", "tell": "Install Kokoro first; Qwen3-TTS uses the same engine."})
         if not (hf_cached(QWEN_DESIGN_REPO) and hf_cached(QWEN_BASE_REPO)):
             out.append({"what": "install", "tell": "Download the models: `voices.py install qwen3` (6.2 GB)."})
+    if eng == "qwen3-preset":
+        if not venv_ready():
+            out.append({"what": "install", "tell": "Install Kokoro first; the presets use the same engine."})
+        if not hf_cached(QWEN_PRESET_REPO):
+            out.append({"what": "install", "tell": "Download the model: `voices.py install qwen3-preset` (3.1 GB)."})
     if eng == "breeze":
         if not venv_ready():
             out.append({"what": "install", "tell": "Install Kokoro first; Breeze uses the same engine."})
@@ -414,10 +430,11 @@ def cmd_install(args):
         p = subprocess.run(["bash", os.path.join(HERE, "setup_tts.sh")])
         if p.returncode != 0:
             done({"ok": False, "stage": "kokoro", "error": "setup_tts.sh failed (exit %d); see its messages above." % p.returncode}, 1)
-    if args.engine in ("qwen3", "breeze"):
+    if args.engine in ("qwen3", "qwen3-preset", "breeze"):
         code = ("import sys\nfrom huggingface_hub import snapshot_download\n"
                 "for r in sys.argv[1:]:\n    print('Downloading', r, flush=True)\n    snapshot_download(r)\n")
-        repos = (QWEN_DESIGN_REPO, QWEN_BASE_REPO) if args.engine == "qwen3" else (BREEZE_REPO,)
+        repos = {"qwen3": (QWEN_DESIGN_REPO, QWEN_BASE_REPO), "qwen3-preset": (QWEN_PRESET_REPO,),
+                 "breeze": (BREEZE_REPO,)}[args.engine]
         p = run_venv_python(code, *repos)
         if p.returncode != 0:
             done({"ok": False, "stage": "download", "error": "The download failed; run it again to resume."}, 1)
@@ -512,7 +529,7 @@ def main():
     g.add_argument("--transcript", help="estimate for this transcript")
     p.set_defaults(func=cmd_list)
     p = sub.add_parser("install")
-    p.add_argument("engine", choices=["kokoro", "qwen3", "breeze"])
+    p.add_argument("engine", choices=["kokoro", "qwen3", "qwen3-preset", "breeze"])
     p.set_defaults(func=cmd_install)
     p = sub.add_parser("machine")
     p.set_defaults(func=cmd_machine)

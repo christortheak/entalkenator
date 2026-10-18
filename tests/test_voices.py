@@ -288,8 +288,8 @@ def main():
         p = subprocess.run([sys.executable, VOICES, "machine"], capture_output=True, text=True, env=henv)
         m = json.loads(p.stdout)
         check("machine lists the local voices with their work and whether they fit",
-              [v["id"] for v in m["localVoices"]] == ["kokoro", "qwen3", "breeze", "say"]
-              and m["localVoices"][2]["measured"] == 1.4 and "memoryGB" in m["hardware"], m)
+              [v["id"] for v in m["localVoices"]] == ["kokoro", "qwen3", "qwen3-preset", "breeze", "say"]
+              and m["localVoices"][3]["measured"] == 1.4 and "memoryGB" in m["hardware"], m)
         e = est("gemini:gemini-3.8-flash-tts")
         check("a cloud voice needs no compute here", "renderMinutes" not in e and e["costUSD"] > 0, e)
     finally:

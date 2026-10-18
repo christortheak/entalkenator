@@ -8,6 +8,10 @@ Engines (scripts/voices.py describes each: cost, speed, download, what it needs)
               VoiceDesign model makes a reference clip from it once (kept in
               ~/.cache/entalkenator/qwen3-voices), and the Base model clones that clip for
               every turn, so the voice stays the same. Weights Apache-2.0.
+  qwen3-preset  Qwen3-TTS 1.7B CustomVoice through mlx-audio, local and free (Apache-2.0): nine
+              preset voices, each line directed by the role's --styles note plus the turn's
+              delivery note, batched like qwen3. Only ryan and aiden are native English
+              speakers (both male); the others speak English with their native accent.
   breeze      Breeze TTS 2 (3B) through mlx-audio, local and free for research and non-commercial
               use (BreezeBlue's licence). Voices are descriptions, designed once and cloned like
               qwen3's, and each turn can be directed: the role's --styles note plus the turn's
@@ -73,6 +77,21 @@ KOKORO_MODEL = os.environ.get("ENTALKENATOR_KOKORO_MODEL", "mlx-community/Kokoro
 QWEN_DESIGN_MODEL = voice_options.QWEN_DESIGN_REPO
 QWEN_BASE_MODEL = voice_options.QWEN_BASE_REPO
 QWEN_VOICE_DIR = os.path.join(ENT_HOME, "qwen3-voices")
+QWEN_PRESET_MODEL = voice_options.QWEN_PRESET_REPO
+# The CustomVoice model's speakers, as its model card describes them. Only the first two are
+# native English speakers; the rest are offered only when asked for by name.
+QWEN_PRESETS = {
+    "ryan": "dynamic male voice with strong rhythmic drive (native English)",
+    "aiden": "sunny American male voice with a clear midrange (native English)",
+    "serena": "warm, gentle young female voice (native Chinese; English with an accent)",
+    "vivian": "bright, slightly edgy young female voice (native Chinese; English with an accent)",
+    "uncle_fu": "seasoned male voice, low and mellow (native Chinese; English with an accent)",
+    "dylan": "youthful Beijing male voice (native Chinese; English with an accent)",
+    "eric": "lively Chengdu male voice, slightly husky (native Chinese; English with an accent)",
+    "ono_anna": "playful Japanese female voice, light and nimble (native Japanese; English with an accent)",
+    "sohee": "warm Korean female voice with rich emotion (native Korean; English with an accent)",
+}
+QWEN_PRESET_ENGLISH = ["ryan", "aiden"]
 BREEZE_MODEL = voice_options.BREEZE_REPO
 BREEZE_VOICE_DIR = os.path.join(ENT_HOME, "breeze-voices")
 BREEZE_REF_LINE = ("Well, that's the interesting part, isn't it? I'd have said the opposite a year ago. "
@@ -99,7 +118,7 @@ GEMINI_URL = os.environ.get("ENTALKENATOR_GEMINI_BASE", "https://generativelangu
 OPENAI_URL = os.environ.get("ENTALKENATOR_OPENAI_BASE", "https://api.openai.com") + "/v1/audio/speech"
 ELEVENLABS_BASE = os.environ.get("ENTALKENATOR_ELEVENLABS_BASE", "https://api.elevenlabs.io")
 DEFAULT_MODELS = {"kokoro": KOKORO_MODEL, "qwen3": "Qwen3-TTS-12Hz-1.7B (VoiceDesign + Base, 8-bit)",
-                  "breeze": "Breeze-TTS-2 (MLX)",
+                  "breeze": "Breeze-TTS-2 (MLX)", "qwen3-preset": "Qwen3-TTS-12Hz-1.7B CustomVoice (8-bit)",
                   "say": "macOS say", "gemini": os.environ.get("ENTALKENATOR_GEMINI_TTS_MODEL", "gemini-3.8-flash-tts"),
                   "openai": "gpt-4o-mini-tts", "elevenlabs": "eleven_v4"}
 DEFAULT_STYLE = "Natural and conversational, as in a live discussion."
@@ -385,6 +404,60 @@ class QwenRenderer:
                     secs, took))
 
 
+class QwenPresetRenderer:
+    """Qwen3-TTS CustomVoice in the child process: preset voices, each piece with its own voice and
+    direction, so any pieces batch together. Windows of whole turns, sorted by length, are written
+    as soon as they're done."""
+    name = "qwen3-preset"
+
+    def render_all(self, jobs, batch=QWEN_BATCH, window=QWEN_WINDOW):
+        import numpy as np
+        import mlx.core as mx
+        from mlx_audio.tts.utils import load_model
+        model = load_model(QWEN_PRESET_MODEL)
+        rate = model.sample_rate
+        gap = np.zeros(int(0.12 * rate), dtype="float32")
+        k = 0
+        while k < len(jobs):
+            group, pieces = [], []
+            while k < len(jobs) and (not group or len(pieces) < window):
+                group.append(jobs[k])
+                pieces += [(len(group) - 1, i, p) for i, p in
+                           enumerate(split_text(jobs[k]["text"], max_words=QWEN_CHUNK_WORDS))]
+                k += 1
+            t0 = time.time()
+            audio = {}
+            order = sorted(pieces, key=lambda x: len(x[2].split()))
+            for start in range(0, len(order), batch):
+                chunk = order[start:start + batch]
+                out = [None] * len(chunk)
+                for r in model.batch_generate(texts=[p for _, _, p in chunk],
+                                              voices=[group[n]["voice"] for n, _, _ in chunk],
+                                              instructs=[group[n].get("style") for n, _, _ in chunk],
+                                              lang_code="english", stream=False):
+                    i = getattr(r, "sequence_idx", 0)
+                    a = np.asarray(r.audio, dtype="float32").reshape(-1)
+                    out[i] = a if out[i] is None else np.concatenate([out[i], a])
+                for (n, i, _), a in zip(chunk, out):
+                    audio[(n, i)] = a if a is not None else np.zeros(0, dtype="float32")
+            mx.clear_cache()
+            secs = 0.0
+            for n, j in enumerate(group):
+                parts = []
+                for i in sorted(i for (m, i) in audio if m == n):
+                    if parts:
+                        parts.append(gap)
+                    parts.append(audio[(n, i)])
+                if not parts or sum(len(x) for x in parts) == 0:
+                    raise RuntimeError("Qwen3-TTS produced no audio for %s" % j["label"])
+                joined = np.concatenate(parts)
+                write_float_wav(j["path"], joined, rate, np)
+                secs += len(joined) / float(rate)
+            log("  %s done (%.0f s of audio in %.1f s)" % (
+                group[0]["label"] if len(group) == 1 else "%s and %d more" % (group[0]["label"], len(group) - 1),
+                secs, time.time() - t0))
+
+
 class BreezeRenderer:
     """Breeze TTS 2 in the child process: design each described voice once, then clone it for every
     turn, directed by the turn's note. It doesn't batch, so turns go one at a time, each written as
@@ -659,10 +732,10 @@ def kokoro_python():
     return None
 
 
-ENGINES = ("kokoro", "qwen3", "breeze", "say", "gemini", "openai", "elevenlabs")
-LOCAL_IN_CHILD = ("kokoro", "qwen3", "breeze")
+ENGINES = ("kokoro", "qwen3", "qwen3-preset", "breeze", "say", "gemini", "openai", "elevenlabs")
+LOCAL_IN_CHILD = ("kokoro", "qwen3", "qwen3-preset", "breeze")
 DESCRIBED_VOICES = ("qwen3", "breeze")  # voices are descriptions, designed once and kept
-DIRECTED = ("gemini", "openai", "breeze")  # engines that follow a delivery note
+DIRECTED = ("gemini", "openai", "breeze", "qwen3-preset")  # engines that follow a delivery note
 
 
 def engine_ready(name):
@@ -673,6 +746,8 @@ def engine_ready(name):
                 and voice_options.hf_cached(QWEN_BASE_MODEL))
     if name == "breeze":
         return bool(kokoro_python()) and voice_options.hf_cached(BREEZE_MODEL)
+    if name == "qwen3-preset":
+        return bool(kokoro_python()) and voice_options.hf_cached(QWEN_PRESET_MODEL)
     if name == "say":
         return bool(shutil.which("say"))
     return bool(voice_options.api_key(name))
@@ -717,6 +792,8 @@ def voice_pool(name, model=None):
         return VoicePool(KOKORO_VOICES)
     if name in DESCRIBED_VOICES:
         return VoicePool(QWEN_VOICES)
+    if name == "qwen3-preset":
+        return VoicePool(QWEN_PRESET_ENGLISH)
     if name == "gemini":
         return VoicePool(GEMINI_VOICES)
     if name == "openai":
@@ -758,6 +835,8 @@ def describe_voice(engine_name, voice, pool=None):
         return OPENAI_DESCRIPTIONS.get(voice, "")
     if engine_name in DESCRIBED_VOICES:
         return voice
+    if engine_name == "qwen3-preset":
+        return QWEN_PRESETS.get(voice, "")
     if engine_name == "elevenlabs" and hasattr(pool, "describe"):
         return pool.describe(voice)
     return ""
@@ -775,6 +854,8 @@ def local_worker(engine_name, jobs_file, speed):
         QwenRenderer().render_all(jobs)
     elif engine_name == "breeze":
         BreezeRenderer().render_all(jobs)
+    elif engine_name == "qwen3-preset":
+        QwenPresetRenderer().render_all(jobs)
     else:
         import mlx.core as mx
         engine = KokoroEngine(speed)
@@ -798,7 +879,7 @@ def render_in_child(engine_name, todo, speed, work):
         json.dump(todo, f)
     cmd = [kokoro_python(), "-X", "faulthandler", os.path.abspath(__file__), "--worker", jobs_file,
            "--engine", engine_name, "--speed", str(speed)]
-    label = {"kokoro": "Kokoro", "qwen3": "Qwen3-TTS", "breeze": "Breeze TTS 2"}[engine_name]
+    label = {"kokoro": "Kokoro", "qwen3": "Qwen3-TTS", "qwen3-preset": "Qwen3-TTS presets", "breeze": "Breeze TTS 2"}[engine_name]
     missing = todo
     for attempt in (1, 2):
         rc = subprocess.run(cmd, stdout=subprocess.DEVNULL).returncode
@@ -1130,7 +1211,7 @@ def main():
     ap.add_argument("--transcript", help='file of "[Name]: text" turns')
     ap.add_argument("--out", help="output .m4a")
     ap.add_argument("--engine", default="auto",
-                    help="auto, kokoro, qwen3, breeze, say, gemini, openai or elevenlabs; or an option id like "
+                    help="auto, kokoro, qwen3, qwen3-preset, breeze, say, gemini, openai or elevenlabs; or an option id like "
                          "gemini:gemini-3.8-flash-lite-tts (see voices.py list)")
     ap.add_argument("--model", help="the engine's model, e.g. tts-1, gemini-3.8-flash-lite-tts, eleven_v4_turbo")
     ap.add_argument("--voices", help='overrides, e.g. "Hillford Johns=bm_george;The Author=af_heart". '
@@ -1142,6 +1223,8 @@ def main():
                     help="narrations: chapters for headings down to this level (1 = top level only; default all)")
     ap.add_argument("--speed", type=float, default=1.0)
     ap.add_argument("--redo", help="turn numbers to render again, e.g. 5,23")
+    ap.add_argument("--sample", type=float, metavar="SECONDS",
+                    help="render only about the first SECONDS of the program, to hear a voice option (and time it)")
     ap.add_argument("--gap", type=float, help="seconds of silence between turns (default: fitted to the conversation)")
     ap.add_argument("--lines", help='qwen3, breeze: the line each designed voice reads, in character, e.g. '
                                     '"Professor Swift=Well, that is a brave word for it."')
@@ -1167,6 +1250,11 @@ def main():
             listing["note"] = ("These voices are descriptions, and these are only fallbacks. Describe each role "
                                "instead (gender, age, accent, temperament, pace) and pass them with --voices, "
                                "with a line in character for each in --lines.")
+        if engine_name == "qwen3-preset":
+            listing["note"] = ("Only these two are native English speakers, both male. The other presets speak English "
+                               "with their native accent; use one only when the person asks for it by name, never just "
+                               "to fill a role. For a woman's voice or more than two speakers, choose another engine.")
+            listing["otherPresets"] = [{"voice": v, "sounds": d} for v, d in QWEN_PRESETS.items() if v not in QWEN_PRESET_ENGLISH]
         if engine_name in ("gemini", "openai", "elevenlabs"):
             listing["note"] = "Gender and character are as the provider describes them or as commonly heard; audition when unsure."
         emit(listing)
@@ -1178,6 +1266,13 @@ def main():
         turns = parse_transcript(f.read())
     if not turns:
         raise SystemExit("Transcript has no turns.")
+    if args.sample:
+        budget, kept = args.sample / 60.0 * voice_options.WPM, []
+        for t in turns:
+            if kept and sum(len(x[1].split()) for x in kept) >= budget:
+                break
+            kept.append(t)
+        turns, args.chapter_plan = kept, None
     roles = []
     for r, _ in turns:
         if r not in roles:
@@ -1187,6 +1282,11 @@ def main():
         audition(args, engine_name, model, pool, turns, roles, styles)
         return
     voices = assign_voices(roles, pool, parse_overrides(args.voices))
+    shared = {}
+    for r, v in voices.items():
+        shared.setdefault(v, []).append(r)
+    warnings = ["%s share a voice (%s): this engine has too few voices for the cast." % (" and ".join(rs), v)
+                for v, rs in shared.items() if len(rs) > 1]
     lines = parse_overrides(args.lines)
     speeds = {r: float(v) for r, v in parse_overrides(args.speeds).items()}
     dfile = args.delivery or os.path.join(os.path.dirname(os.path.abspath(args.transcript)), "delivery.json")
@@ -1254,6 +1354,7 @@ def main():
         "embeddedChapters": embedded,
         "clips": work,
         "checkTurns": pace_outliers(jobs, spans, [r for r, _ in turns]),
+        "warnings": warnings,
     })
 
 

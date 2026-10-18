@@ -119,6 +119,17 @@ def main():
         ct = json.load(open(os.path.splitext(cout)[0] + ".chapters.json"))["entalkenator"]["turnTimes"]
         check("a turn marked as cutting in overlaps the one before it", ct[2]["start"] < ct[1]["end"]
               and ct[1]["start"] - ct[0]["end"] > 0.1, ct)
+        first = json.loads(subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "render_audio.py"), "--transcript", conv,
+                                           "--out", cout, "--engine", "say"], capture_output=True, text=True).stdout)["voices"]
+        p = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "render_audio.py"), "--transcript", conv,
+                            "--out", os.path.join(tmp, "Shared.m4a"), "--engine", "say",
+                            "--voices", "Ada=%s;Ben=%s" % (first["Ada"], first["Ada"])], capture_output=True, text=True)
+        warned = json.loads(p.stdout).get("warnings", []) if p.returncode == 0 else []
+        check("two roles sharing a voice are reported", any("Ada and Ben share a voice" in w for w in warned), warned)
+        p = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "render_audio.py"), "--transcript", conv,
+                            "--out", os.path.join(tmp, "Sample.m4a"), "--engine", "say", "--sample", "1"],
+                           capture_output=True, text=True)
+        check("--sample renders just the opening", p.returncode == 0 and json.loads(p.stdout)["turns"] == 1, p.stdout[-300:])
         v = mp4chapters.verify(out)
         check("AVFoundation reads every chapter title", v and v.get("chapters") == [w[1] for w in want], v)
         dur = afinfo_seconds(out)

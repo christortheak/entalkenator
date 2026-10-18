@@ -489,7 +489,7 @@ with its turn's opening words, so check they land where you meant. In section 3,
      the estimate in one line, e.g. "This will cost about $0.29 on your Google account".
      If they didn't pick this engine for this run and the estimate is over $1, ask before
      rendering.
-   - **Heavy local engines (qwen3, breeze):** the same listing gives `renderMinutes` from this
+   - **Heavier local engines (qwen3, qwen3-preset, breeze):** the same listing gives `renderMinutes` from this
      Mac's own earlier renders, or a rough guess from Kokoro's speed here. Say it in a line
      ("Breeze will take about 40 minutes on this Mac"). When it's over about an hour, or
      longer than the person seems to expect, offer the choice once: go ahead, a lighter
@@ -520,6 +520,13 @@ with its turn's opening words, so check they land where you meant. In section 3,
      `=` inside). Each designed voice reads its line once, and every turn copies how that
      line was delivered. A line in character gives a livelier voice than the default, which
      is neutral and careful. For a recurring character, reuse the same description and line.
+   - **Qwen3 preset voices** (qwen3-preset): only `ryan` and `aiden` are native English
+     speakers, both men. Never give a role one of the other presets just to fill the cast:
+     they speak English with a Chinese, Japanese or Korean accent, which can sound like a
+     caricature. Use one only when the person asks for it by name. For a woman's voice, or
+     more than two speakers, choose another engine. Each line follows the role's `--styles`
+     note and the turn's delivery note. A render that has to share a voice says so under
+     `warnings`.
    - **Kokoro**: give roles a slightly different pace with `--speeds "Role=0.94;Role=1.06"`
      (a measured professor, a quick student), and blend two voices for more variety than
      the eight presets, e.g. `af_bella,am_puck`.
