@@ -34,8 +34,10 @@ You don't need GitHub, a website, a domain name, or any coding.
 
 ## Get started
 
-1. Unzip the download. Put the `enTalkenator` folder somewhere you'll keep it, such as
-   Documents.
+1. Unzip the download. (From GitHub the folder is called `entalkenator-main`; rename it if
+   you like.) Put it somewhere you'll keep it that iCloud Drive doesn't sync, such as your
+   home folder: programs are large audio files, and syncing them slows things down. If your
+   Mac syncs Desktop and Documents to iCloud, avoid those two.
 2. Open the folder in Claude:
    - **Claude desktop app:** open the **Code** tab, choose the `enTalkenator` folder, and
      say yes when asked whether you trust it.
