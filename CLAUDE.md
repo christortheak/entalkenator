@@ -85,8 +85,9 @@ scripts/engine.py templates` lists them with their roles and lengths.
 - `~/.cache/entalkenator/`: the local voice engine (`venv/`), the designed Qwen3-TTS voices
   (`qwen3-voices/`), and Wrangler (`wrangler/`), installed only with permission. Model weights
   are in the Hugging Face cache (`~/.cache/huggingface/hub`).
-- `~/.config/entalkenator/keys.json` (mode 600): API keys for cloud voices, saved by
-  `voices.py key set`; `voices.json`: their default voice option
+- The login Keychain (service "enTalkenator"): API keys for cloud voices, saved by
+  `voices.py key set`. They show up in Keychain Access, where the person can delete them.
+- `~/.config/entalkenator/voices.json`: their default voice option
 - `~/.config/entalkenator/library.json` (mode 600): the library's address and upload token,
   written by `scripts/library.py`
 - `cloud/`: the library's code, which is deployed to their Cloudflare account

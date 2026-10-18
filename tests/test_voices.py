@@ -5,7 +5,8 @@ that checks each request the way the real API documents it and answers with a sh
 
     python3 tests/test_voices.py
 
-Touches no real keys or settings: everything goes to a temporary folder.
+Touches no real keys, Keychain or settings: `security` is replaced by tests/fake_security.py, and
+everything else goes to a temporary folder.
 """
 
 import base64
@@ -13,6 +14,7 @@ import io
 import json
 import math
 import os
+import shlex
 import shutil
 import struct
 import subprocess
@@ -27,6 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 VOICES = os.path.join(ROOT, "scripts", "voices.py")
 RENDER = os.path.join(ROOT, "scripts", "render_audio.py")
+FAKE_SECURITY = os.path.join(HERE, "fake_security.py")
 GOOD = {"openai": "sk-test-0123456789abcdefghijklmnop", "elevenlabs": "xi-test-0123456789abcdefghijkl",
         "gemini": "AIza-test-0123456789abcdefghijkl"}
 
@@ -135,8 +138,18 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = "http://127.0.0.1:%d" % server.server_port
     env = {k: v for k, v in os.environ.items() if k not in ("OPENAI_API_KEY", "GEMINI_API_KEY", "ELEVENLABS_API_KEY")}
-    env.update({"ENTALKENATOR_CONFIG_DIR": os.path.join(tmp, "config"), "ENTALKENATOR_KEYS": os.path.join(tmp, "config", "keys.json"),
+    store = os.path.join(tmp, "keychain.json")
+    env.update({"ENTALKENATOR_CONFIG_DIR": os.path.join(tmp, "config"),
+                "ENTALKENATOR_SECURITY": " ".join(shlex.quote(x) for x in (sys.executable, FAKE_SECURITY)),
+                "FAKE_SECURITY_STORE": store,
                 "ENTALKENATOR_OPENAI_BASE": base, "ENTALKENATOR_ELEVENLABS_BASE": base, "ENTALKENATOR_GEMINI_BASE": base})
+
+    def keychain():
+        try:
+            with open(store) as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return {"items": {}, "argv": []}
     transcript = os.path.join(tmp, "transcript.txt")
     with open(transcript, "w") as f:
         f.write(TRANSCRIPT)
@@ -162,16 +175,22 @@ def main():
 
         print("keys")
         code, out, raw = run(VOICES, "key", "set", "openai", "--stdin", stdin="sk-wrong-0123456789abcdefghijklmnop\n")
-        check("a rejected key isn't saved", code == 1 and not os.path.exists(env["ENTALKENATOR_KEYS"]), out)
+        check("a rejected key isn't saved", code == 1 and not keychain()["items"], out)
         code, out, raw = run(VOICES, "key", "set", "openai", "--stdin", stdin=GOOD["openai"] + "\n")
-        check("a working key is checked and saved", code == 0 and out.get("checked") is True, out)
+        kc = keychain()
+        check("a working key is checked and saved in the Keychain", code == 0 and out.get("checked") is True
+              and kc["items"].get("enTalkenator|openai", {}).get("password") == GOOD["openai"], out)
+        check("...with a label people can find in Keychain Access", "enTalkenator" in kc["items"]["enTalkenator|openai"]["label"])
         check("the key never appears in the output", GOOD["openai"] not in raw)
-        check("the keys file is private (600)", oct(os.stat(env["ENTALKENATOR_KEYS"]).st_mode & 0o777) == "0o600")
+        check("the key is never on a command line (only on stdin)", not any(GOOD["openai"] in " ".join(a) for a in kc["argv"]))
+        check("nothing is written to the settings folder", not os.path.exists(os.path.join(tmp, "config", "keys.json")))
         for eng in ("elevenlabs", "gemini"):
             code, out, raw = run(VOICES, "key", "set", eng, "--stdin", stdin=GOOD[eng] + "\n")
             check("%s key saved" % eng, code == 0 and out.get("checked") is True and GOOD[eng] not in raw, out)
         code, out, _ = run(VOICES, "key", "check", "gemini")
-        check("key check works", code == 0 and out.get("ok"), out)
+        check("key check works and names the Keychain", code == 0 and out.get("ok") and out.get("from") == "Keychain", out)
+        code, out, _ = run(VOICES, "key", "set", "openai", "--stdin", stdin='sk-test-quote"inside-0123456789abc\n')
+        check("a key with a quote in it is refused rather than mangled", code == 1, out)
         code, out, _ = run(VOICES, "key", "set", "openai", "--stdin", stdin="short\n")
         check("an obviously incomplete key is refused", code == 1, out)
 
@@ -234,6 +253,7 @@ def main():
 
         print("key removal")
         code, out, _ = run(VOICES, "key", "remove", "openai")
+        check("remove deletes the Keychain item", out.get("removed") is True and "enTalkenator|openai" not in keychain()["items"], out)
         code, out, raw = run(RENDER, "--transcript", transcript, "--out", os.path.join(tmp, "x.m4a"), "--engine", "openai")
         check("without a key, the engine stops and says how to add one", code != 0 and "voices.py key set openai" in raw, raw[-200:])
         code, out, raw = run(RENDER, "--list-voices")

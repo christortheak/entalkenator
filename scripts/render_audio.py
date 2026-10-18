@@ -15,7 +15,7 @@ Engines (scripts/voices.py describes each: cost, speed, download, what it needs)
   elevenlabs  ElevenLabs (--model eleven_v4 or eleven_v4_turbo). Paid; needs a key.
 --engine auto uses the person's saved choice (voices.py default), else Kokoro if it's
 installed, else the macOS voices. It never picks a paid engine on its own. API keys come
-from the environment or ~/.config/entalkenator/keys.json (see voices.py key set).
+from the environment or the macOS Keychain (see voices.py key set).
 
 --styles "Role=brisk, skeptical;..." gives each role a delivery note. Gemini and
 gpt-4o-mini-tts follow it; the other engines ignore it.

@@ -8,15 +8,18 @@ Commands (each prints JSON):
   install kokoro     the free local voices (about 660 MB to download): runs setup_tts.sh
   install qwen3      the expressive local voices (Qwen3-TTS 1.7B, two models, 6.2 GB)
   key set ENGINE     ask for an API key (gemini, openai, elevenlabs) in a macOS dialog, check
-                     it with a free request, and save it. The key is never printed.
+                     it with a free request, and save it in the login Keychain. The key is
+                     never printed.
   key check ENGINE   check the saved key still works
   key remove ENGINE
   default            the person's chosen option
   default set ID     choose it, e.g. kokoro, qwen3, gemini:gemini-3.8-flash-lite-tts
 
 Keys are read from the environment first (GEMINI_API_KEY, OPENAI_API_KEY,
-ELEVENLABS_API_KEY), then from ~/.config/entalkenator/keys.json (mode 600). The default
-is kept in ~/.config/entalkenator/voices.json. Prices and rankings were checked on
+ELEVENLABS_API_KEY), then from the macOS login Keychain: service "enTalkenator", account
+gemini / openai / elevenlabs, visible in Keychain Access. They reach the Keychain through
+`security -i` on stdin, so a key never appears in a process listing. The default option is
+kept in ~/.config/entalkenator/voices.json. Prices and rankings were checked on
 CATALOG_DATE; Claude should present them as approximate. Python 3.9+, standard library only.
 """
 
@@ -25,6 +28,7 @@ import glob
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -40,7 +44,10 @@ CATALOG_DATE = "2026-10-17"
 WPM = 175  # the app's speaking rate, also used for template loop lengths
 ENT_HOME = os.environ.get("ENTALKENATOR_HOME", os.path.expanduser("~/.cache/entalkenator"))
 CONFIG_DIR = os.environ.get("ENTALKENATOR_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".config", "entalkenator")
-KEYS_FILE = os.environ.get("ENTALKENATOR_KEYS") or os.path.join(CONFIG_DIR, "keys.json")
+KEYCHAIN_SERVICE = "enTalkenator"
+# Tests point these at a stand-in for `security` and a throwaway store.
+SECURITY = shlex.split(os.environ.get("ENTALKENATOR_SECURITY", "/usr/bin/security"))
+KEYCHAIN = os.environ.get("ENTALKENATOR_KEYCHAIN")  # a keychain file; default: the login keychain
 DEFAULT_FILE = os.path.join(CONFIG_DIR, "voices.json")
 HF_HUB = os.path.join(os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface")), "hub")
 
@@ -156,19 +163,54 @@ def write_private(path, data):
 # What this Mac has
 
 
+def keychain_available():
+    return bool(os.environ.get("ENTALKENATOR_SECURITY")) or (sys.platform == "darwin" and os.path.exists(SECURITY[0]))
+
+
+def _kc():
+    return [KEYCHAIN] if KEYCHAIN else []
+
+
+def keychain_get(account):
+    """The stored secret, or None. Never printed."""
+    if not keychain_available():
+        return None
+    p = subprocess.run(SECURITY + ["find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", account, "-w"] + _kc(),
+                       capture_output=True, text=True)
+    return (p.stdout.strip() or None) if p.returncode == 0 else None
+
+
+def keychain_set(account, secret, label):
+    """Add or replace the item. The secret goes to `security -i` on stdin, never on a command line."""
+    if any(c in secret for c in '"\\') or any(c.isspace() for c in secret):
+        raise ValueError("unexpected characters in the secret")
+    quote = lambda v: '"%s"' % v.replace('"', "")  # noqa: E731
+    line = "add-generic-password -U -s %s -a %s -l %s -w %s %s" % (
+        quote(KEYCHAIN_SERVICE), quote(account), quote(label), quote(secret), " ".join(quote(k) for k in _kc()))
+    subprocess.run(SECURITY + ["-i"], input=line.strip() + "\n", capture_output=True, text=True)
+    # `security -i` exits 0 even when a command fails, so read the item back.
+    return keychain_get(account) == secret
+
+
+def keychain_delete(account):
+    p = subprocess.run(SECURITY + ["delete-generic-password", "-s", KEYCHAIN_SERVICE, "-a", account] + _kc(),
+                       capture_output=True, text=True)
+    return p.returncode == 0
+
+
 def api_key(engine):
-    """The engine's API key from the environment or the keys file, or None. Never printed."""
+    """The engine's API key from the environment or the Keychain, or None. Never printed."""
     env = os.environ.get(KEY_ENV.get(engine, ""), "").strip()
     if env:
         return env
-    return (read_json(KEYS_FILE).get(engine) or "").strip() or None
+    return keychain_get(engine)
 
 
 def key_source(engine):
     if os.environ.get(KEY_ENV.get(engine, ""), "").strip():
         return "environment (%s)" % KEY_ENV[engine]
-    if (read_json(KEYS_FILE).get(engine) or "").strip():
-        return "saved on this Mac"
+    if keychain_get(engine):
+        return "Keychain"
     return None
 
 
@@ -331,11 +373,10 @@ def check_key(engine, key):
 
 def cmd_key(args):
     eng = args.engine
-    keys = read_json(KEYS_FILE)
+    names = {"gemini": "Google AI Studio (Gemini)", "openai": "OpenAI", "elevenlabs": "ElevenLabs"}
     if args.action == "remove":
-        keys.pop(eng, None)
-        write_private(KEYS_FILE, keys)
-        emit({"ok": True, "removed": eng, "stillSet": key_source(eng)})
+        removed = keychain_delete(eng)
+        emit({"ok": True, "removed": removed, "engine": eng, "stillSet": key_source(eng)})
         return
     if args.action == "check":
         key = api_key(eng)
@@ -350,20 +391,22 @@ def cmd_key(args):
     else:
         if not dialog.available():
             done({"ok": False, "needs": [{"what": "terminal", "tell": "Set %s in your shell profile instead." % KEY_ENV[eng]}]}, 2)
-        names = {"gemini": "Google AI Studio (Gemini)", "openai": "OpenAI", "elevenlabs": "ElevenLabs"}
-        key = dialog.ask_secret("Paste your %s API key. It's saved on this Mac only, readable by your account, "
-                                "and never shown to Claude." % names[eng])
+        key = dialog.ask_secret("Paste your %s API key. It's kept in your Mac's Keychain and never shown to Claude."
+                                % names[eng])
         if key is None:
             done({"ok": False, "cancelled": True, "tell": "Cancelled; nothing was saved."}, 1)
         key = key.strip()
-    if len(key) < 20 or any(c.isspace() for c in key):
+    if len(key) < 20 or any(c.isspace() or c in '"\\' for c in key):
         done({"ok": False, "error": "That doesn't look like a complete API key; nothing was saved."}, 1)
+    if not keychain_available():
+        done({"ok": False, "needs": [{"what": "terminal", "tell": "No Keychain here. Set %s in your shell profile instead." % KEY_ENV[eng]}]}, 2)
     ok, msg = check_key(eng, key)
     if ok is False:
         done({"ok": False, "engine": eng, "message": msg + " Nothing was saved."}, 1)
-    keys[eng] = key
-    write_private(KEYS_FILE, keys)
-    emit({"ok": True, "engine": eng, "saved": KEYS_FILE, "checked": ok is True, "message": msg})
+    if not keychain_set(eng, key, "enTalkenator: %s API key" % names[eng]):
+        done({"ok": False, "engine": eng, "error": "The Keychain didn't accept the key (is it locked?). Nothing was saved."}, 1)
+    emit({"ok": True, "engine": eng, "saved": "Keychain (Keychain Access: search for enTalkenator)",
+          "checked": ok is True, "message": msg})
 
 
 def cmd_default(args):

@@ -82,9 +82,12 @@ deliberate, but can change between turns, so the engine designs once and clones.
 - **elevenlabs:** `POST /v1/text-to-speech/{voice_id}?output_format=pcm_24000`. Voices come
   from the account's `GET /v1/voices` and are matched by name. Text is split under 9,000
   characters.
-- **Keys:** the environment first, then `~/.config/entalkenator/keys.json` (mode 600), written
-  by `voices.py key set`. The key is typed into a macOS dialog and checked with a free
-  read-only request.
+- **Keys:** the environment first, then the login Keychain: service `enTalkenator`, account
+  `gemini` / `openai` / `elevenlabs`. `voices.py key set` takes the key from a macOS dialog
+  and checks it with a free read-only request. It then hands the key to `security -i` on stdin,
+  so it never appears in a process listing, and reads it back, because `security -i` exits 0
+  even when a command fails. Items made by `security` trust it, so later reads don't
+  prompt.
 
 The cloud engines are tested against a stand-in server (`tests/test_voices.py`), not the real
 services, because no keys were available. The first real run with each provider is the real

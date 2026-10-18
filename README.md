@@ -73,8 +73,8 @@ You choose, and can change your mind for any program:
 
 Prices were checked in October 2026 and change. Cloud voices are billed by the provider to
 your own account; enTalkenator never sees your key: you type it into a small Mac window,
-and it's saved on your Mac where only your account can read it. Every program in your
-library says its voices are AI-generated.
+and it's kept in your Mac's Keychain (look for "enTalkenator" in Keychain Access to see or
+delete it). Every program in your library says its voices are AI-generated.
 
 ## Your library
 

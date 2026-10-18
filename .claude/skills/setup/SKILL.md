@@ -86,7 +86,8 @@ Picking an option whose size is stated is the go-ahead to install it. Then:
   create the key there, then that a small enTalkenator window will ask for it. They
   create the account and add any card themselves. Run
   `VOICE_OPTIONS key set <gemini|openai|elevenlabs>`. It checks the key with a free
-  request and saves it on this Mac, readable only by their account. Never ask them to
+  request and saves it in their Mac's Keychain (they can see it in Keychain Access under
+  "enTalkenator"). Never ask them to
   paste a key into the chat. If they paste one anyway, don't repeat it, and suggest they
   revoke it and make a new one.
 
