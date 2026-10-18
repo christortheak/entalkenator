@@ -162,7 +162,8 @@ def main():
         speak(out, "")
         code, out = eng("advance", run3, "--speaker", "Abney", "--speaker", "Rigel", "--say", "Ask.")
         check("...but spoken turns go one at a time", code == 1 and "one at a time" in out["error"], out)
-        code, out = eng("advance", run3, "--speaker", "Rigel", "--segment", "2", "--say", "Ask {{question_rigel-milford}}.")
+        code, out = eng("advance", run3, "--speaker", "Rigel", "--segment", "2", "--say", "Ask {{question_rigel-milford}}.",
+                        "--delivery", "curious, a little nervous", "--cuts-in")
         speak(out, "Janson, Rigel here. Doesn't silence sometimes mean yes?")
         code, out = eng("advance", run3, "--speaker", "Gene", "--last", "--say", "Thank everyone and close.")
         check("the program doesn't end until the showrunner says so", out.get("done") is False)
@@ -177,6 +178,12 @@ def main():
         check("...and lists where each segment began, for chapters",
               [(s["title"], s["startTurn"]) for s in out["segments"]] == [("The talk", 2), ("Questions", 6)], out.get("segments"))
         check("...and every speaker saw the whole conversation", out["viewAudit"].get("ok") is True, out["viewAudit"])
+        notes = json.load(open(out["deliveryNotes"]))["turns"] if out.get("deliveryNotes") else []
+        check("delivery notes go to the voices, numbered as the transcript's turns",
+              notes == [{"turn": 3, "role": "Rigel Milford", "note": "curious, a little nervous", "cutsIn": True}], notes)
+        sheet = open(os.path.join(run3, "turns", sorted(f for f in os.listdir(os.path.join(run3, "turns"))
+                                                        if "rigel" in f and f.endswith(".md"))[-1])).read()
+        check("...and never to the speaker", "nervous" not in sheet, sheet[-300:])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (passed, len(failed)))

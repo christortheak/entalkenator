@@ -18,7 +18,12 @@ installed, else the macOS voices. It never picks a paid engine on its own. API k
 from the environment or the macOS Keychain (see voices.py key set).
 
 --styles "Role=brisk, skeptical;..." gives each role a delivery note. Gemini and
-gpt-4o-mini-tts follow it; the other engines ignore it.
+gpt-4o-mini-tts follow it; the other engines ignore it. A directed program's per-turn notes
+(delivery.json beside the transcript, from engine.py finalize) are added to the role's note.
+--lines "Role=a line in character;..." (qwen3) is what each designed voice reads for its
+reference clip; a clone copies its delivery, so a line in character makes a livelier voice.
+--speeds "Role=0.95;..." (kokoro, say) sets a role's pace. Kokoro blends voices given as
+"af_heart,af_bella". Pauses between turns follow the conversation unless --gap is given.
 
 Clips are cached in --work-dir by text and voice, so a re-run only renders what changed.
 --redo 5,23 renders those turns again (a local voice's new take, say, for a turn whose
@@ -37,6 +42,7 @@ Prints JSON: output path, duration, engine, voice map, timings, chapters file.
 """
 
 import argparse
+import array
 import base64
 import hashlib
 import json
@@ -245,12 +251,12 @@ class KokoroEngine:
         self.model = load_model(KOKORO_MODEL)
         self.rate = getattr(self.model, "sample_rate", SAMPLE_RATE)
 
-    def render(self, text, voice, path, style=None):
+    def render(self, text, voice, path, style=None, speed=None):
         np = self.np
         lang = voice[0] if voice[:1] in ("a", "b") else "a"
         parts = []
         gap = np.zeros(int(0.25 * self.rate), dtype="float32")
-        for r in self.model.generate(text=text, voice=voice, speed=self.speed, lang_code=lang):
+        for r in self.model.generate(text=text, voice=voice, speed=speed or self.speed, lang_code=lang):
             if parts:
                 parts.append(gap)
             parts.append(np.asarray(r.audio, dtype="float32"))
@@ -279,41 +285,42 @@ class QwenRenderer:
         self.np, self.mx, self.load_model = np, mx, load_model
 
     @staticmethod
-    def ref_path(description):
-        key = hashlib.sha1(("%s|%s|%s|%s" % (QWEN_DESIGN_MODEL, description, QWEN_PACE, QWEN_REF_LINE)).encode("utf-8"))
+    def ref_path(description, line=None):
+        key = hashlib.sha1(("%s|%s|%s|%s" % (QWEN_DESIGN_MODEL, description, QWEN_PACE, line or QWEN_REF_LINE)).encode("utf-8"))
         return os.path.join(QWEN_VOICE_DIR, key.hexdigest()[:16] + ".wav")
 
     def _audio(self, results):
         parts = [self.np.asarray(r.audio, dtype="float32").reshape(-1) for r in results]
         return self.np.concatenate(parts) if parts else None
 
-    def design(self, descriptions):
-        missing = [d for d in descriptions if not os.path.exists(self.ref_path(d))]
+    def design(self, voices):
+        """voices: (description, line) pairs; each is designed once and kept."""
+        missing = [(d, l) for d, l in voices if not os.path.exists(self.ref_path(d, l))]
         if not missing:
             return
         os.makedirs(QWEN_VOICE_DIR, exist_ok=True)
         model = self.load_model(QWEN_DESIGN_MODEL)
-        for d in missing:
-            a = self._audio(model.generate_voice_design(text=QWEN_REF_LINE, language="English", instruct=d + QWEN_PACE))
+        for d, l in missing:
+            a = self._audio(model.generate_voice_design(text=l or QWEN_REF_LINE, language="English", instruct=d + QWEN_PACE))
             if a is None:
                 raise RuntimeError("Qwen3-TTS couldn't design a voice for: %s" % d)
-            write_float_wav(self.ref_path(d), a, model.sample_rate, self.np)
-            with open(self.ref_path(d)[:-4] + ".json", "w", encoding="utf-8") as f:
-                json.dump({"description": d, "pace": QWEN_PACE, "line": QWEN_REF_LINE, "model": QWEN_DESIGN_MODEL}, f, indent=1)
+            write_float_wav(self.ref_path(d, l), a, model.sample_rate, self.np)
+            with open(self.ref_path(d, l)[:-4] + ".json", "w", encoding="utf-8") as f:
+                json.dump({"description": d, "pace": QWEN_PACE, "line": l or QWEN_REF_LINE, "model": QWEN_DESIGN_MODEL}, f, indent=1)
             log("  designed a voice: %s" % d[:70])
         del model
         self.mx.clear_cache()
 
     def render_all(self, jobs, batch=QWEN_BATCH, window=QWEN_WINDOW):
         np = self.np
-        voices = sorted({j["voice"] for j in jobs})
+        voices = sorted({(j["voice"], j.get("line") or "") for j in jobs})
         self.design(voices)
         model = self.load_model(QWEN_BASE_MODEL)
         rate = model.sample_rate
         gap = np.zeros(int(0.12 * rate), dtype="float32")
-        for voice in voices:
+        for voice, line in voices:
             # mlx-audio clones one shared reference per batch, so each voice's pieces are batched together.
-            mine = [j for j in jobs if j["voice"] == voice and not os.path.exists(j["path"])]
+            mine = [j for j in jobs if (j["voice"], j.get("line") or "") == (voice, line) and not os.path.exists(j["path"])]
             k = 0
             while k < len(mine):
                 # A window of whole turns: sorted by length inside it so batches stay even, and written
@@ -330,8 +337,8 @@ class QwenRenderer:
                 for start in range(0, len(order), batch):
                     chunk = order[start:start + batch]
                     out = [None] * len(chunk)
-                    for r in model.batch_generate(texts=[p for _, _, p in chunk], ref_audio=self.ref_path(voice),
-                                                  ref_text=QWEN_REF_LINE, lang_code="english", stream=False):
+                    for r in model.batch_generate(texts=[p for _, _, p in chunk], ref_audio=self.ref_path(voice, line),
+                                                  ref_text=line or QWEN_REF_LINE, lang_code="english", stream=False):
                         i = getattr(r, "sequence_idx", 0)
                         a = np.asarray(r.audio, dtype="float32").reshape(-1)
                         out[i] = a if out[i] is None else np.concatenate([out[i], a])
@@ -377,12 +384,13 @@ class SayEngine:
         if not self.voices:
             self.voices = [n for n, _ in english][:8]
 
-    def render(self, text, voice, path, style=None):
+    def render(self, text, voice, path, style=None, speed=None):
         txt = path + ".txt"
         with open(txt, "w", encoding="utf-8") as f:
             f.write(text)
         tmp = path + ".say.wav"
-        subprocess.run(["say", "-v", voice, "-r", str(self.rate_wpm), "-f", txt, "-o", tmp,
+        rate_wpm = int(self.rate_wpm * (speed or 1.0))
+        subprocess.run(["say", "-v", voice, "-r", str(rate_wpm), "-f", txt, "-o", tmp,
                         "--file-format=WAVE", "--data-format=LEI16@%d" % SAMPLE_RATE], check=True)
         rate, pcm = read_wav(tmp)
         write_wav(path, pcm, rate)
@@ -683,7 +691,7 @@ def local_worker(engine_name, jobs_file, speed):
         clear = os.environ.get("ENTALKENATOR_KOKORO_CLEAR", "1") != "0"
         for j in jobs:
             t0 = time.time()
-            engine.render(j["text"], j["voice"], j["path"])
+            engine.render(j["text"], j["voice"], j["path"], speed=j.get("speed"))
             if clear:
                 mx.clear_cache()  # MLX's buffer cache otherwise grows over a long render and slows it down
             with wave.open(j["path"]) as w:
@@ -722,7 +730,10 @@ def render_jobs(engine_name, model, jobs, speed, work):
         engine = make_engine(engine_name, speed, model)
 
         def run(job):
-            engine.render(job["text"], job["voice"], job["path"], job.get("style"))
+            if job.get("speed") and engine_name == "say":
+                engine.render(job["text"], job["voice"], job["path"], job.get("style"), speed=job["speed"])
+            else:
+                engine.render(job["text"], job["voice"], job["path"], job.get("style"))
             log("  %s done" % job["label"])
 
         if engine.workers > 1 and len(todo) > 1:
@@ -764,25 +775,70 @@ def clip_path(work, prefix, engine_name, model, voice, speed, style, text):
     return os.path.join(work, "%s-%s.wav" % (prefix, key.hexdigest()[:12]))
 
 
-def stitch(paths, gap, out, bitrate, work):
-    """Join 16-bit mono clips with silence between them and encode to .m4a.
+def turn_gaps(turns, deliveries, base=0.45):
+    """The pause after each turn, fitted to the conversation: a quick comeback follows almost at once,
+    a question gets a beat, a long answer a breath, and a turn marked as cutting in overlaps slightly.
+    A little seeded variation keeps it from sounding metronomic."""
+    gaps = []
+    for i, (role, text) in enumerate(turns):
+        if i + 1 == len(turns):
+            gaps.append(0.0)
+            break
+        nrole, ntext = turns[i + 1]
+        words = len(ntext.split())
+        if (deliveries.get(i + 2) or {}).get("cutsIn"):
+            gaps.append(-0.18)
+            continue
+        if nrole == role:
+            g = 0.35  # the same speaker going on
+        elif words <= 8:
+            g = 0.22
+        elif text.rstrip().endswith("?"):
+            g = 0.6
+        elif words >= 150:
+            g = 0.6
+        else:
+            g = base
+        jitter = (int(hashlib.sha1(("%d|%s" % (i, ntext[:40])).encode("utf-8")).hexdigest()[:4], 16) / 65535.0 - 0.5) * 0.1
+        gaps.append(round(g + jitter, 3))
+    return gaps
 
-    Returns (total seconds, [(start, end) seconds of each clip in the output]).
-    """
-    pcm = [silence(0.3)]
+
+def mix_into(buf, clip, at):
+    """Add 16-bit samples of clip into bytearray buf starting at sample `at`, extending buf as needed."""
+    a = array.array("h")
+    a.frombytes(bytes(buf[at * 2:]))
+    b = array.array("h")
+    b.frombytes(clip)
+    for k in range(min(len(a), len(b))):
+        b[k] = max(-32768, min(32767, a[k] + b[k]))
+    del buf[at * 2:]
+    buf.extend(b.tobytes())
+
+
+def stitch(paths, gaps, out, bitrate, work):
+    """Join 16-bit mono clips, each followed by its gap (seconds; negative overlaps the next clip),
+    and encode to .m4a. Returns (total seconds, [(start, end) seconds of each clip in the output])."""
+    buf = bytearray(silence(0.3))
     spans = []
-    samples = len(pcm[0]) // 2
-    for path in paths:
+    pending = 0.0
+    for path, gap in zip(paths, gaps):
         rate, clip = read_wav(path)
         if rate != SAMPLE_RATE:
             raise SystemExit("Clip %s is %d Hz, expected %d" % (path, rate, SAMPLE_RATE))
         clip = normalize_pcm16(clip)
-        spans.append((samples / SAMPLE_RATE, (samples + len(clip) // 2) / SAMPLE_RATE))
-        pcm.append(clip)
-        pcm.append(silence(gap))
-        samples += len(clip) // 2 + len(pcm[-1]) // 2
-    pcm.append(silence(0.3))
-    joined = b"".join(pcm)
+        start = len(buf) // 2
+        if pending < 0:
+            start = max(start - min(int(-pending * SAMPLE_RATE), len(clip) // 4), 0)
+            mix_into(buf, clip, start)
+        else:
+            buf.extend(clip)
+        spans.append((start / SAMPLE_RATE, (start + len(clip) // 2) / SAMPLE_RATE))
+        if gap > 0:
+            buf.extend(silence(gap))
+        pending = gap
+    buf.extend(silence(0.3))
+    joined = bytes(buf)
     full_wav = os.path.join(work, "full-%s.wav" % os.getpid())
     write_wav(full_wav, joined)
     encode_m4a(full_wav, out, bitrate)
@@ -913,7 +969,8 @@ def audition(args, engine_name, model, pool, turns, roles, styles):
     rendered = render_jobs(engine_name, model, jobs, args.speed, work)
     for entry in plan:
         f = os.path.join(out_dir, "audition-%s.m4a" % re.sub(r"[^A-Za-z0-9]+", "-", entry["role"]).strip("-").lower())
-        entry["seconds"] = round(stitch([o.pop("path") for o in entry["order"]], 0.9, f, args.bitrate, work)[0], 1)
+        paths = [o.pop("path") for o in entry["order"]]
+        entry["seconds"] = round(stitch(paths, [0.9] * len(paths), f, args.bitrate, work)[0], 1)
         entry["file"] = f
     emit({"engine": engine_name, "model": model, "rendered": rendered, "auditions": plan,
           "note": "Each file plays the candidates in the listed order, about a second apart."})
@@ -995,7 +1052,11 @@ def main():
                     help="narrations: chapters for headings down to this level (1 = top level only; default all)")
     ap.add_argument("--speed", type=float, default=1.0)
     ap.add_argument("--redo", help="turn numbers to render again, e.g. 5,23")
-    ap.add_argument("--gap", type=float, default=0.45, help="seconds of silence between turns")
+    ap.add_argument("--gap", type=float, help="seconds of silence between turns (default: fitted to the conversation)")
+    ap.add_argument("--lines", help='qwen3: the line each designed voice reads, in character, e.g. '
+                                    '"Professor Swift=Well, that is a brave word for it."')
+    ap.add_argument("--speeds", help='kokoro and say: a role\'s pace, e.g. "Professor Swift=0.95;Rigel=1.05"')
+    ap.add_argument("--delivery", help="per-turn delivery notes (default: delivery.json beside the transcript)")
     ap.add_argument("--bitrate", type=int, default=48000)
     ap.add_argument("--work-dir", help="clip cache (default: <out>.clips/)")
     ap.add_argument("--list-voices", action="store_true")
@@ -1035,6 +1096,13 @@ def main():
         audition(args, engine_name, model, pool, turns, roles, styles)
         return
     voices = assign_voices(roles, pool, parse_overrides(args.voices))
+    lines = parse_overrides(args.lines)
+    speeds = {r: float(v) for r, v in parse_overrides(args.speeds).items()}
+    dfile = args.delivery or os.path.join(os.path.dirname(os.path.abspath(args.transcript)), "delivery.json")
+    deliveries = {}
+    if os.path.isfile(dfile):
+        with open(dfile, encoding="utf-8") as f:
+            deliveries = {d["turn"]: d for d in json.load(f).get("turns", [])}
 
     out = os.path.abspath(args.out)
     work = os.path.abspath(args.work_dir or (os.path.splitext(out)[0] + ".clips"))
@@ -1043,10 +1111,21 @@ def main():
     jobs = []
     for i, (role, text) in enumerate(turns):
         spoken = speakable(text)
-        jobs.append({"text": spoken, "voice": voices[role], "style": styles.get(role),
-                     "label": "turn %d/%d (%s)" % (i + 1, len(turns), role),
-                     "path": clip_path(work, "%03d" % (i + 1), engine_name, model, voices[role], args.speed,
-                                       styles.get(role), spoken)})
+        # Only engines that take direction get a note, so adding notes doesn't re-render the others.
+        note = (deliveries.get(i + 1) or {}).get("note")
+        style = "; ".join(x for x in (styles.get(role), note) if x) or None
+        style = style if engine_name in ("gemini", "openai") else styles.get(role)
+        speed = args.speed * speeds.get(role, 1.0) if engine_name in ("kokoro", "say") else args.speed
+        line = lines.get(role) if engine_name == "qwen3" else None
+        job = {"text": spoken, "voice": voices[role], "style": style,
+               "label": "turn %d/%d (%s)" % (i + 1, len(turns), role),
+               "path": clip_path(work, "%03d" % (i + 1), engine_name, model,
+                                 voices[role] + ("|" + line if line else ""), speed, style, spoken)}
+        if speed != args.speed:
+            job["speed"] = speed
+        if line:
+            job["line"] = line
+        jobs.append(job)
     if args.redo:
         for n in [int(x) for x in args.redo.replace(" ", "").split(",") if x]:
             if not 1 <= n <= len(jobs):
@@ -1057,7 +1136,8 @@ def main():
     t1 = time.time()
     rendered = render_jobs(engine_name, model, jobs, args.speed, work)
     render_s = time.time() - t1
-    seconds, spans = stitch([j["path"] for j in jobs], args.gap, out, args.bitrate, work)
+    gaps = [args.gap] * len(jobs) if args.gap is not None else turn_gaps(turns, deliveries)
+    seconds, spans = stitch([j["path"] for j in jobs], gaps, out, args.bitrate, work)
     chapters = os.path.splitext(out)[0] + ".chapters.json"
     plan = None
     if args.chapter_plan:

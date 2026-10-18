@@ -46,6 +46,7 @@ Subcommands (all print JSON on stdout):
   commit   RUN                    fold the written outputs of the pending step(s) in
   advance  RUN [--batch] [--cast ROLE=AGENT_ID ...] [--speaker NAME]
            [--say TEXT|-] [--private KEY] [--segment N] [--last]   (directed programs)
+           [--delivery NOTE] [--cuts-in]     how the turn should sound, for the voices
                                   record speaker agents, commit, then issue the next step(s)
   status   RUN                    progress summary
   finalize RUN                    write transcript.txt in the app's "[Name]: text" format
@@ -857,6 +858,10 @@ def directed_next(args, st, template, run, mode):
         key = args.private if not args.private or len(chosen) == 1 else "%s_%s" % (args.private, slug(name))
         template["steps"].append({"roleName": name, "promptTemplate": say, "outputKey": key or "output",
                                   "includeInTranscript": "false" if args.private else "true"})
+        if not args.private and (args.delivery or args.cuts_in):
+            # For the voices, not the speaker: how the line should sound, and whether it cuts in.
+            template["steps"][-1]["delivery"] = {k: v for k, v in (("note", (args.delivery or "").strip()),
+                                                                   ("cutsIn", bool(args.cuts_in))) if v}
         idx = len(template["steps"]) - 1
         st["current_index"] = idx
         pend, _ = issue(st, template, idx, name)
@@ -1726,6 +1731,16 @@ def cmd_finalize(args):
         fail("The template has not finished yet. Keep running advance.")
     path = os.path.join(st["run_dir"], "transcript.txt")
     write_text(path, transcript_text(st))
+    # Delivery notes the showrunner gave for spoken turns, numbered as in transcript.txt, for render_audio.py.
+    steps = template_of(st)["steps"]
+    spoken = [t for t in st["turns"] if t["visible"]]
+    deliveries = [dict(turn=i, role=t["role"], **steps[t["index"]]["delivery"])
+                  for i, t in enumerate(spoken, 1) if steps[t["index"]].get("delivery")]
+    dpath = os.path.join(st["run_dir"], "delivery.json")
+    if deliveries:
+        write_text(dpath, json.dumps({"turns": deliveries}, indent=1, ensure_ascii=False) + "\n")
+    elif os.path.exists(dpath):
+        os.remove(dpath)
     # A speaker that rewrote its file after the showrunner committed it would leave
     # the transcript with a stale draft. Report it rather than guess.
     changed = []
@@ -1744,6 +1759,7 @@ def cmd_finalize(args):
         "estimatedMinutes": round(st["total_words"] / WORDS_PER_MINUTE, 1),
         "generationSeconds": round(elapsed),
         "roles": [r["name"] for r in template["roles"]],
+        "deliveryNotes": os.path.join(st["run_dir"], "delivery.json") if deliveries else None,
         "segments": [{"segment": x["segment"], "title": st["program"]["segments"][x["segment"] - 1]["title"]
                       if x["segment"] <= len(st["program"]["segments"]) else None, "startTurn": x["turn"]}
                      for x in st.get("segment_starts", [])] if st.get("directed") else None,
@@ -2187,6 +2203,9 @@ def main():
         p.add_argument("--private", metavar="KEY", help="directed programs: preparation nobody hears, saved as {{KEY}}")
         p.add_argument("--segment", type=int, help="directed programs: this turn begins segment N")
         p.add_argument("--last", action="store_true", help="directed programs: this is the final spoken turn")
+        p.add_argument("--delivery", help="directed programs: how this turn should sound, for voices that take "
+                                          "direction (e.g. \"wry, conceding the point\")")
+        p.add_argument("--cuts-in", action="store_true", help="directed programs: this turn interrupts the last one")
         p.set_defaults(func=fn)
 
     p = sub.add_parser("commit")

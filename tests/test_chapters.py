@@ -112,6 +112,13 @@ def main():
               [(c["title"], c["startTime"]) for c in pdoc["chapters"]] == [("Welcome", 0), ("Is silence consent?", tts[1]["start"])]
               and len(tts) == 3, pdoc["chapters"])
         check("...embedded in the .m4a too", [c[1] for c in mp4chapters.read_chapters(cout)] == ["Welcome", "Is silence consent?"])
+        with open(os.path.join(tmp, "delivery.json"), "w") as f:
+            json.dump({"turns": [{"turn": 3, "role": "Ben", "note": "cutting in", "cutsIn": True}]}, f)
+        subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "render_audio.py"), "--transcript", conv,
+                        "--out", cout, "--engine", "say"], capture_output=True, text=True)
+        ct = json.load(open(os.path.splitext(cout)[0] + ".chapters.json"))["entalkenator"]["turnTimes"]
+        check("a turn marked as cutting in overlaps the one before it", ct[2]["start"] < ct[1]["end"]
+              and ct[1]["start"] - ct[0]["end"] > 0.1, ct)
         v = mp4chapters.verify(out)
         check("AVFoundation reads every chapter title", v and v.get("chapters") == [w[1] for w in want], v)
         dur = afinfo_seconds(out)

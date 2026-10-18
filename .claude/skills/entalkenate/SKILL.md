@@ -304,6 +304,11 @@ Don't put words in their mouths, and don't tell them who's right.
   rotation and ping-pong between the same two people.
 - Vary the rhythm: short interjections ("one or two sentences") between longer answers,
   and an aside or a joke where these people would make one.
+- **How it should sound.** On a spoken turn, `--delivery "wry, conceding the point"` adds a
+  few words for the voices: mood, pace, intensity. `--cuts-in` marks a turn that interrupts
+  the last one; in the audio it starts a moment early, overlapping slightly. The speaker
+  never sees these. Voices that take direction follow the note; the pauses between turns
+  follow the conversation in every engine. Leave the note off when the moment is plain.
 - Mark each segment's first turn with `--segment N`. Move on when its minutes are up or it
   has done its job, through the lead and within the story ("We have time for one more
   question"). Land the whole program within about 10% of its target length.
@@ -501,6 +506,15 @@ with its turn's opening words, so check they land where you meant. In section 3,
      - don't use `;` or `=`, which separate the roles
      The same description gives the same voice in every program, because designed voices
      are kept, so a recurring character keeps their voice.
+
+     Also write each role a line in character, one to three sentences that person would
+     say in their own manner, and pass them as `--lines "Role=line;Role=line"` (no `;` or
+     `=` inside). Each designed voice reads its line once, and every turn copies how that
+     line was delivered. A line in character gives a livelier voice than the default, which
+     is neutral and careful. For a recurring character, reuse the same description and line.
+   - **Kokoro**: give roles a slightly different pace with `--speeds "Role=0.94;Role=1.06"`
+     (a measured professor, a quick student), and blend two voices for more variety than
+     the eight presets, e.g. `af_bella,am_puck`.
    - **Delivery notes** (gemini and gpt-4o-mini-tts follow them; the others ignore them):
      write a short note per role from its sketch and the form, under 12 words, such as
      "dry, unhurried, faintly amused". Pass them as `--styles "Role=note;Role=note"`.
@@ -524,6 +538,8 @@ with its turn's opening words, so check they land where you meant. In section 3,
      - Kokoro: under a tenth of the audio's length
      - Qwen3-TTS: about half (its first use also designs each voice, a few seconds each)
      - cloud engines: a few minutes, four turns at a time
+   - The pauses between turns follow the conversation: a quick reply comes fast, a question
+     gets a beat, and a turn that cuts in overlaps. `--gap N` makes them all the same.
    - Clips are cached by text, voice, model, and delivery note, so a re-run after a failure,
      or with one role's voice changed, only renders what's missing.
    - Next to the .m4a it writes `<Title>.chapters.json`: your chapters, plus
