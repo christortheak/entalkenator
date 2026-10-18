@@ -49,8 +49,7 @@ import zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-CONFIG_DIR = os.environ.get("ENTALKENATOR_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".config", "entalkenator")
-PREFS = os.path.join(CONFIG_DIR, "narration.json")
+import prefs as preferences  # noqa: E402
 
 TEXTUTIL_TYPES = {".doc", ".docx", ".rtf", ".rtfd", ".html", ".htm", ".odt", ".webarchive", ".wordml"}
 TEXT_TYPES = {".txt", ".md", ".markdown", ".text"}
@@ -842,7 +841,7 @@ def cmd_script(args):
             if b["type"] == "heading":
                 if args.notes == "section-end":
                     release()
-                turns.append(["Narrator", "# " + spoken_heading(b["text"])])
+                turns.append(["Narrator", "#" * max(1, min(4, b.get("level", 1))) + " " + spoken_heading(b["text"])])
                 stats["sections"] += 1
             elif b["type"] == "para":
                 say("Narrator", clean_para(b["text"]))
@@ -859,7 +858,7 @@ def cmd_script(args):
     # A heading turn on its own would be a one-line chapter: fold the text that follows into it.
     merged = []
     for role, text in turns:
-        if merged and merged[-1][0] == "Narrator" and role == "Narrator" and re.match(r"^# [^\n]*$", merged[-1][1]):
+        if merged and merged[-1][0] == "Narrator" and role == "Narrator" and re.match(r"^#{1,4} [^\n]*$", merged[-1][1]):
             merged[-1][1] += "\n\n" + text
         else:
             merged.append([role, text])
@@ -966,16 +965,14 @@ def cmd_meta(args):
 
 
 def cmd_prefs(args):
-    try:
-        with open(PREFS, encoding="utf-8") as f:
-            prefs = json.load(f)
-    except (OSError, ValueError):
-        prefs = {}
-    changed = {k: v for k, v in (("notes", args.notes), ("citations", args.citations), ("figures", args.figures)) if v}
-    if changed:
-        prefs.update(changed)
-        write_json(PREFS, prefs)
-    emit({"prefs": prefs, "saved": bool(changed), "file": PREFS})
+    """The narration settings in prefs.py's preferences (kept here for older skill text)."""
+    pairs = ["narration.%s=%s" % (k, v) for k, v in (("notes", args.notes), ("citations", args.citations),
+                                                     ("figures", args.figures)) if v]
+    if pairs:
+        preferences.set_values(pairs)
+    data = preferences.load()
+    emit({"prefs": {k.split(".", 1)[1]: v for k, v in data.items() if k.startswith("narration.")},
+          "saved": bool(pairs), "file": preferences.PATH})
 
 
 def main():

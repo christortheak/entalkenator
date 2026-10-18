@@ -69,6 +69,14 @@ Open the folder in Claude and ask in your own words:
 
 > A seminar on the three articles in ~/Documents/Week 6
 
+> Make a workshop hot bench from this PDF. No questions, use your best judgment.
+
+With "no questions", Claude makes every choice itself, publishes to your library, and tells
+you when it's done, so you can walk away. Keep the Mac awake and Claude open until it
+finishes. Otherwise Claude asks only when a choice is really yours, and offers to remember
+the answer. You can also just tell it what you like ("always publish", "chapters for the
+main parts only", "never read footnotes"), and it remembers.
+
 > Turn this article into a podcast conversation: (paste the text)
 
 > What formats are there?

@@ -8,6 +8,7 @@
       "Bash(python3 scripts/status.py *)",
       "Bash(python3 scripts/voices.py *)",
       "Bash(python3 scripts/sources.py *)",
+      "Bash(python3 scripts/prefs.py *)",
       "Bash(bash scripts/setup_tts.sh --check)",
       "Edit(/programs/**)"
     ],

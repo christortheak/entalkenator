@@ -294,6 +294,31 @@ def main():
     st, _, body = c.req("GET", "/app/api/items/%s/transcript" % item_id, session)
     tv = json.loads(body)
     check("app transcript view is timed", st == 200 and tv.get("timed") and all(t["start"] is not None for t in tv["turns"]), tv.get("timed"))
+
+    # A narration: chapters only at headings (fewer than its turns), with every turn's timing
+    # in entalkenator.turnTimes. The transcript must still follow the audio.
+    narr_dir = os.path.join(CLOUD, ".wrangler", "test-narration")
+    os.makedirs(narr_dir, exist_ok=True)
+    with open(os.path.join(narr_dir, "narration.txt"), "w", encoding="utf-8") as f:
+        f.write("[Narrator]: # Introduction\n\nSilence is ambiguous.\n\n[Notes]: Footnote 1. An aside.\n\n"
+                "[Narrator]: The argument has three parts.\n\n[Narrator]: # Part Two\n\nProcedure is harsher.\n")
+    narr_audio = os.path.join(narr_dir, "Narration.m4a")
+    subprocess.run([sys.executable, os.path.join(os.path.dirname(CLOUD), "scripts", "render_audio.py"),
+                    "--transcript", os.path.join(narr_dir, "narration.txt"), "--out", narr_audio, "--engine", "say"],
+                   capture_output=True, text=True, check=True)
+    narr = run_publish(args, "push", "--audio", narr_audio, "--transcript", os.path.join(narr_dir, "narration.txt"),
+                       "--title", "Narration test", "--template", "Narration")
+    st, _, body = c.req("GET", "/app/api/items/%s/transcript" % narr["id"], session)
+    nv = json.loads(body)
+    with open(os.path.splitext(narr_audio)[0] + ".chapters.json") as f:
+        nchap = json.load(f)
+    check("a narration's chapters are its headings, fewer than its turns",
+          [x["title"] for x in nchap["chapters"]] == ["Introduction", "Part Two"] and len(nv.get("turns", [])) == 4, nchap["chapters"])
+    check("...and its transcript still follows the audio (from turnTimes)",
+          st == 200 and nv.get("timed") and all(t["start"] is not None for t in nv["turns"]), nv)
+    st, _, body = c.req("GET", "/media/%s/%s/transcript.vtt" % (feed_token, narr["id"]))
+    check("...and podcast apps get timed captions for it", st == 200 and body.count(b"-->") >= 4, st)
+    run_publish(args, "delete", narr["id"], "--yes")
     st, _, _ = c.req("GET", "/app/api/items", {"Cookie": cookie[:-3] + "AAA"})
     check("tampered cookie -> 401", st == 401, st)
     st, _, _ = c.req("PATCH", "/app/api/items/" + item_id, dict(session, **{"Content-Type": "application/json"}), json.dumps({"title": "csrf"}))

@@ -196,6 +196,34 @@ def main():
         code, out = run("prefs", "--notes", "section-end", env=env)
         code, out = run("prefs", env=env)
         check("preferences are remembered", out["prefs"].get("notes") == "section-end")
+        PREFS = os.path.join(ROOT, "scripts", "prefs.py")
+
+        def pr(*a):
+            p = subprocess.run([sys.executable, PREFS] + list(a), capture_output=True, text=True, env=env)
+            return p.returncode, json.loads(p.stdout)
+        code, out = pr("show")
+        check("narration choices live in the shared preferences", out["settings"].get("narration.notes") == "section-end", out)
+        code, out = pr("set", "questions=none", "publish=always", "chapters.narration=main-parts")
+        check("settings are recorded", code == 0 and out["set"]["questions"] == "none")
+        code, out = pr("set", "publish=sometimes")
+        check("an invalid value is refused", code == 1 and "publish must be one of" in out["error"], out)
+        code, out = pr("note", "Likes a chapter every 5 to 10 minutes")
+        code, out = pr("show")
+        check("notes in the person's own words are kept", out["notes"][0]["text"].startswith("Likes a chapter") and out["notes"][0]["n"] == 1)
+        code, out = pr("forget", "1")
+        code, out = pr("show")
+        check("...and can be forgotten", out["notes"] == [] and out["settings"]["publish"] == "always")
+
+        print("heading levels")
+        reading = json.load(open(os.path.join(runp, "sources", "d1", "reading.json")))
+        for b in reading["blocks"]:
+            if b["type"] == "heading" and b["text"].startswith("I."):
+                b["level"] = 2
+        json.dump(reading, open(os.path.join(runp, "sources", "d1", "reading.json"), "w"))
+        run("script", runp, env=env)
+        script = open(os.path.join(runp, "narration.txt")).read()
+        check("the narration script keeps heading levels", "## I. Contract" in script and "\n[Narrator]: # Introduction" not in script
+              or "## I. Contract" in script, script[:300])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (passed, len(failed)))

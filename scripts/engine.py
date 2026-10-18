@@ -1402,6 +1402,44 @@ def cmd_finalize(args):
     })
 
 
+def cmd_chapters(args):
+    """Save the showrunner's chapter points for the finished transcript: [(turn, title)]."""
+    st = load_state(args.run_dir)
+    if not st["done"]:
+        fail("Run finalize first.")
+    turns = st["history"]
+    plan = []
+    for part in re.split(r"[;\n]", args.plan or ""):
+        if not part.strip():
+            continue
+        if "=" not in part:
+            fail("Write each chapter as TURN=Title, separated by semicolons: %r" % part.strip())
+        n, title = part.split("=", 1)
+        try:
+            n = int(n.strip())
+        except ValueError:
+            fail("%r isn't a turn number" % n.strip())
+        title = " ".join(title.split())
+        if not 1 <= n <= len(turns):
+            fail("Turn %d doesn't exist; the transcript has %d spoken turns." % (n, len(turns)))
+        if not title or len(title) > 80:
+            fail("Chapter titles should be 1 to 80 characters: %r" % title)
+        plan.append({"turn": n, "title": title})
+    plan.sort(key=lambda c: c["turn"])
+    if len({c["turn"] for c in plan}) != len(plan):
+        fail("Two chapters start at the same turn.")
+    if not plan:
+        fail("Give at least one chapter, e.g. --plan \"1=Opening statements;6=The jurisdiction question\"")
+    if plan[0]["turn"] != 1:
+        plan.insert(0, {"turn": 1, "title": "Opening"})
+    path = os.path.join(st["run_dir"], "chapters-plan.json")
+    write_text(path, json.dumps({"chapters": plan}, ensure_ascii=False, indent=1) + "\n")
+    emit({"plan": path, "chapters": [dict(c, speaker=turns[c["turn"] - 1]["role"],
+                                         opens=" ".join(turns[c["turn"] - 1]["text"].split()[:12])) for c in plan],
+          "spokenTurns": len(turns),
+          "note": "Pass --chapter-plan with this file to render_audio.py."})
+
+
 def safe_component(name, fallback="Untitled"):
     s = re.sub(r'[/\\:*?"<>|\x00-\x1f]', " ", name or "")
     s = re.sub(r"\s+", " ", s).strip().strip(".")
@@ -1798,6 +1836,11 @@ def main():
         p = sub.add_parser(name)
         p.add_argument("run_dir")
         p.set_defaults(func=fn)
+
+    p = sub.add_parser("chapters", help="save chapter points for the finished transcript")
+    p.add_argument("run_dir")
+    p.add_argument("--plan", required=True, help='"1=Opening statements;6=The jurisdiction question;14=Closing"')
+    p.set_defaults(func=cmd_chapters)
 
     p = sub.add_parser("package")
     p.add_argument("run_dir")

@@ -747,33 +747,61 @@ def chapter_title(role, text, limit=60):
     return "%s: %s" % (role, words) if words else role
 
 
-def write_chapters(path, turns, spans, seconds, engine_name, model, voices, transcript):
-    """One Podcasting 2.0 chapter per turn, in transcript order.
+HEADING_RE = re.compile(r"^[ \t]*(#{1,4})[ \t]+(.+?)[ \t]*$", re.M)
 
-    The enTalkenator library pairs chapter N with turn N of the transcript to show
-    who is speaking. Chapters start where each clip starts (the first at 0) and end
-    where its speech ends; the silence between turns belongs to no chapter.
+
+def write_chapters(path, turns, spans, seconds, engine_name, model, voices, transcript, plan=None, depth=4):
+    """Podcasting 2.0 chapters, plus every turn's timing for the library.
+
+    A narration (turns with "# Heading" lines) gets one chapter per heading, so podcast apps
+    list the document's own outline, not its footnotes and figures. A conversation gets the
+    chapters the showrunner chose (plan: [{"turn", "title"}], from engine.py chapters), or one
+    chapter per turn ("Moderator: Welcome…") without a plan. Either way
+    entalkenator.turnTimes holds each turn's start, end and speaker, which the library uses to
+    make the transcript follow the audio.
     """
+    turn_times = [{"start": 0 if i == 0 else round(start, 3), "end": round(end, 3), "speaker": role}
+                  for i, ((role, _), (start, end)) in enumerate(zip(turns, spans))]
     chapters = []
-    heading = None  # narrations: turns that open with "# Heading" title their chapter, and the ones after it
-    for i, ((role, text), (start, end)) in enumerate(zip(turns, spans)):
-        m = re.match(r"^\s*#{1,4}\s+(.+)", text)
-        if m:
-            heading = m.group(1).strip()
-            title = chapter_title("", heading, 80).lstrip(": ")
-        elif heading and role == "Narrator":
-            title = "%s (continued)" % chapter_title("", heading, 60).lstrip(": ")
-        elif role == "Notes":
-            title = chapter_title("", speakable(text), 70)  # "Footnote 13. Yann LeCun…", "Figure 1 is…"
-        else:
-            title = chapter_title(role, speakable(text))
-        chapters.append({
-            "startTime": 0 if i == 0 else round(start, 3),
-            "endTime": round(end, 3),
-            "title": title,
-            "speaker": role,
-            "turn": i + 1,
-        })
+    if any(HEADING_RE.search(text) for _, text in turns):
+        for i, ((role, text), (start, end)) in enumerate(zip(turns, spans)):
+            spoken_total = max(1, len(speakable(text).split()))
+            for m in HEADING_RE.finditer(text):
+                if len(m.group(1)) > depth:
+                    continue  # deeper than the person wants in their chapter list
+                # A heading partway into a turn starts in proportion to the words before it.
+                before = len(speakable(text[:m.start()]).split())
+                t = start + (end - start) * before / float(spoken_total)
+                chapters.append({"startTime": round(t, 3), "title": chapter_title("", m.group(2), 80).lstrip(": ")})
+        if not chapters:
+            chapters.append({"startTime": 0, "title": "Opening"})
+        if chapters[0]["startTime"] < 1:
+            chapters[0]["startTime"] = 0
+        else:  # text before the first heading
+            chapters.insert(0, {"startTime": 0, "title": "Opening"})
+        # A heading followed at once by a subheading ("Results", then its first subsection)
+        # would be a chapter of a second or two: make them one ("Results: Accurate prediction…").
+        merged = []
+        for c in chapters:
+            if merged and c["startTime"] - merged[-1]["startTime"] < 6:
+                merged[-1]["title"] = chapter_title("", merged[-1]["title"] + ": " + c["title"], 90).lstrip(": ")
+            else:
+                merged.append(c)
+        chapters = merged
+        for c, nxt in zip(chapters, chapters[1:] + [None]):
+            c["endTime"] = round(nxt["startTime"] if nxt else seconds, 3)
+    elif plan:
+        marks = sorted((c for c in plan if 1 <= int(c["turn"]) <= len(turns)), key=lambda c: int(c["turn"]))
+        for c in marks:
+            chapters.append({"startTime": turn_times[int(c["turn"]) - 1]["start"], "title": c["title"], "turn": int(c["turn"])})
+        if not chapters or chapters[0]["startTime"] > 0:
+            chapters.insert(0, {"startTime": 0, "title": "Opening", "turn": 1})
+        for c, nxt in zip(chapters, chapters[1:] + [None]):
+            c["endTime"] = round(nxt["startTime"] if nxt else seconds, 3)
+    else:
+        for i, ((role, text), tt) in enumerate(zip(turns, turn_times)):
+            chapters.append({"startTime": tt["start"], "endTime": tt["end"], "title": chapter_title(role, speakable(text)),
+                             "speaker": role, "turn": i + 1})
     doc = {
         "version": "1.2.0",
         "chapters": chapters,
@@ -784,7 +812,8 @@ def write_chapters(path, turns, spans, seconds, engine_name, model, voices, tran
             "model": model,
             "voices": voices,
             "transcript": os.path.basename(transcript),
-            "turns": len(chapters),
+            "turnCount": len(turn_times),
+            "turnTimes": turn_times,
         },
     }
     tmp = path + ".tmp"
@@ -908,6 +937,9 @@ def main():
                                      "For qwen3 each value is a description of the voice.")
     ap.add_argument("--styles", help='delivery notes per role, e.g. "Judge=dry, unhurried;Counsel=quick, confident" '
                                      "(gemini and gpt-4o-mini-tts)")
+    ap.add_argument("--chapter-plan", help="chapters-plan.json from engine.py chapters: where a conversation's chapters go")
+    ap.add_argument("--chapter-depth", type=int, default=4,
+                    help="narrations: chapters for headings down to this level (1 = top level only; default all)")
     ap.add_argument("--speed", type=float, default=1.0)
     ap.add_argument("--gap", type=float, default=0.45, help="seconds of silence between turns")
     ap.add_argument("--bitrate", type=int, default=48000)
@@ -967,7 +999,11 @@ def main():
     render_s = time.time() - t1
     seconds, spans = stitch([j["path"] for j in jobs], args.gap, out, args.bitrate, work)
     chapters = os.path.splitext(out)[0] + ".chapters.json"
-    write_chapters(chapters, turns, spans, seconds, engine_name, model, voices, args.transcript)
+    plan = None
+    if args.chapter_plan:
+        with open(args.chapter_plan, encoding="utf-8") as f:
+            plan = json.load(f).get("chapters")
+    write_chapters(chapters, turns, spans, seconds, engine_name, model, voices, args.transcript, plan, args.chapter_depth)
     embedded = embed_chapters(out, chapters)
 
     emit({

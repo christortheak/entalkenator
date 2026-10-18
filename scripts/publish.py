@@ -303,9 +303,10 @@ def gather(args):
     voices = extra.get("voices") or {}
     speakers = [{"name": n, "voice": voices[n]} if voices.get(n) else {"name": n} for n in names]
     warnings = []
-    if chapters and transcript and len(chap.get("chapters") or []) != turns:
-        warnings.append("The chapters (%d) don't match the transcript's turns (%d), so the web app can't "
-                        "follow along. Re-render to rebuild them." % (len(chap.get("chapters") or []), turns))
+    timed = extra.get("turnTimes") if isinstance(extra.get("turnTimes"), list) else chap.get("chapters") or []
+    if chapters and transcript and len(timed) != turns:
+        warnings.append("The turn timings (%d) don't match the transcript's turns (%d), so the web app can't "
+                        "follow along. Re-render to rebuild them." % (len(timed), turns))
 
     duration = extra.get("durationSeconds") or mp4_duration(audio)
     title = args.title or st.get("title") or os.path.splitext(os.path.basename(audio))[0]

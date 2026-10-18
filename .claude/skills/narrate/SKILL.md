@@ -14,12 +14,22 @@ PDF's own text.
 
 Arguments: `$ARGUMENTS`
 
+**No questions.** If the person said "no questions", "use your best judgment", or "I'm walking
+away", or `PREFS show` has `questions=none`, ask nothing.
+- Survey and write the brief yourself, from their preferences and your judgment.
+- Use voices that are already ready, and publish if a library is set up, unless
+  `publish=never`.
+- Report at the end, including any choice you would have asked about, plus a push
+  notification if you have that tool.
+
 Scripts run from the enTalkenator folder, `${CLAUDE_PROJECT_DIR}`. If an earlier command
 changed directory, `cd` back there first. Quote other paths; they may contain spaces.
 - `SOURCES` = `python3 scripts/sources.py`
 - `RENDER` = `python3 scripts/render_audio.py`
 - `VOICE_OPTIONS` = `python3 scripts/voices.py`
 - `PUBLISH` = `python3 scripts/publish.py`
+- `PREFS` = `python3 scripts/prefs.py`: the person's preferences (CLAUDE.md says when to record
+  them)
 
 ## 1. Plan the reading
 
@@ -54,9 +64,19 @@ finish. Writing it is your job, and it's the step that matters most.
    - figures and tables
    - anything odd: columns, equations, foreign-language passages, long quotations
 
-   `SOURCES prefs` holds the person's usual choices, and the arguments (`--notes`,
-   `--citations`, `--figures`) settle those choices for this run. Follow both unless the
-   document gives a good reason not to, and then say why.
+   `PREFS show` holds the person's usual choices (`narration.notes`, `narration.citations`,
+   `narration.figures`, `chapters.narration`, and notes in their own words). The arguments
+   (`--notes`, `--citations`, `--figures`) settle those choices for this run. Follow both
+   unless the document gives a good reason not to, and then say why.
+   - **Chapters:** podcast apps list one chapter per heading, down to the depth in
+     `chapters.narration`:
+     - `all-headings` is every level, the default
+     - `main-parts` is the top two levels
+     - `top-level` is the top level only
+
+     If there's no preference and the outline is deep (say, over 30 headings), that's a
+     fair question: "Chapters for every subsection (60), or the main parts only (9)?".
+
 3. **Ask only about real choices.** Use AskUserQuestion, recommended option first, at most
    two or three questions. Ask when a choice is genuinely the person's and the document
    makes it matter. For example:
@@ -64,9 +84,9 @@ finish. Writing it is your job, and it's the step that matters most.
    - "About 300 footnotes, a tenth substantive. Read those after their paragraph?"
    - "Methods runs 9 pages. Read it, or stop at the Discussion?"
 
-   Don't ask what the brief can settle sensibly by itself. If the person states a general
-   preference ("never read footnotes"), save it with
-   `SOURCES prefs --notes ... --citations ... --figures ...`.
+   Don't ask what the brief can settle sensibly by itself. When you ask, offer to remember
+   the answer. If the person states a general preference ("never read footnotes"), record
+   it: `PREFS set narration.notes=none`, or `PREFS note "..."`.
 4. **Write the brief** to the `brief` path the plan printed (`sources/<doc>/brief.md`). Use
    plain sentences, under about 250 words, for readers who will see only their own pages.
    The same note placement goes to `SOURCES script` in step 5 (`--notes after-paragraph`,
@@ -135,7 +155,10 @@ For Gemini and gpt-4o-mini-tts, also pass `--styles`:
 ## 6. Render, package, publish
 
 1. **Render**, in the background for anything over a few minutes of audio:
-   `RENDER --transcript <dir>/narration.txt --out "<dir>/<Title>.m4a" --engine <id> --voices "Narrator=…;Notes=…" --gap 0.6`
+   `RENDER --transcript <dir>/narration.txt --out "<dir>/<Title>.m4a" --engine <id> --voices "Narrator=…;Notes=…" --gap 0.6 [--chapter-depth 1|2]`
+   - `--chapter-depth` follows `chapters.narration`: 2 for `main-parts`, 1 for `top-level`,
+     nothing for all headings. The chapters are embedded in the .m4a for Overcast and Apple
+     Podcasts, and listed in the feed for other apps.
    - Paid engines: state the estimated cost first (`VOICE_OPTIONS list --transcript <dir>/narration.txt`).
    - A long document takes a while. Kokoro does three hours of audio in about 12 minutes on a
      recent Mac; Qwen3-TTS takes about four times as long.
@@ -144,8 +167,9 @@ For Gemini and gpt-4o-mini-tts, also pass `--styles`:
    - the PDF
    - the reading as the paper's text
    - the narration as the paper's own audio
-3. **Publish** if a library is configured (`PUBLISH status`; same choices as in the entalkenate
-   skill):
+3. **Publish** if a library is configured (`PUBLISH status`). Follow the entalkenate skill:
+   `publish=always`, `--publish`, or no-questions mode publish without asking; otherwise
+   ask.
    `PUBLISH push "<dir>" --audio "<dir>/<Title>.m4a" --transcript "<dir>/narration.txt" --title "<Title>" --author "<Author>" --template Narration [--tag ...]`
    Its chapters file sits next to the .m4a, so the web app follows along by section.
 

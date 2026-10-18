@@ -31,25 +31,37 @@ export function parseTranscript(text: string): { speaker: string; text: string }
   return turns;
 }
 
-/** Pair turns with chapter times when the chapters are one per turn, in the same order. */
+/**
+ * Pair turns with their times. render_audio.py writes every turn's timing in
+ * entalkenator.turnTimes, so narrations can keep their chapters to the document's
+ * headings. Older uploads had one chapter per turn, which still works.
+ */
 export function timedTurns(transcript: string, chaptersJson: string | null): Turn[] {
   const turns = parseTranscript(transcript);
-  let chapters: Chapter[] = [];
+  let times: Chapter[] = [];
   if (chaptersJson) {
     try {
-      const parsed = JSON.parse(chaptersJson) as { chapters?: Chapter[] };
-      chapters = Array.isArray(parsed.chapters) ? parsed.chapters : [];
+      const parsed = JSON.parse(chaptersJson) as {
+        chapters?: Chapter[];
+        entalkenator?: { turnTimes?: { start: number; end?: number; speaker?: string }[] };
+      };
+      const tt = parsed.entalkenator?.turnTimes;
+      times = Array.isArray(tt)
+        ? tt.map((t) => ({ startTime: t.start, endTime: t.end, speaker: t.speaker }))
+        : Array.isArray(parsed.chapters)
+          ? parsed.chapters
+          : [];
     } catch {
-      chapters = [];
+      times = [];
     }
   }
   const aligned =
-    chapters.length === turns.length &&
-    chapters.every((c, i) => typeof c.startTime === "number" && (!c.speaker || c.speaker === turns[i].speaker));
+    times.length === turns.length &&
+    times.every((c, i) => typeof c.startTime === "number" && (!c.speaker || c.speaker === turns[i].speaker));
   return turns.map((t, i) => {
     if (!aligned) return { ...t, start: null, end: null };
-    const c = chapters[i];
-    const next = chapters[i + 1];
+    const c = times[i];
+    const next = times[i + 1];
     const end = typeof c.endTime === "number" ? c.endTime : next && typeof next.startTime === "number" ? next.startTime : null;
     return { ...t, start: c.startTime!, end };
   });

@@ -51,6 +51,13 @@ def node():
         return None
 
 
+def _prefs():
+    import prefs
+    data = prefs.load()
+    notes = data.pop("notes", [])
+    return {"settings": data, "notes": notes}
+
+
 def gather():
     lib_path = os.environ.get("ENTALKENATOR_LIBRARY_CONFIG") or os.path.join(CONFIG_DIR, "library.json")
     lib = read_json(lib_path)
@@ -79,6 +86,7 @@ def gather():
         "programs": len(runs),
         "latestProgram": os.path.relpath(os.path.dirname(runs[-1]), ROOT) if runs else None,
         "welcomed": bool(read_json(STATE).get("welcomed")),
+        "preferences": _prefs(),
     }
 
 
@@ -103,6 +111,10 @@ def hook_text(s):
         lines.append("- Library: not set up (optional; it's what lets programs play on a phone or in a podcast app).")
     lines.append("- Programs made in this folder: %d%s" % (
         s["programs"], " (latest: %s)" % s["latestProgram"] if s["latestProgram"] else ""))
+    pr = s.get("preferences") or {}
+    if pr.get("settings") or pr.get("notes"):
+        bits = ["%s=%s" % kv for kv in sorted(pr["settings"].items())] + ['"%s"' % n["text"] for n in pr["notes"]]
+        lines.append("- Preferences (follow them; `prefs.py` to change): " + "; ".join(bits))
     if not s["welcomed"]:
         lines.append("- First visit: the person hasn't been welcomed yet. Follow \"First visit\" in CLAUDE.md.")
     return "\n".join(lines)

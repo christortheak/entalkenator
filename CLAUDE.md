@@ -83,6 +83,32 @@ scripts/engine.py templates` lists them with their roles and lengths.
 - **Generated speech can be wrong.** Speakers paraphrase. If the person relies on a claim,
   point them back to the document.
 
+## Preferences, and working without questions
+
+`python3 scripts/prefs.py show` holds what the person has told you to remember, and the
+session-start status lists it. Follow it. Record lasting preferences as they come up:
+- settings: `prefs.py set publish=always`, `questions=none`, `chapters.narration=main-parts`,
+  `narration.notes=none`, and so on (see `prefs.py --help`)
+- anything else, in their own words: `prefs.py note "Likes a chapter every 5 to 10 minutes"`
+
+Only record what they said, or confirmed when you asked "Remember that?". Never record a
+one-off choice.
+
+**No-questions mode.** The person may say "no questions", "use your best judgment", or "I'm
+walking away", or `questions=none` may be set. Then ask nothing at all; this is a core use.
+- Make every choice yourself: their preferences first, then the recommended options, then
+  your own judgment about the document.
+- Don't install or download anything. Use voices that are already ready, Kokoro if
+  installed, else the macOS voices; mention what better ones they could add.
+- Publish to their library if one is set up, unless `publish=never`.
+- Report when it's done, in a few lines, with anything you'd have asked about. If you have a
+  push-notification tool, notify them when the program is in their feed.
+- The Mac has to stay awake and Claude Code open until then; say so if they're about to
+  leave.
+
+Otherwise, ask only where a choice is genuinely theirs and the document makes it matter, at
+most two or three questions. Offer to remember the answer.
+
 ## Where things live
 
 - `programs/<template>-<date>/` and `programs/narration-<name>-<date>/`: each program's or
@@ -94,7 +120,8 @@ scripts/engine.py templates` lists them with their roles and lengths.
   are in the Hugging Face cache (`~/.cache/huggingface/hub`).
 - The login Keychain (service "enTalkenator"): API keys for cloud voices, saved by
   `voices.py key set`. They show up in Keychain Access, where the person can delete them.
-- `~/.config/entalkenator/voices.json`: their default voice option
+- `~/.config/entalkenator/voices.json`: their default voice option;
+  `preferences.json`: everything else they've asked you to remember
 - `~/.config/entalkenator/library.json` (mode 600): the library's address and upload token,
   written by `scripts/library.py`
 - `cloud/`: the library's code, which is deployed to their Cloudflare account

@@ -72,9 +72,46 @@ def main():
         got = mp4chapters.read_chapters(out)
         check("the embedded chapters match the chapters file", [g[1] for g in got] == [w[1] for w in want]
               and all(abs(g[0] - w[0]) < 0.01 for g, w in zip(got, want)), (got, want))
-        check("chapters are titled by section, footnote, and continuation",
-              [w[1] for w in want] == ["Introduction", "Footnote 1. The rule is older than the Restatement.",
-                                       "Introduction (continued)", "II. Procédure — “quoted” titles"], [w[1] for w in want])
+        check("a narration's chapters are its headings only, not its footnotes",
+              [w[1] for w in want] == ["Introduction", "II. Procédure — “quoted” titles"], [w[1] for w in want])
+        tt = doc["entalkenator"]["turnTimes"]
+        check("every turn's timing is kept for the library's follow-along transcript",
+              len(tt) == 4 and [t["speaker"] for t in tt] == ["Narrator", "Notes", "Narrator", "Narrator"]
+              and tt[0]["start"] == 0 and all(a["end"] <= b["start"] for a, b in zip(tt, tt[1:])), tt)
+        check("the second chapter starts where its heading's turn starts", abs(want[1][0] - tt[3]["start"]) < 0.01, (want, tt))
+
+        deep = os.path.join(tmp, "deep.txt")
+        with open(deep, "w") as f:
+            body = "This paragraph is long enough to take several seconds to read aloud, so headings stay apart. " * 2
+            f.write("[Narrator]: # Part One\n\n## A. First\n\n%s\n\n[Narrator]: ## B. Second\n\n%s\n\n"
+                    "[Narrator]: # Part Two\n\n%s\n" % (body, body, body))
+        dout = os.path.join(tmp, "Deep.m4a")
+        subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "render_audio.py"), "--transcript", deep,
+                        "--out", dout, "--engine", "say", "--chapter-depth", "1"], capture_output=True, text=True)
+        ddoc = json.load(open(os.path.splitext(dout)[0] + ".chapters.json"))
+        check("--chapter-depth 1 keeps only top-level headings", [c["title"] for c in ddoc["chapters"]] == ["Part One", "Part Two"],
+              ddoc["chapters"])
+
+        conv = os.path.join(tmp, "conv.txt")
+        with open(conv, "w") as f:
+            f.write("[Moderator]: Welcome to the debate.\n\n[Ada]: Thank you. Silence is consent.\n\n[Ben]: It is not.\n")
+        cout = os.path.join(tmp, "Conv.m4a")
+        subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "render_audio.py"), "--transcript", conv,
+                        "--out", cout, "--engine", "say"], capture_output=True, text=True)
+        cdoc = json.load(open(os.path.splitext(cout)[0] + ".chapters.json"))
+        check("a conversation keeps one chapter per speaker turn", [c["title"] for c in cdoc["chapters"]] ==
+              ["Moderator: Welcome to the debate.", "Ada: Thank you. Silence is consent.", "Ben: It is not."], cdoc["chapters"])
+        plan = os.path.join(tmp, "plan.json")
+        with open(plan, "w") as f:
+            json.dump({"chapters": [{"turn": 1, "title": "Welcome"}, {"turn": 2, "title": "Is silence consent?"}]}, f)
+        subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "render_audio.py"), "--transcript", conv,
+                        "--out", cout, "--engine", "say", "--chapter-plan", plan], capture_output=True, text=True)
+        pdoc = json.load(open(os.path.splitext(cout)[0] + ".chapters.json"))
+        tts = pdoc["entalkenator"]["turnTimes"]
+        check("with a plan, a conversation's chapters are the showrunner's choices",
+              [(c["title"], c["startTime"]) for c in pdoc["chapters"]] == [("Welcome", 0), ("Is silence consent?", tts[1]["start"])]
+              and len(tts) == 3, pdoc["chapters"])
+        check("...embedded in the .m4a too", [c[1] for c in mp4chapters.read_chapters(cout)] == ["Welcome", "Is silence consent?"])
         v = mp4chapters.verify(out)
         check("AVFoundation reads every chapter title", v and v.get("chapters") == [w[1] for w in want], v)
         dur = afinfo_seconds(out)

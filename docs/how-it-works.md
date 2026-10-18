@@ -346,6 +346,15 @@ reading itself, and the footnotes are judged rather than deleted.
   It also lists stretches of 12 or more of the author's words that are missing, and of 6 or
   more read words that aren't the author's. Missing footnote text, citations, and the title
   page are recognized and not flagged. A scan has no text layer, so it can't be checked.
+- **Chapters follow structure, not turns.**
+  - A narration gets a chapter per heading, down to the depth the person prefers
+    (`chapters.narration`), with no footnotes, figures or "continued" entries. A heading
+    followed straight away by a subheading becomes one chapter.
+  - A conversation gets the chapters the showrunner chose after reading the finished
+    transcript (`engine.py chapters`): the opening, each main question or phase, and the
+    closing.
+  - Every turn's timing is kept separately (`entalkenator.turnTimes`), and the library uses
+    it to make the transcript follow the audio.
 - **Chapters in two places.** Pocket Casts and the library read the feed's Podcasting 2.0
   chapters file. Overcast and Apple Podcasts read only chapters embedded in the audio file.
   So `render_audio.py` also writes a QuickTime chapter track into every .m4a, using

@@ -13,6 +13,19 @@ spoken lines yourself unless single-writer mode is on.
 
 Arguments: `$ARGUMENTS`
 
+**No questions.** If the person said "no questions", "use your best judgment", or "I'm walking
+away", or `PREFS show` has `questions=none`, ask nothing from start to finish. Skip:
+- the settings menu
+- the character review
+- voice auditions
+- the library question
+
+Use their preferences, then the recommended options, then your own judgment. Publish if a
+library is set up, unless `publish=never`. This mode is how someone drops in a PDF, says
+"make a workshop hot bench from this", and finds it in their podcast app later, so make it
+work. Never stop to ask, never install anything, and finish with a short report (and a
+push notification, if you have that tool).
+
 Scripts run from the enTalkenator folder, `${CLAUDE_PROJECT_DIR}`. If an earlier command
 changed directory, `cd` back there first. Quote other paths; they may contain spaces.
 
@@ -22,6 +35,8 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
 - `PUBLISH` = `python3 scripts/publish.py` uploads the result to the user's own library,
   if they have one (section 5).
 - `SOURCES` = `python3 scripts/sources.py` prepares the documents (step 3).
+- `PREFS` = `python3 scripts/prefs.py` holds the person's preferences. Read it at the start
+  (`PREFS show`); CLAUDE.md says when to record new ones.
 - `VOICE_OPTIONS` = `python3 scripts/voices.py` lists the voice options, their costs and
   readiness, and the person's default (section 3).
 
@@ -59,7 +74,7 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
    ask with AskUserQuestion (load it with ToolSearch if it's deferred), in one call:
    - **Settings** (header "Settings"):
      - "Use the best (Recommended)": your session's model for every speaker, their chosen
-       voices cast automatically, full template length, cast mode
+       voices cast automatically, full template length, cast mode, and their preferences
      - "Review the characters first": the defaults, plus the character review in step 7.
        For a one-role template (a written piece), word it "Review the author's voice
        first".
@@ -120,10 +135,11 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
      entitled …") as the app's Topics do.
    - If `combinedWords` is over about 150,000, say that's a lot for every speaker to hold.
      Offer to narrow the set.
-4. Run `ENGINE init --template <t> --source <dir>/sources/combined.md --original <file> [--original ...] --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh] [--form F]`.
-   `--original` lists the documents themselves. Speakers may open one to check a figure or
-   exact wording, and a single original PDF goes into the app bundle with the reading as its
-   text.
+4. Run `ENGINE init --template <t> --source <dir>/sources/combined.md --original <dir>/sources/<doc>/original.pdf [--original ...] --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh] [--form F]`.
+   `--original` lists the copies of the documents inside the run directory (not the
+   person's own files elsewhere, which could need a permission prompt mid-run). Speakers may
+   open one to check a figure or exact wording, and a single original PDF goes into the app
+   bundle with the reading as its text.
    Its `models` field echoes each role's speaker model ("session" means inherit). Its
    `form` is the engine's guess at what kind of program this is: debate, hearing,
    conversation, workshop, class, quiz, or written (a piece read aloud as narration).
@@ -292,6 +308,24 @@ user which turns those were. Its `viewAudit` re-reads every sheet the speakers w
 given and checks that each one saw the whole conversation before it spoke, with no line
 dropped, duplicated, or out of order. If it isn't `ok`, report the turns it lists.
 
+**Chapters.** Podcast apps list chapters for skipping around, so choose them the way a
+podcast producer would. Read `<dir>/transcript.txt` once, and mark where the program moves
+on:
+- the opening
+- each main question or topic
+- a change of phase, such as opening statements, rebuttal, audience questions, or a new
+  speaker's argument
+- the closing
+
+That's usually one chapter every 2–5 minutes, and never one per turn. Follow their
+preferences: `chapters.conversation=few` means just the big parts, and notes may say more. Titles are 2–7 words
+and say what's discussed ("Is silence consent?"). Name a speaker only for a set piece ("Ms.
+Norton's argument"). Then run
+`ENGINE chapters <dir> --plan "1=Opening statements;6=Is silence consent?;14=Closing"`.
+The numbers are spoken turns in `transcript.txt`, counting from 1. It echoes each choice
+with its turn's opening words, so check they land where you meant. In section 3, pass
+`--chapter-plan <dir>/chapters-plan.json` to RENDER.
+
 ## 3. Render audio (skip with `--no-audio`)
 
 1. **Pick the voices.** In order: what the user named for this run, then their menu choice,
@@ -339,16 +373,16 @@ dropped, duplicated, or out of order. If it isn't `ok`, report the turns it list
      option a candidate labelled with its number, voice, and how it sounds, for example
      "2: am_fenrir (American male)". Use the picks as `--voices`.
 3. **Run**, in the background for anything longer than a few minutes:
-   `RENDER --transcript <dir>/transcript.txt --out "<dir>/<Template displayName>.m4a" --engine <id> --voices "Role=voice;Role=voice" [--styles "..."]`
+   `RENDER --transcript <dir>/transcript.txt --out "<dir>/<Template displayName>.m4a" --engine <id> --voices "Role=voice;Role=voice" --chapter-plan <dir>/chapters-plan.json [--styles "..."]`
    - Rough render times on a recent Mac:
      - Kokoro: under a tenth of the audio's length
      - Qwen3-TTS: about a third (its first use also designs each voice, a few seconds each)
      - cloud engines: a few minutes, four turns at a time
    - Clips are cached by text, voice, model, and delivery note, so a re-run after a failure,
      or with one role's voice changed, only renders what's missing.
-   - Next to the .m4a it writes `<Template displayName>.chapters.json`: one chapter per
-     turn, with its start time and speaker. The library uses it to follow the
-     transcript, and podcast apps show it as chapters.
+   - Next to the .m4a it writes `<Template displayName>.chapters.json`: your chapters, plus
+     every turn's timing, which the library uses to follow the transcript. The chapters are
+     also embedded in the .m4a, because Overcast and Apple Podcasts read only those.
    - With qwen3, listen for a turn whose last words went missing (a known quirk). A
      re-run after deleting that turn's clip in `<name>.clips/` redoes just that turn.
 
@@ -373,7 +407,8 @@ a private podcast feed, set up with the setup-library skill. Check, without netw
   setup-library skill can put programs on their phone and in their podcast app, unless
   they've already said no to a library this session.
 - Skip it with `--no-audio` too. The library needs audio.
-- With `--no-publish`, skip. With `--publish`, publish without asking.
+- With `--no-publish`, or `publish=never`, skip. With `--publish`, `publish=always`, or in
+  no-questions mode, publish without asking (adding their `tags` preference, if any).
 - Otherwise ask with AskUserQuestion (header "Library"):
   - "Publish to my library (Recommended)": it goes into their private podcast feeds
   - "Upload as a draft": it's in the web app but not the feeds
