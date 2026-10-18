@@ -6,11 +6,12 @@ page changes. Researched on 17 October 2026.
 
 ## The options
 
-| Option | Where | Licence / terms | Quality evidence | Speed (M5 Pro) | Cost per 30 min |
+| Option | Where | Licence / terms | Quality evidence | Work vs Kokoro (M5 Pro: render time ÷ audio) | Cost per 30 min |
 |---|---|---|---|---|---|
-| Kokoro-82M | Mac (mlx-audio) | Apache-2.0; espeak-ng fallback GPL-3.0 | Artificial Analysis Elo 1061, 7th of 17 open models; TTS Arena V2 ties Chatterbox | 16× real time | free |
-| Qwen3-TTS 1.7B (VoiceDesign + Base, 8-bit) | Mac (mlx-audio), 16 GB+ | Apache-2.0, not gated | Not on the arenas; Seed-TTS English WER 1.24 (maker's figure) | about 2× real time (sorted batches per voice) | free |
-| macOS `say` | Mac | Apple system voices | Clearly synthetic | instant | free |
+| Kokoro-82M | Mac (mlx-audio) | Apache-2.0; espeak-ng fallback GPL-3.0 | Artificial Analysis Elo 1061, 7th of 17 open models; TTS Arena V2 ties Chatterbox | 1× (0.07) | free |
+| Qwen3-TTS 1.7B (VoiceDesign + Base, 8-bit) | Mac (mlx-audio), 16 GB+ | Apache-2.0, not gated | Not on the arenas; Seed-TTS English WER 1.24 (maker's figure) | about 7× (0.5) | free |
+| Breeze TTS 2 (3B, MLX build) | Mac (mlx-audio), 24 GB+ (13 GB in use) | BreezeBlue Research and Non-Commercial License: personal, educational and research use; outputs not for commercial use; no unconsented cloning | Elo 1215, top open-weights model (reported Sept 2026); preferred in our listening test | about 12× undirected (0.85), 20× with a note per line (1.5) | free |
+| macOS `say` | Mac | Apple system voices | Clearly synthetic | about 1× | free |
 | Gemini 3.8 Flash TTS | Google | Free tier may use prompts for training; EEA/UK/CH paid only | Elo 1275, #5 overall | cloud | $0.41 (≈$0.81 from Jan 2027) |
 | Gemini 3.8 Flash-Lite TTS | Google | as above | Elo 1248, #8 | cloud | $0.28 (≈$0.55 from 2027) |
 | OpenAI gpt-4o-mini-tts | OpenAI | Must disclose AI voices to listeners | Not ranked | cloud | ≈$0.45 |
@@ -26,7 +27,30 @@ characters for v4, half that for Turbo. Arena Elo comes from short single-voice 
 treat gaps under about 40 points as noise.
 
 Every library episode says its voices are AI-generated (`cloud/src/feed.ts`), which covers
-OpenAI's disclosure rule and is true for every option.
+OpenAI's disclosure rule and Breeze's rule against misleading listeners, and is true for
+every option.
+
+Times depend on the Mac, so the skills never quote these: each option carries its work
+relative to Kokoro, `voices.py machine` says which local voices fit this Mac's memory, and
+`render_audio.py` records how fast each engine actually renders here (`speeds.json`), which
+later estimates use.
+
+## Listening test (18 October 2026)
+
+Seven renders of the same four minutes of a Socratic class (three speakers, 660 words, with
+a delivery note per turn and two turns marked as cutting in):
+
+| Version | Work (M5 Pro, time ÷ audio) | Verdict |
+|---|---|---|
+| Kokoro, fixed pauses / with fitted pauses, per-role pace, a blended voice | 0.1 | baseline |
+| Qwen3-TTS, neutral reference line / a line in character per voice | about 0.5 on a full program | the line in character came out livelier and about 9% quicker |
+| Qwen3-TTS CustomVoice (preset voices, a note per line) | 1.3 | only two native English voices, both male |
+| Breeze TTS 2 (designed voices, a note per line) | 1.4, plus about 100 s to design three voices | preferred |
+| Sesame CSM-1B (each line conditioned on the last two turns' audio) | 0.5 | dropped and mangled words in places |
+
+Breeze became an option. Its MLX build doesn't batch, and a delivery note runs the model
+twice (with and without the note) to strengthen the direction, so a note on every line
+nearly doubles the work: notes are for turns that need one.
 
 ## Why these, and not others
 

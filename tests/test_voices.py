@@ -258,6 +258,40 @@ def main():
         check("without a key, the engine stops and says how to add one", code != 0 and "voices.py key set openai" in raw, raw[-200:])
         code, out, raw = run(RENDER, "--list-voices")
         check("auto falls back to free voices when the chosen one has no key", out.get("engine") in ("kokoro", "say") and "aren't ready" in raw, raw[-300:])
+
+        print("render times measured on this Mac, not quoted from another")
+        home = os.path.join(tmp, "home")
+        os.makedirs(home)
+        henv = dict(env, ENTALKENATOR_HOME=home)
+
+        def est(opt_id):
+            p = subprocess.run([sys.executable, VOICES, "list", "--words", "1750"], capture_output=True, text=True, env=henv)
+            return next(o for o in json.loads(p.stdout)["options"] if o["id"] == opt_id)["estimate"]
+        e = est("breeze")
+        check("before any render here, a local voice gives its relative work, not a time",
+              "renderMinutes" not in e and "about 20 times Kokoro's work" in e["renderNote"], e)
+        with open(os.path.join(home, "speeds.json"), "w") as f:
+            json.dump({"kokoro": [{"ratio": 0.08}, {"ratio": 0.1}, {"ratio": 0.09}]}, f)
+        e = est("breeze")
+        check("after Kokoro has rendered here, the others are guessed from its speed",
+              e.get("renderMinutes") == 18.0 and "rough guess" in e["renderNote"], e)
+        sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        os.environ["ENTALKENATOR_HOME"] = home
+        import importlib
+        import voices as vmod
+        importlib.reload(vmod)
+        vmod.record_speed("breeze", 30, 45)
+        vmod.record_speed("breeze", 600, 840)
+        e = est("breeze")
+        check("an engine's own renders here replace the guess (short ones don't count)",
+              e.get("renderMinutes") == 14.0 and "this Mac's earlier renders" in e["renderNote"], e)
+        p = subprocess.run([sys.executable, VOICES, "machine"], capture_output=True, text=True, env=henv)
+        m = json.loads(p.stdout)
+        check("machine lists the local voices with their work and whether they fit",
+              [v["id"] for v in m["localVoices"]] == ["kokoro", "qwen3", "breeze", "say"]
+              and m["localVoices"][2]["measured"] == 1.4 and "memoryGB" in m["hardware"], m)
+        e = est("gemini:gemini-3.8-flash-tts")
+        check("a cloud voice needs no compute here", "renderMinutes" not in e and e["costUSD"] > 0, e)
     finally:
         server.shutdown()
         shutil.rmtree(tmp, ignore_errors=True)

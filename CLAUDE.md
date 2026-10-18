@@ -83,7 +83,7 @@ written when someone asks for one; `python3 scripts/engine.py templates` lists t
 - **Accounts and payments are theirs.** Never create an account, sign in, or enter card or
   payment details for them. Open the page (`open <url>`) and talk them through it.
 - **Ask before installing or downloading anything.** Name it, say what it's for, its licence,
-  and its size, then wait for a yes. That covers the voices (Kokoro, Qwen3-TTS), Node.js, and
+  and its size, then wait for a yes. That covers the voices (Kokoro, Qwen3-TTS, Breeze), Node.js, and
   Wrangler.
 - **Voices are the person's choice, and so is spending.** Present the options with their
   trade-offs (`scripts/voices.py list`) rather than picking for them. Cloud voices are billed
@@ -129,8 +129,8 @@ most two or three questions. Offer to remember the answer.
   narration's transcript, audio (`.m4a`), chapters, and an `.enTalkenator` bundle for the
   enTalkenator iPhone and Mac app, if they use it. `sources/` inside holds Claude's reading of
   the documents (`combined.md`), which another program can reuse.
-- `~/.cache/entalkenator/`: the local voice engine (`venv/`), the designed Qwen3-TTS voices
-  (`qwen3-voices/`), and Wrangler (`wrangler/`), installed only with permission. Model weights
+- `~/.cache/entalkenator/`: the local voice engine (`venv/`), the designed Qwen3-TTS and Breeze voices
+  (`qwen3-voices/`, `breeze-voices/`), how fast each local voice renders here (`speeds.json`), and Wrangler (`wrangler/`), installed only with permission. Model weights
   are in the Hugging Face cache (`~/.cache/huggingface/hub`).
 - The login Keychain (service "enTalkenator"): API keys for cloud voices, saved by
   `voices.py key set`. They show up in Keychain Access, where the person can delete them.

@@ -101,16 +101,25 @@ done.
 
 ## Voices
 
-You choose, and can change your mind for any program:
+You choose, and can change your mind for any program. The local voices run on your Mac's
+own chip, so how long they take depends on the Mac. The table gives the work each one
+needs relative to Kokoro instead of times:
 
-| | Where | Cost for a 20-minute program | Notes |
-|---|---|---|---|
-| **Kokoro** | your Mac | free | Natural and fast: about a minute to voice 20 minutes. 660 MB download. |
-| **Qwen3-TTS** | your Mac | free | More expressive: each character's voice is designed from a description. Needs 16 GB of memory, 6.2 GB download, about 10 minutes for 20. |
-| **macOS voices** | your Mac | free | Built in, nothing to install, robotic. |
-| **Google Gemini** | cloud | about $0.19–$0.28 | Best value; excellent quality. Needs a Google AI Studio key. |
-| **OpenAI** | cloud | about $0.30–$0.65 | gpt-4o-mini-tts, tts-1 and tts-1-hd. Needs an OpenAI key with credit. |
-| **ElevenLabs** | cloud | about $0.85–$1.75 | The best-sounding voices. Needs an ElevenLabs key. |
+| | Where | Cost for a 20-minute program | Work on your Mac | Notes |
+|---|---|---|---|---|
+| **Kokoro** | your Mac | free | light | Natural and even. Any Apple Silicon Mac; 660 MB download. |
+| **Qwen3-TTS** | your Mac | free | heavy: about 7× Kokoro | More expressive: each character's voice is designed from a description. 16 GB of memory or more; 6.2 GB download. |
+| **Breeze TTS 2** | your Mac | free | very heavy: about 12–20× Kokoro | The most natural local voices: designed from descriptions, directed line by line, and they laugh and sigh. 24 GB of memory or more; 7.6 GB download. Personal, educational and research use only (BreezeBlue's licence). English and Chinese. |
+| **macOS voices** | your Mac | free | light | Built in, nothing to install, robotic. |
+| **Google Gemini** | cloud | about $0.19–$0.28 | none | Best value; excellent quality. Needs a Google AI Studio key. |
+| **OpenAI** | cloud | about $0.30–$0.65 | none | gpt-4o-mini-tts, tts-1 and tts-1-hd. Needs an OpenAI key with credit. |
+| **ElevenLabs** | cloud | about $0.85–$1.75 | none | The best-sounding voices. Needs an ElevenLabs key. |
+
+Claude checks what your Mac can run before offering anything. After a voice's first
+program it knows how fast that voice is on your Mac, and it tells you how long the next one
+will take before starting. If a heavy voice would take too long for a long program, or your
+Mac doesn't have the memory, it suggests a lighter voice or a cloud one, with what that
+would cost.
 
 Prices were checked in October 2026 and change. Cloud voices are billed by the provider to
 your own account; enTalkenator never sees your key: you type it into a small Mac window,

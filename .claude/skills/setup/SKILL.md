@@ -46,16 +46,32 @@ Then ask with AskUserQuestion (header "Setup"), leaving out parts that are alrea
 ## 3. Voices
 
 Every voice option is the person's choice: present them all, with their trade-offs, and let
-them pick. Run `VOICE_OPTIONS list --words 3500`, which gives each option's cost, speed,
-download, memory, licence, and readiness on this Mac, with estimates for a typical
-20-minute program. Present prices as approximate ("about"): they were checked on the
-catalogue's `asOf` date.
+them pick. Run `VOICE_OPTIONS machine` first: the Mac's chip and memory, which local voices
+fit, and how fast any has already rendered here. Then `VOICE_OPTIONS list --words 3500` for
+each option's cost, work, download, memory, licence, and readiness, with estimates for a
+typical 20-minute program. Present prices as approximate ("about"): they were checked on
+the catalogue's `asOf` date.
 
-Explain the three kinds in a sentence each:
-- **Free, on this Mac.** Kokoro is natural-sounding and fast. Qwen3-TTS is more expressive:
-  each character's voice is designed from a description and kept the same throughout. It
-  needs Apple Silicon with 16 GB or more, and is 4–5× slower. The built-in macOS voices
-  need no install but sound robotic.
+**Speak of work, not minutes, for local voices.** How long a local voice takes depends on
+the Mac, so never quote another machine's times. Each option has a `compute` word (light,
+heavy, very heavy) and a `work` factor relative to Kokoro. Once a voice has rendered here,
+the estimate's `renderMinutes` is this Mac's own figure; before that, say how heavy it is
+and that the first program will show how long it takes. Help them choose what will work:
+- The memory a voice needs is a hard limit: leave out what doesn't fit.
+- An older or base chip (an M1 or M2 without Pro, Max or Ultra), or a Mac with only the
+  memory a voice needs, will find the heavy voices slow. Say so, recommend Kokoro for
+  everyday use, and suggest a heavy voice for short programs or a cloud voice for long
+  ones.
+- For someone who wants the best sound on long programs but has a modest Mac, recommend a
+  cloud voice: Gemini is about $0.20–$0.30 for 20 minutes and takes no compute here.
+
+Explain the kinds in a sentence each:
+- **Free, on this Mac.** Kokoro is natural-sounding and light. Qwen3-TTS is more
+  expressive: each character's voice is designed from a description and kept the same
+  throughout (heavy, 16 GB or more). Breeze TTS 2 is the most natural: designed voices
+  that can be directed line by line and that laugh and sigh (very heavy, 24 GB or more;
+  its licence allows personal, educational and research use only, and it speaks English
+  and Chinese). The built-in macOS voices need no install but sound robotic.
 - **Cloud, with their own key.** Better voices, paid per program to the provider, never
   to enTalkenator: Google Gemini (best value), OpenAI, and ElevenLabs (best quality,
   about 5× Gemini's price).
@@ -63,10 +79,11 @@ Explain the three kinds in a sentence each:
 
 Then ask with AskUserQuestion (header "Voices", multiSelect), leaving out what can't run
 here (an option whose `needs` say `unsupported`) and saying what's already installed:
-- "Kokoro: free, on this Mac (Recommended)": about 660 MB to download, a 20-minute program
-  in about 1–2 minutes
-- "Expressive voices (Qwen3-TTS): free, on this Mac": 6.2 GB more, about 10 GB of memory, a
-  20-minute program in about 10 minutes on a fast Mac
+- "Kokoro: free, on this Mac (Recommended)": about 660 MB to download, light work
+- "Expressive voices (Qwen3-TTS): free, on this Mac": 6.2 GB more, about 10 GB of memory,
+  heavy work (about 7× Kokoro)
+- "Most natural voices (Breeze TTS 2): free for personal use": 7.6 GB more, about 13 GB of
+  memory, very heavy work (about 12–20× Kokoro); non-commercial licence
 - "Cloud voices with my own key": Gemini, OpenAI or ElevenLabs, about $0.20–$1.75 for a
   20-minute program
 - "Just the macOS voices": nothing to install
@@ -78,6 +95,9 @@ Picking an option whose size is stated is the go-ahead to install it. Then:
   installer (https://docs.astral.sh/uv/getting-started/installation/). Carry on with the
   next step while it runs.
 - **Qwen3-TTS:** after Kokoro, `VOICE_OPTIONS install qwen3` in the background.
+- **Breeze TTS 2:** after Kokoro, `VOICE_OPTIONS install breeze` in the background. Mention
+  its licence in a sentence: free for personal, educational and research use, not for
+  commercial use, and no cloning a real person's voice without their consent.
 - **Cloud:** ask which providers (header "Cloud", multiSelect), each with its
   `summary`, cost for 20 minutes, and terms:
   - "Google Gemini (Recommended)": the Flash and Flash-Lite models; the key is free to

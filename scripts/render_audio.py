@@ -8,6 +8,11 @@ Engines (scripts/voices.py describes each: cost, speed, download, what it needs)
               VoiceDesign model makes a reference clip from it once (kept in
               ~/.cache/entalkenator/qwen3-voices), and the Base model clones that clip for
               every turn, so the voice stays the same. Weights Apache-2.0.
+  breeze      Breeze TTS 2 (3B) through mlx-audio, local and free for research and non-commercial
+              use (BreezeBlue's licence). Voices are descriptions, designed once and cloned like
+              qwen3's, and each turn can be directed: the role's --styles note plus the turn's
+              delivery note. It performs (laughs), (sighs), (coughs) and (clears throat), which
+              the other engines leave out. The heaviest local engine.
   say         The macOS `say` command. No install, no cost, robotic.
   gemini      Google Gemini TTS (--model gemini-3.8-flash-tts or gemini-3.8-flash-lite-tts)
               through the Interactions API, one request per turn. Paid; needs a key.
@@ -68,6 +73,15 @@ KOKORO_MODEL = os.environ.get("ENTALKENATOR_KOKORO_MODEL", "mlx-community/Kokoro
 QWEN_DESIGN_MODEL = voice_options.QWEN_DESIGN_REPO
 QWEN_BASE_MODEL = voice_options.QWEN_BASE_REPO
 QWEN_VOICE_DIR = os.path.join(ENT_HOME, "qwen3-voices")
+BREEZE_MODEL = voice_options.BREEZE_REPO
+BREEZE_VOICE_DIR = os.path.join(ENT_HOME, "breeze-voices")
+BREEZE_REF_LINE = ("Well, that's the interesting part, isn't it? I'd have said the opposite a year ago. "
+                   "But the evidence kept pointing the same way, so here we are.")
+BREEZE_CFG = 4.0  # the model card's guidance strength for following a direction (it doubles the work)
+# Vocal sounds a speaker may write; Breeze performs them, the other engines leave them out.
+EVENT_RE = re.compile(r"\s*\((laughs?|laughing|chuckles?|sighs?|coughs?|clears (?:his |her |their )?throat)\)\s*", re.I)
+BREEZE_EVENTS = {"laugh": "laugh", "laughs": "laugh", "laughing": "laugh", "chuckle": "laugh", "chuckles": "laugh",
+                 "sigh": "sigh", "sighs": "sigh", "cough": "cough", "coughs": "cough"}
 # The line each designed voice reads for its reference clip, and a pacing note added to every
 # description: clones copy the reference's pace, and an unprompted reference runs fast.
 QWEN_REF_LINE = ("Thank you. Let me make sure I understand the point, because the answer to this question "
@@ -85,6 +99,7 @@ GEMINI_URL = os.environ.get("ENTALKENATOR_GEMINI_BASE", "https://generativelangu
 OPENAI_URL = os.environ.get("ENTALKENATOR_OPENAI_BASE", "https://api.openai.com") + "/v1/audio/speech"
 ELEVENLABS_BASE = os.environ.get("ENTALKENATOR_ELEVENLABS_BASE", "https://api.elevenlabs.io")
 DEFAULT_MODELS = {"kokoro": KOKORO_MODEL, "qwen3": "Qwen3-TTS-12Hz-1.7B (VoiceDesign + Base, 8-bit)",
+                  "breeze": "Breeze-TTS-2 (MLX)",
                   "say": "macOS say", "gemini": os.environ.get("ENTALKENATOR_GEMINI_TTS_MODEL", "gemini-3.8-flash-tts"),
                   "openai": "gpt-4o-mini-tts", "elevenlabs": "eleven_v4"}
 DEFAULT_STYLE = "Natural and conversational, as in a live discussion."
@@ -163,6 +178,14 @@ def speakable(text):
     t = re.sub(r"^\s*[-*•]\s+", "", t, flags=re.M)
     t = t.replace("*", "")
     return t.strip()
+
+
+def vocal_events(text, keep):
+    """(laughs), (sighs)...: Breeze's own spelling where it can perform them, else gone."""
+    def sub(m):
+        word = m.group(1).lower()
+        return " (%s) " % (BREEZE_EVENTS.get(word, "clears throat")) if keep else " "
+    return re.sub(r" +([.,;:!?])", r"\1", re.sub(r" {2,}", " ", EVENT_RE.sub(sub, text))).strip()
 
 
 def split_text(text, max_words=None, max_chars=None):
@@ -360,6 +383,67 @@ class QwenRenderer:
                 log("  %s done (%.0f s of audio in %.1f s)" % (
                     group[0]["label"] if len(group) == 1 else "%s and %d more" % (group[0]["label"], len(group) - 1),
                     secs, took))
+
+
+class BreezeRenderer:
+    """Breeze TTS 2 in the child process: design each described voice once, then clone it for every
+    turn, directed by the turn's note. It doesn't batch, so turns go one at a time, each written as
+    soon as it's done."""
+    name = "breeze"
+
+    def __init__(self):
+        import numpy as np
+        import mlx.core as mx
+        from mlx_audio.tts.utils import load_model
+        self.np, self.mx = np, mx
+        self.model = load_model(BREEZE_MODEL)
+        self.rate = self.model.sample_rate
+
+    @staticmethod
+    def ref_path(description, line=None):
+        key = hashlib.sha1(("%s|%s|%s|%s" % (BREEZE_MODEL, description, QWEN_PACE, line or BREEZE_REF_LINE)).encode("utf-8"))
+        return os.path.join(BREEZE_VOICE_DIR, key.hexdigest()[:16] + ".wav")
+
+    def _audio(self, results):
+        parts = [self.np.asarray(r.audio, dtype="float32").reshape(-1) for r in results]
+        return self.np.concatenate(parts) if parts else None
+
+    def design(self, voices):
+        os.makedirs(BREEZE_VOICE_DIR, exist_ok=True)
+        for d, l in voices:
+            path = self.ref_path(d, l)
+            if os.path.exists(path):
+                continue
+            a = self._audio(self.model.generate(text=l or BREEZE_REF_LINE, instruct=d + QWEN_PACE,
+                                                cfg_scale=BREEZE_CFG, seed=7))
+            if a is None:
+                raise RuntimeError("Breeze couldn't design a voice for: %s" % d)
+            write_float_wav(path, a, self.rate, self.np)
+            with open(path[:-4] + ".json", "w", encoding="utf-8") as f:
+                json.dump({"description": d, "pace": QWEN_PACE, "line": l or BREEZE_REF_LINE, "model": BREEZE_MODEL}, f, indent=1)
+            log("  designed a voice: %s" % d[:70])
+
+    def render_all(self, jobs):
+        np = self.np
+        self.design(sorted({(j["voice"], j.get("line") or "") for j in jobs}))
+        gap = np.zeros(int(0.12 * self.rate), dtype="float32")
+        for j in jobs:
+            t0 = time.time()
+            line = j.get("line") or BREEZE_REF_LINE
+            parts = []
+            for piece in split_text(j["text"], max_words=QWEN_CHUNK_WORDS):
+                a = self._audio(self.model.generate(text=piece, voice="S0", ref_audio=self.ref_path(j["voice"], j.get("line")),
+                                                    ref_text=line, instruct=j.get("style"),
+                                                    cfg_scale=BREEZE_CFG if j.get("style") else None))
+                if parts:
+                    parts.append(gap)
+                parts.append(a if a is not None else np.zeros(0, dtype="float32"))
+            if not parts or sum(len(x) for x in parts) == 0:
+                raise RuntimeError("Breeze produced no audio for %s" % j["label"])
+            joined = np.concatenate(parts)
+            write_float_wav(j["path"], joined, self.rate, np)
+            self.mx.clear_cache()
+            log("  %s done (%.0f s of audio in %.1f s)" % (j["label"], len(joined) / float(self.rate), time.time() - t0))
 
 
 class SayEngine:
@@ -575,8 +659,10 @@ def kokoro_python():
     return None
 
 
-ENGINES = ("kokoro", "qwen3", "say", "gemini", "openai", "elevenlabs")
-LOCAL_IN_CHILD = ("kokoro", "qwen3")
+ENGINES = ("kokoro", "qwen3", "breeze", "say", "gemini", "openai", "elevenlabs")
+LOCAL_IN_CHILD = ("kokoro", "qwen3", "breeze")
+DESCRIBED_VOICES = ("qwen3", "breeze")  # voices are descriptions, designed once and kept
+DIRECTED = ("gemini", "openai", "breeze")  # engines that follow a delivery note
 
 
 def engine_ready(name):
@@ -585,6 +671,8 @@ def engine_ready(name):
     if name == "qwen3":
         return (bool(kokoro_python()) and voice_options.hf_cached(QWEN_DESIGN_MODEL)
                 and voice_options.hf_cached(QWEN_BASE_MODEL))
+    if name == "breeze":
+        return bool(kokoro_python()) and voice_options.hf_cached(BREEZE_MODEL)
     if name == "say":
         return bool(shutil.which("say"))
     return bool(voice_options.api_key(name))
@@ -627,7 +715,7 @@ class VoicePool:
 def voice_pool(name, model=None):
     if name == "kokoro":
         return VoicePool(KOKORO_VOICES)
-    if name == "qwen3":
+    if name in DESCRIBED_VOICES:
         return VoicePool(QWEN_VOICES)
     if name == "gemini":
         return VoicePool(GEMINI_VOICES)
@@ -668,7 +756,7 @@ def describe_voice(engine_name, voice, pool=None):
         return GEMINI_DESCRIPTIONS.get(voice, "")
     if engine_name == "openai":
         return OPENAI_DESCRIPTIONS.get(voice, "")
-    if engine_name == "qwen3":
+    if engine_name in DESCRIBED_VOICES:
         return voice
     if engine_name == "elevenlabs" and hasattr(pool, "describe"):
         return pool.describe(voice)
@@ -685,6 +773,8 @@ def local_worker(engine_name, jobs_file, speed):
         jobs = [j for j in json.load(f) if not os.path.exists(j["path"])]
     if engine_name == "qwen3":
         QwenRenderer().render_all(jobs)
+    elif engine_name == "breeze":
+        BreezeRenderer().render_all(jobs)
     else:
         import mlx.core as mx
         engine = KokoroEngine(speed)
@@ -708,7 +798,7 @@ def render_in_child(engine_name, todo, speed, work):
         json.dump(todo, f)
     cmd = [kokoro_python(), "-X", "faulthandler", os.path.abspath(__file__), "--worker", jobs_file,
            "--engine", engine_name, "--speed", str(speed)]
-    label = {"kokoro": "Kokoro", "qwen3": "Qwen3-TTS"}[engine_name]
+    label = {"kokoro": "Kokoro", "qwen3": "Qwen3-TTS", "breeze": "Breeze TTS 2"}[engine_name]
     missing = todo
     for attempt in (1, 2):
         rc = subprocess.run(cmd, stdout=subprocess.DEVNULL).returncode
@@ -1040,7 +1130,7 @@ def main():
     ap.add_argument("--transcript", help='file of "[Name]: text" turns')
     ap.add_argument("--out", help="output .m4a")
     ap.add_argument("--engine", default="auto",
-                    help="auto, kokoro, qwen3, say, gemini, openai or elevenlabs; or an option id like "
+                    help="auto, kokoro, qwen3, breeze, say, gemini, openai or elevenlabs; or an option id like "
                          "gemini:gemini-3.8-flash-lite-tts (see voices.py list)")
     ap.add_argument("--model", help="the engine's model, e.g. tts-1, gemini-3.8-flash-lite-tts, eleven_v4_turbo")
     ap.add_argument("--voices", help='overrides, e.g. "Hillford Johns=bm_george;The Author=af_heart". '
@@ -1053,7 +1143,7 @@ def main():
     ap.add_argument("--speed", type=float, default=1.0)
     ap.add_argument("--redo", help="turn numbers to render again, e.g. 5,23")
     ap.add_argument("--gap", type=float, help="seconds of silence between turns (default: fitted to the conversation)")
-    ap.add_argument("--lines", help='qwen3: the line each designed voice reads, in character, e.g. '
+    ap.add_argument("--lines", help='qwen3, breeze: the line each designed voice reads, in character, e.g. '
                                     '"Professor Swift=Well, that is a brave word for it."')
     ap.add_argument("--speeds", help='kokoro and say: a role\'s pace, e.g. "Professor Swift=0.95;Rigel=1.05"')
     ap.add_argument("--delivery", help="per-turn delivery notes (default: delivery.json beside the transcript)")
@@ -1073,9 +1163,10 @@ def main():
         listing = {"engine": engine_name, "model": model,
                    "voices": [{"voice": v, "sounds": describe_voice(engine_name, v, pool)} for v in pool.voices],
                    "default order": "roles get these in order of first appearance unless --voices says otherwise"}
-        if engine_name == "qwen3":
-            listing["note"] = ("Qwen3-TTS voices are descriptions, and these are only fallbacks. Describe each role "
-                               "instead (gender, age, accent, temperament, pace) and pass them with --voices.")
+        if engine_name in DESCRIBED_VOICES:
+            listing["note"] = ("These voices are descriptions, and these are only fallbacks. Describe each role "
+                               "instead (gender, age, accent, temperament, pace) and pass them with --voices, "
+                               "with a line in character for each in --lines.")
         if engine_name in ("gemini", "openai", "elevenlabs"):
             listing["note"] = "Gender and character are as the provider describes them or as commonly heard; audition when unsure."
         emit(listing)
@@ -1110,13 +1201,13 @@ def main():
 
     jobs = []
     for i, (role, text) in enumerate(turns):
-        spoken = speakable(text)
+        spoken = vocal_events(speakable(text), keep=engine_name == "breeze")
         # Only engines that take direction get a note, so adding notes doesn't re-render the others.
         note = (deliveries.get(i + 1) or {}).get("note")
         style = "; ".join(x for x in (styles.get(role), note) if x) or None
-        style = style if engine_name in ("gemini", "openai") else styles.get(role)
+        style = style if engine_name in DIRECTED else styles.get(role)
         speed = args.speed * speeds.get(role, 1.0) if engine_name in ("kokoro", "say") else args.speed
-        line = lines.get(role) if engine_name == "qwen3" else None
+        line = lines.get(role) if engine_name in DESCRIBED_VOICES else None
         job = {"text": spoken, "voice": voices[role], "style": style,
                "label": "turn %d/%d (%s)" % (i + 1, len(turns), role),
                "path": clip_path(work, "%03d" % (i + 1), engine_name, model,
@@ -1134,10 +1225,14 @@ def main():
                 os.remove(jobs[n - 1]["path"])
     log("%s (%s): %d turns, voices %s" % (engine_name, model, len(jobs), voices))
     t1 = time.time()
+    fresh = {j["path"] for j in jobs if not os.path.exists(j["path"])}
     rendered = render_jobs(engine_name, model, jobs, args.speed, work)
     render_s = time.time() - t1
     gaps = [args.gap] * len(jobs) if args.gap is not None else turn_gaps(turns, deliveries)
     seconds, spans = stitch([j["path"] for j in jobs], gaps, out, args.bitrate, work)
+    if engine_name in LOCAL_IN_CHILD + ("say",) and fresh:
+        # How fast this engine runs on this Mac, for voices.py's estimates.
+        voice_options.record_speed(engine_name, sum(b - a for (a, b), j in zip(spans, jobs) if j["path"] in fresh), render_s)
     chapters = os.path.splitext(out)[0] + ".chapters.json"
     plan = None
     if args.chapter_plan:

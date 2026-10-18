@@ -4,9 +4,16 @@
 Commands (each prints JSON):
   list [--words N | --transcript FILE]
                      every option, whether it's ready on this Mac, what it still needs,
-                     and (with a length) the time and cost for that program
+                     and (with a length) the cost, and the render time once it's known here
+  machine            this Mac: chip, memory, which local voices fit, and how fast each has
+                     rendered here so far
   install kokoro     the free local voices (about 660 MB to download): runs setup_tts.sh
   install qwen3      the expressive local voices (Qwen3-TTS 1.7B, two models, 6.2 GB)
+  install breeze     the most natural local voices (Breeze TTS 2, 7.6 GB; non-commercial licence)
+
+How long a local voice takes depends on the Mac, so the catalog gives each one's work
+relative to Kokoro instead of times. render_audio.py records how fast each engine actually
+rendered here (speeds.json), and estimates use that once there is one.
   key set ENGINE     ask for an API key (gemini, openai, elevenlabs) in a macOS dialog, check
                      it with a free request, and save it in the login Keychain. The key is
                      never printed.
@@ -54,6 +61,8 @@ HF_HUB = os.path.join(os.environ.get("HF_HOME", os.path.expanduser("~/.cache/hug
 KOKORO_REPO = "mlx-community/Kokoro-82M-bf16"
 QWEN_DESIGN_REPO = "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-8bit"
 QWEN_BASE_REPO = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit"
+BREEZE_REPO = "mlx-community/Breeze-TTS-2-mlx"
+SPEEDS_FILE = os.path.join(ENT_HOME, "speeds.json")
 
 KEY_ENV = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "elevenlabs": "ELEVENLABS_API_KEY"}
 KEY_PAGES = {
@@ -64,26 +73,41 @@ KEY_PAGES = {
 
 # Rates as of CATALOG_DATE. perMinute is per minute of finished audio; perKChars per 1,000
 # characters of text. Rankings are the Artificial Analysis Speech Arena (single lines, not
-# conversations); Kokoro scores 1061 there.
+# conversations); Kokoro scores 1061 there. A local option's `work` is its compute per
+# minute of audio relative to Kokoro, measured on one Mac (an M5 Pro); the ratio holds
+# roughly across Apple Silicon even though the times don't.
 OPTIONS = [
     {"id": "kokoro", "engine": "kokoro", "label": "Kokoro", "where": "this Mac", "default": True,
-     "summary": "Free natural-sounding voices that run on this Mac. Fast: a 30-minute program takes about 2 minutes.",
+     "summary": "Free natural-sounding voices that run on this Mac. Light: the quickest local voices, fine on any Apple Silicon Mac.",
      "quality": "Clear and natural for its size; mid-table among open models (Elo 1061). Delivery is even rather than expressive.",
-     "voices": "28 English voices, American and British, male and female",
-     "speedRatio": 0.07, "download": "about 660 MB to download, 1.3 GB on disk", "memory": "about 2 GB",
+     "voices": "28 English voices, American and British, male and female, and blends of two",
+     "work": 1, "compute": "light", "download": "about 660 MB to download, 1.3 GB on disk", "memory": "about 2 GB",
      "requires": ["apple-silicon"], "license": "Apache-2.0 (its pronunciation fallback, espeak-ng, is GPL-3.0)",
      "cost": "free"},
     {"id": "qwen3", "engine": "qwen3", "label": "Qwen3-TTS (expressive)", "where": "this Mac",
      "summary": "Free expressive voices on this Mac. Each character's voice is designed from a description "
-                "(\"a gravelly older judge\") and kept the same throughout. About 7x slower than Kokoro.",
+                "(\"a gravelly older judge\") and kept the same throughout. Heavy: about 7 times Kokoro's work.",
      "quality": "More expressive and varied than Kokoro; not yet on the public leaderboards. Occasionally drops "
                 "a turn's last words, so listen to the ends of turns.",
      "voices": "any voice you can describe: age, accent, temperament, pace",
-     "speedRatio": 0.5, "download": "6.2 GB (two models), plus Kokoro's install", "memory": "about 10 GB",
+     "work": 7, "compute": "heavy", "download": "6.2 GB (two models), plus Kokoro's install", "memory": "about 10 GB",
      "requires": ["apple-silicon", "16gb"], "license": "Apache-2.0", "cost": "free"},
+    {"id": "breeze", "engine": "breeze", "label": "Breeze TTS 2 (most natural)", "where": "this Mac",
+     "summary": "Free, the most natural local voices: each character's voice is designed from a description, "
+                "and each line can be directed (\"wry, conceding the point\"); it laughs and sighs where the "
+                "script says so. Very heavy: about 12 times Kokoro's work, about 20 with a delivery note on "
+                "every line. Personal, educational and research use only.",
+     "quality": "Preferred in our listening test; leads the open-weights Speech Arena (Elo 1215, reported "
+                "September 2026). English and Chinese only.",
+     "voices": "any voice you can describe; a direction per line; (laughs), (sighs), (coughs), (clears throat)",
+     "work": 20, "compute": "very heavy", "download": "7.6 GB, plus Kokoro's install", "memory": "about 13 GB",
+     "requires": ["apple-silicon", "24gb"],
+     "license": "BreezeBlue Research and Non-Commercial License: free for personal, educational and research "
+                "use; no commercial use. Don't clone a real person's voice without their consent.",
+     "cost": "free"},
     {"id": "say", "engine": "say", "label": "macOS voices", "where": "this Mac",
      "summary": "The voices built into macOS. Nothing to install; robotic next to the others.",
-     "quality": "Clearly synthetic", "voices": "about 10 English voices", "speedRatio": 0.05,
+     "quality": "Clearly synthetic", "voices": "about 10 English voices", "work": 1, "compute": "light",
      "download": "none", "memory": "minimal", "requires": ["mac"], "license": "Apple system voices", "cost": "free"},
     {"id": "gemini:gemini-3.8-flash-tts", "engine": "gemini", "model": "gemini-3.8-flash-tts",
      "label": "Google Gemini 3.8 Flash TTS", "where": "cloud",
@@ -231,9 +255,36 @@ def memory_gb():
         return None
 
 
+def chip():
+    try:
+        return subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True,
+                              timeout=5).stdout.strip() or None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def hardware():
     mac = sys.platform == "darwin"
-    return {"mac": mac, "appleSilicon": mac and os.uname().machine == "arm64", "memoryGB": memory_gb() if mac else None}
+    return {"mac": mac, "appleSilicon": mac and os.uname().machine == "arm64", "memoryGB": memory_gb() if mac else None,
+            "chip": chip() if mac else None}
+
+
+def measured_ratio(engine):
+    """Render seconds per second of audio for this engine on this Mac: the median of recent renders."""
+    rows = (read_json(SPEEDS_FILE).get(engine) or [])[-8:]
+    ratios = sorted(r["ratio"] for r in rows if r.get("ratio"))
+    return ratios[len(ratios) // 2] if ratios else None
+
+
+def record_speed(engine, audio_seconds, render_seconds):
+    """Called by render_audio.py after a render; only renders long enough to mean something count."""
+    if audio_seconds < 60 or render_seconds <= 0:
+        return
+    data = read_json(SPEEDS_FILE)
+    data.setdefault(engine, []).append({"ratio": round(render_seconds / audio_seconds, 3),
+                                        "audioSeconds": round(audio_seconds), "at": time.strftime("%Y-%m-%d")})
+    data[engine] = data[engine][-8:]
+    write_private(SPEEDS_FILE, data)
 
 
 def needs_for(opt, hw):
@@ -244,8 +295,10 @@ def needs_for(opt, hw):
         out.append({"what": "unsupported", "tell": "Needs a Mac."})
     if "apple-silicon" in req and not hw["appleSilicon"]:
         out.append({"what": "unsupported", "tell": "Needs a Mac with Apple Silicon (M1 or later)."})
-    if "16gb" in req and (hw["memoryGB"] or 0) < 16:
-        out.append({"what": "unsupported", "tell": "Needs at least 16 GB of memory (this Mac has %s GB)." % hw["memoryGB"]})
+    for gb in (16, 24):
+        if "%dgb" % gb in req and (hw["memoryGB"] or 0) < gb:
+            out.append({"what": "unsupported", "tell": "Needs at least %d GB of memory (this Mac has %s GB)."
+                        % (gb, hw["memoryGB"])})
     if out:
         return out
     eng = opt["engine"]
@@ -256,6 +309,11 @@ def needs_for(opt, hw):
             out.append({"what": "install", "tell": "Install Kokoro first; Qwen3-TTS uses the same engine."})
         if not (hf_cached(QWEN_DESIGN_REPO) and hf_cached(QWEN_BASE_REPO)):
             out.append({"what": "install", "tell": "Download the models: `voices.py install qwen3` (6.2 GB)."})
+    if eng == "breeze":
+        if not venv_ready():
+            out.append({"what": "install", "tell": "Install Kokoro first; Breeze uses the same engine."})
+        if not hf_cached(BREEZE_REPO):
+            out.append({"what": "install", "tell": "Download the model: `voices.py install breeze` (7.6 GB)."})
     if eng == "say" and not shutil.which("say"):
         out.append({"what": "unsupported", "tell": "The macOS `say` command isn't available."})
     if eng in KEY_ENV and not api_key(eng):
@@ -267,11 +325,18 @@ def needs_for(opt, hw):
 def estimate(opt, words, chars):
     minutes = words / float(WPM)
     est = {"audioMinutes": round(minutes, 1)}
-    if "speedRatio" in opt:
-        est["renderMinutes"] = round(max(0.2, minutes * opt["speedRatio"]), 1)
-        est["renderNote"] = "measured on an M5 Pro; older Macs are slower"
-    else:
+    if opt["where"] == "cloud":
         est["renderNote"] = "a few minutes; turns are sent four at a time"
+    elif measured_ratio(opt["engine"]):
+        est["renderMinutes"] = round(max(0.2, minutes * measured_ratio(opt["engine"])), 1)
+        est["renderNote"] = "from this Mac's earlier renders with this engine"
+    elif measured_ratio("kokoro") and opt.get("work"):
+        est["renderMinutes"] = round(max(0.2, minutes * measured_ratio("kokoro") * opt["work"]), 1)
+        est["renderNote"] = "a rough guess from Kokoro's speed on this Mac; the first render will tell"
+    else:
+        est["renderNote"] = ("not known on this Mac yet: %s (%s); a short sample render would tell"
+                             % (opt.get("compute"), "Kokoro's work" if opt.get("work") == 1 else
+                                "about %d times Kokoro's work" % opt.get("work", 1)))
     if "perMinute" in opt:
         est["costUSD"] = round(minutes * opt["perMinute"], 2)
         if "perMinuteFrom2027" in opt:
@@ -308,7 +373,7 @@ def cmd_list(args):
         words, chars = args.words, args.words * 6
     out = []
     for opt in OPTIONS:
-        row = {k: v for k, v in opt.items() if k not in ("perMinute", "perMinuteFrom2027", "perKChars", "speedRatio", "requires")}
+        row = {k: v for k, v in opt.items() if k not in ("perMinute", "perMinuteFrom2027", "perKChars", "requires")}
         row["needs"] = needs_for(opt, hw)
         row["ready"] = not row["needs"]
         if opt["engine"] in KEY_ENV:
@@ -320,6 +385,18 @@ def cmd_list(args):
           "length": {"words": words, "audioMinutes": round(words / float(WPM), 1)} if words else None,
           "options": out,
           "note": "Prices and rankings change; present them as approximate. Rankings are for single lines, not conversations."})
+
+
+def cmd_machine(args):
+    hw = hardware()
+    local = [o for o in OPTIONS if o["where"] == "this Mac"]
+    emit({"hardware": hw,
+          "localVoices": [{"id": o["id"], "label": o["label"], "compute": o.get("compute"), "work": o.get("work"),
+                           "memory": o.get("memory"),
+                           "fits": not any(n["what"] == "unsupported" for n in needs_for(o, hw)),
+                           "measured": measured_ratio(o["engine"])} for o in local],
+          "note": "work is relative to Kokoro. measured is render seconds per second of audio on this Mac "
+                  "(median of recent renders); null until an engine has rendered at least a minute here."})
 
 
 def run_venv_python(code, *argv):
@@ -337,10 +414,11 @@ def cmd_install(args):
         p = subprocess.run(["bash", os.path.join(HERE, "setup_tts.sh")])
         if p.returncode != 0:
             done({"ok": False, "stage": "kokoro", "error": "setup_tts.sh failed (exit %d); see its messages above." % p.returncode}, 1)
-    if args.engine == "qwen3":
+    if args.engine in ("qwen3", "breeze"):
         code = ("import sys\nfrom huggingface_hub import snapshot_download\n"
                 "for r in sys.argv[1:]:\n    print('Downloading', r, flush=True)\n    snapshot_download(r)\n")
-        p = run_venv_python(code, QWEN_DESIGN_REPO, QWEN_BASE_REPO)
+        repos = (QWEN_DESIGN_REPO, QWEN_BASE_REPO) if args.engine == "qwen3" else (BREEZE_REPO,)
+        p = run_venv_python(code, *repos)
         if p.returncode != 0:
             done({"ok": False, "stage": "download", "error": "The download failed; run it again to resume."}, 1)
     left = needs_for(opt, hw)
@@ -434,8 +512,10 @@ def main():
     g.add_argument("--transcript", help="estimate for this transcript")
     p.set_defaults(func=cmd_list)
     p = sub.add_parser("install")
-    p.add_argument("engine", choices=["kokoro", "qwen3"])
+    p.add_argument("engine", choices=["kokoro", "qwen3", "breeze"])
     p.set_defaults(func=cmd_install)
+    p = sub.add_parser("machine")
+    p.set_defaults(func=cmd_machine)
     p = sub.add_parser("key")
     p.add_argument("action", choices=["set", "check", "remove"])
     p.add_argument("engine", choices=sorted(KEY_ENV))

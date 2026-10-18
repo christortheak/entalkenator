@@ -41,6 +41,10 @@ How to play the turn:
   directions or descriptions of gestures, no quotation marks around the whole
   answer, no headings, bullet lists, or other markdown, and no remarks about
   the task.
+  One exception: where your character would really laugh, sigh, cough, or clear their
+  throat, you may write `(laughs)`, `(sighs)`, `(coughs)` or `(clears throat)` at that
+  spot. Some voices perform it and the others leave it out. Use it rarely, at most once in
+  a few turns, never as decoration.
 - For a private preparation step (notes, an outline), write the notes the
   instruction asks for. Nobody else hears them.
 - Don't repeat what has already been said, including your own earlier turns.

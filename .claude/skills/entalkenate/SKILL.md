@@ -489,6 +489,13 @@ with its turn's opening words, so check they land where you meant. In section 3,
      the estimate in one line, e.g. "This will cost about $0.29 on your Google account".
      If they didn't pick this engine for this run and the estimate is over $1, ask before
      rendering.
+   - **Heavy local engines (qwen3, breeze):** the same listing gives `renderMinutes` from this
+     Mac's own earlier renders, or a rough guess from Kokoro's speed here. Say it in a line
+     ("Breeze will take about 40 minutes on this Mac"). When it's over about an hour, or
+     longer than the person seems to expect, offer the choice once: go ahead, a lighter
+     voice, or a cloud voice with its cost. With no questions, go ahead with their choice
+     and say how long it took in the report. With no figure yet, say this is the first
+     render with that voice here and the time will be known after it.
 2. **Cast the voices**, unless the user gave `--voices`. Never cast a real person's voice
    or ask for one ("sounds like" a named person).
    - **Engines with preset voices** (kokoro, say, gemini, openai, elevenlabs): run
@@ -498,7 +505,8 @@ with its turn's opening words, so check they land where you meant. In section 3,
      to how the transcript itself refers to that role (pronouns, or words like "a man" or
      "she"). Never go by the name alone. If the transcript gives no cue, the default order
      is fine. Contrast neighbouring roles, for example by accent.
-   - **Qwen3-TTS** (qwen3): voices are descriptions. Write one or two sentences per role
+   - **Qwen3-TTS and Breeze** (qwen3, breeze): voices are descriptions. Write one or two
+     sentences per role
      from its sketch or description and the transcript's cues:
      - gender and age, accent, voice quality, temperament, and pace
      - for example, "A calm, measured British man in his sixties with a deep voice;
@@ -534,10 +542,11 @@ with its turn's opening words, so check they land where you meant. In section 3,
      "2: am_fenrir (American male)". Use the picks as `--voices`.
 3. **Run**, in the background for anything longer than a few minutes:
    `RENDER --transcript <dir>/transcript.txt --out "<dir>/<Title>.m4a" --engine <id> --voices "Role=voice;Role=voice" --chapter-plan <dir>/chapters-plan.json [--styles "..."]`
-   - Rough render times on a recent Mac:
-     - Kokoro: under a tenth of the audio's length
-     - Qwen3-TTS: about half (its first use also designs each voice, a few seconds each)
-     - cloud engines: a few minutes, four turns at a time
+   - How long it takes depends on the Mac (see step 1); cloud engines take a few minutes,
+     four turns at a time. A described voice is designed once, on first use, and kept.
+   - **Breeze** follows the role's `--styles` note and each turn's delivery note, and
+     performs `(laughs)`, `(sighs)`, `(coughs)` and `(clears throat)` where the speakers wrote
+     them. A note on every turn nearly doubles its work, so keep them for turns that need one.
    - The pauses between turns follow the conversation: a quick reply comes fast, a question
      gets a beat, and a turn that cuts in overlaps. `--gap N` makes them all the same.
    - Clips are cached by text, voice, model, and delivery note, so a re-run after a failure,

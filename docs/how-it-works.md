@@ -498,7 +498,7 @@ Python, as fixed on main in `9ccccaa`, and lists the library entries the app wou
 
 ## Voice engines and licences
 
-The full set of options (Kokoro, Qwen3-TTS, macOS voices, Gemini, OpenAI, ElevenLabs), how they compare, and how each is wired are in [voices.md](voices.md). The notes below are from the first three engines' test runs.
+The full set of options (Kokoro, Qwen3-TTS, Breeze TTS 2, macOS voices, Gemini, OpenAI, ElevenLabs), how they compare, and how each is wired are in [voices.md](voices.md). The notes below are from the first three engines' test runs.
 
 | Engine | What runs | Cost | Licence notes |
 | :- | :- | :- | :- |

@@ -132,6 +132,10 @@ def main():
         check("a turn spoken far faster than the speaker's usual pace is flagged",
               [(f["turn"], f["wpm"], f["usual"]) for f in flagged] == [(4, 300, 180)] and "missing" in flagged[0]["why"], flagged)
         check("...and the say render above has nothing flagged", res.get("checkTurns") == [], res.get("checkTurns"))
+        t = "Well (laughs) that is fair. (Sighs) Fine. He (clears his throat) said so (coughs)."
+        check("Breeze gets the vocal sounds in its own spelling",
+              render_audio.vocal_events(t, True) == "Well (laugh) that is fair. (sigh) Fine. He (clears throat) said so (cough).")
+        check("...and the other voices leave them out", render_audio.vocal_events(t, False) == "Well that is fair. Fine. He said so.")
 
         mp4chapters.add_chapters(out, [(0, "One"), (1.0, "Two")])
         check("embedding again replaces the chapters", [c[1] for c in mp4chapters.read_chapters(out)] == ["One", "Two"]
