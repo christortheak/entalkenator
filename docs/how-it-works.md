@@ -704,7 +704,7 @@ Observations:
   Anthropic's docs say a plugin's local MCP server runs on the Mac even in Cowork, so a
   plugin with a Mac helper should work. But uploading one shows a warning that it can
   access everything on the Mac, which is too much to ask of the people this is for. That
-  route wasn't tested live; the test plugin is in commit `ded4b75`. So enTalkenator runs in
+  route wasn't tested live; the test plugin is in the history, in the commit "Cowork spike: a test plugin whose local helper reports where it runs". So enTalkenator runs in
   Claude Code only. Off a Mac, `status.py` reports `"mac": false` (with `"where":
   "cowork"` for a Cowork mount), the session hook says to stop, and setup points the
   person to the Code tab.
