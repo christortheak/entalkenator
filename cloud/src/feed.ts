@@ -50,6 +50,9 @@ export async function buildFeed(env: Env, origin: string, token: string, tag: { 
   const title = tag ? `${library}: ${tag.name}` : library;
   const self = `${origin}/feed/${token}${tag ? "/" + tag.slug : ""}.xml`;
   const media = (id: string, name: string) => `${origin}/media/${token}/${encodeURIComponent(id)}/${name}`;
+  // A version marker from the file's upload time, so a replaced file gets a new address and podcast
+  // apps fetch it again instead of keeping a stale download. The Worker routes on the path alone.
+  const v = (f?: { uploadedAt: string }) => (f ? `?v=${(Date.parse(f.uploadedAt) || 0).toString(36)}` : "");
   const cover = `${origin}/media/${token}/cover.png`;
   // The latest change, so the feed (and its ETag) only changes when the library does.
   const changed = items.map((i) => i.updatedAt).sort().pop();
@@ -94,20 +97,20 @@ export async function buildFeed(env: Env, origin: string, token: string, tag: { 
     out.push(`<description>${x(desc)}</description>`);
     out.push(`<itunes:summary>${x(desc)}</itunes:summary>`);
     out.push(`<content:encoded>${x(contentHtml(item))}</content:encoded>`);
-    out.push(`<enclosure url="${x(media(item.id, audioName(audio.contentType)))}" length="${audio.size}" type="${enclosureType(audio.contentType)}"/>`);
+    out.push(`<enclosure url="${x(media(item.id, audioName(audio.contentType)) + v(audio))}" length="${audio.size}" type="${enclosureType(audio.contentType)}"/>`);
     if (item.duration) out.push(`<itunes:duration>${Math.round(item.duration)}</itunes:duration>`);
     if (item.author) out.push(`<itunes:author>${x(item.author)}</itunes:author>`);
     out.push(`<itunes:episodeType>full</itunes:episodeType>`);
     out.push(`<itunes:explicit>false</itunes:explicit>`);
     if (item.files.transcript) {
       if (item.files.chapters) {
-        out.push(`<podcast:transcript url="${x(media(item.id, "transcript.vtt"))}" type="text/vtt" rel="captions"/>`);
-        out.push(`<podcast:transcript url="${x(media(item.id, "transcript.json"))}" type="application/json"/>`);
+        out.push(`<podcast:transcript url="${x(media(item.id, "transcript.vtt") + v(item.files.chapters))}" type="text/vtt" rel="captions"/>`);
+        out.push(`<podcast:transcript url="${x(media(item.id, "transcript.json") + v(item.files.chapters))}" type="application/json"/>`);
       }
-      out.push(`<podcast:transcript url="${x(media(item.id, "transcript.txt"))}" type="text/plain"/>`);
+      out.push(`<podcast:transcript url="${x(media(item.id, "transcript.txt") + v(item.files.transcript))}" type="text/plain"/>`);
     }
     if (item.files.chapters) {
-      out.push(`<podcast:chapters url="${x(media(item.id, "chapters.json"))}" type="application/json+chapters"/>`);
+      out.push(`<podcast:chapters url="${x(media(item.id, "chapters.json") + v(item.files.chapters))}" type="application/json+chapters"/>`);
     }
     for (const t of item.tags) out.push(`<category>${x(t.name)}</category>`);
     out.push(`</item>`);

@@ -151,6 +151,8 @@ def main():
     chapters = it.find("podcast:chapters", NS)
     check("podcast:chapters", chapters is not None and chapters.get("type") == "application/json+chapters")
     check("the episode says its voices are AI-generated", "AI-generated" in (it.findtext("description") or ""))
+    check("media links carry a version marker, so replaced files get new addresses",
+          "?v=" in enc.get("url", "") and "?v=" in (chapters.get("url") if chapters is not None else ""))
     check("every URL carries the feed token", all(feed_token in u for u in list(transcripts.values()) + [chapters.get("url"), enc_url]))
     image = ch.find("itunes:image", NS).get("href")
     st, h, data = c.req("GET", image)

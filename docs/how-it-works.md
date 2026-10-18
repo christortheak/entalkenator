@@ -346,6 +346,12 @@ reading itself, and the footnotes are judged rather than deleted.
   It also lists stretches of 12 or more of the author's words that are missing, and of 6 or
   more read words that aren't the author's. Missing footnote text, citations, and the title
   page are recognized and not flagged. A scan has no text layer, so it can't be checked.
+- **Chapters in two places.** Pocket Casts and the library read the feed's Podcasting 2.0
+  chapters file. Overcast and Apple Podcasts read only chapters embedded in the audio file.
+  So `render_audio.py` also writes a QuickTime chapter track into every .m4a, using
+  `scripts/mp4chapters.py`: standard library only, ffmpeg's layout, verified by reading the
+  file back with AVFoundation. The feed adds `?v=<upload time>` to its media links, so a
+  replaced file gets a new address and podcast apps fetch it again.
 - **Narration script** (`sources.py script`): `[Narrator]` turns open with the section
   heading, so chapters are named after sections. `[Notes]` turns carry substantive footnotes,
   after their paragraph or at the section's end, and figure descriptions. The two voices make

@@ -763,6 +763,8 @@ def write_chapters(path, turns, spans, seconds, engine_name, model, voices, tran
             title = chapter_title("", heading, 80).lstrip(": ")
         elif heading and role == "Narrator":
             title = "%s (continued)" % chapter_title("", heading, 60).lstrip(": ")
+        elif role == "Notes":
+            title = chapter_title("", speakable(text), 70)  # "Footnote 13. Yann LeCun…", "Figure 1 is…"
         else:
             title = chapter_title(role, speakable(text))
         chapters.append({
@@ -861,6 +863,21 @@ def parse_overrides(spec):
     return out
 
 
+def embed_chapters(m4a, chapters_json):
+    """Put the chapters inside the .m4a too: Overcast and Apple Podcasts read only those."""
+    if not m4a.lower().endswith((".m4a", ".m4b", ".mp4")):
+        return False
+    try:
+        import mp4chapters
+        with open(chapters_json, encoding="utf-8") as f:
+            doc = json.load(f)
+        mp4chapters.add_chapters(m4a, [(c["startTime"], c["title"]) for c in doc["chapters"]])
+        return True
+    except Exception as e:  # the audio is fine without them; say so and carry on
+        log("Couldn't embed chapters in the .m4a (%s); the separate chapters file still works." % e)
+        return False
+
+
 def encode_m4a(wav_path, out_path, bitrate):
     tmp = out_path + ".tmp.m4a"
     if shutil.which("afconvert"):
@@ -951,6 +968,7 @@ def main():
     seconds, spans = stitch([j["path"] for j in jobs], args.gap, out, args.bitrate, work)
     chapters = os.path.splitext(out)[0] + ".chapters.json"
     write_chapters(chapters, turns, spans, seconds, engine_name, model, voices, args.transcript)
+    embedded = embed_chapters(out, chapters)
 
     emit({
         "out": out,
@@ -962,6 +980,7 @@ def main():
         "durationSeconds": round(seconds, 1),
         "renderSeconds": round(render_s, 1),
         "chapters": chapters,
+        "embeddedChapters": embedded,
         "clips": work,
     })
 
