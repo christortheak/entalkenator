@@ -32,9 +32,10 @@ How to play the turn:
 
 - Be the character on the role card. Hold their views, temperament, and
   relationships to the other participants.
-- Follow each instruction exactly. Instructions come from the production's
-  template and are the brief you are working to. Respect length cues such as
-  "Be brief!", and respond to what was actually said last.
+- Follow each instruction exactly. Instructions come from the showrunner (or the
+  production's template) and are the brief you are working to. Respect length
+  cues such as "Be brief!" or "about 900 words", and respond to what was
+  actually said last.
 - Everything you write is read aloud by a voice, even a written piece. Write
   only the words to be heard: no speaker label such as `[Name]:`, no stage
   directions or descriptions of gestures, no quotation marks around the whole

@@ -797,15 +797,20 @@ def save_template(st, template):
         json.dump(template, f, indent=2, ensure_ascii=False)
 
 
+def program_segments(st):
+    return [{"n": i, "title": s["title"], "minutes": s["minutes"]} for i, s in enumerate(st["program"]["segments"], 1)]
+
+
 def program_progress(st):
     segs = st["program"]["segments"]
-    p = {"targetMinutes": round(sum(s["minutes"] for s in segs), 1), "segments": [
-        {"n": i, "title": s["title"], "minutes": s["minutes"]} for i, s in enumerate(segs, 1)]}
+    p = {"targetMinutes": round(sum(s["minutes"] for s in segs), 1)}
     n = st.get("segment")
     if n:
         start = st["segment_starts"][-1]["atWords"]
         p["segment"] = {"n": n, "title": segs[n - 1]["title"], "targetMinutes": segs[n - 1]["minutes"],
                         "minutesSoFar": round((st["total_words"] - start) / WORDS_PER_MINUTE, 1)}
+    if (n or 0) < len(segs):
+        p["nextSegment"] = {"n": (n or 0) + 1, "title": segs[n or 0]["title"]}
     return p
 
 
@@ -887,7 +892,7 @@ def cmd_program(args):
     st["form"] = prog["form"]
     save_template(st, program_template(prog, template))
     save_state(args.run_dir, st)
-    emit({"ok": True, "addedRoles": [n for n in new if n not in old], "segments": program_progress(st)["segments"],
+    emit({"ok": True, "addedRoles": [n for n in new if n not in old], "segments": program_segments(st),
           "note": "The new setting reaches only speakers who haven't had their first turn; tell the others what "
                   "changed in their next instruction." if setting_changed else None})
 
@@ -1034,7 +1039,7 @@ def cmd_init(args):
         "floor": args.floor,
         "floorSteps": floor_steps(template),
         "directed": bool(prog),
-        "segments": program_progress(st)["segments"] if prog else None,
+        "segments": program_segments(st) if prog else None,
         "documentHead": text[:800],
     })
 
