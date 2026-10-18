@@ -119,7 +119,13 @@ def main():
         m = json.load(open(os.path.join(runp, "sources", "manifest.json")))
         tasks = m["docs"][0]["tasks"]
         check("each task gets its own one-page PDF", all(t.get("chunk") and len(sources.pdf_pages(t["chunk"])) == 1 for t in tasks))
-        check("the sheet points at the small PDF, with no page range", "no page range needed" in open(tasks[0]["sheet"]).read())
+        sheet = open(tasks[0]["sheet"]).read()
+        check("the sheet points at the small PDF, with no page range", "no page range needed" in sheet)
+        check("the sheet points every reader at the document's brief", m["docs"][0]["brief"] in sheet)
+        code, out = run("map", runp, env=env)
+        rows = out["docs"][0]["map"] if code == 0 else []
+        check("map sketches every page", len(rows) == 3 and rows[0]["starts"].startswith("THE LAW OF QUIET THINGS")
+              and out["docs"][0]["briefWritten"] is False, out)
         code, out = run("plan", os.path.join(tmp, "run2"), "--source", pdf + ":2-3", "--source", notes_md, env=env)
         check("per-source page ranges and text files", code == 0 and len(out["tasks"]) == 1 and out["docs"][0]["range"] == [2, 3]
               and out["docs"][1]["type"] == "text", out)

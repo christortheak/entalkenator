@@ -99,14 +99,17 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
 3. Choose a run directory in this folder: `programs/<template>-<YYYYmmdd-HHMMSS>`. Then
    **prepare the documents**, so that every speaker gets a clean text once, in their first
    sheet (later sheets carry only what's new):
-   - **PDFs are read by Claude** (the default). Run
-     `SOURCES plan <dir> --source <file> [--source ...] --citations names`. Then run its reader
-     tasks, then `SOURCES stitch <dir>` and `SOURCES audit <dir>`, exactly as in steps 3–4 of
-     the narrate skill. Readers see the pages themselves, so the speakers get the text
-     without running heads, page numbers, or footnote clutter. They also get substantive
-     footnotes inline, and descriptions of the figures and tables.
-     - Keep case and author names (`--citations names`): speakers argue better when they can
-       name the authorities.
+   - **PDFs are read by Claude** (the default). Run `SOURCES plan <dir> --source <file>
+     [--source ...]`. Then survey each document and write its brief, as in step 2 of the
+     narrate skill, but aimed at speakers who will discuss it:
+     - keep case and author names, so they can cite authorities
+     - keep substantive footnotes, and describe figures and tables
+     - leave out what no discussion needs, such as contents pages and reference lists
+
+     Ask the person only if a choice really matters for this program. Then run the reader
+     tasks, `SOURCES stitch <dir>`, and `SOURCES audit <dir>`, as in steps 3–4 of the narrate
+     skill. The speakers get the text without running heads, page numbers or footnote
+     clutter, with substantive footnotes inline and descriptions of the figures and tables.
      - A finished narration's `sources/combined.md` (same document) can be used directly.
    - **Quick extraction** (`SOURCES quick <dir> --source ...`) skips the readers. It's for
      when the person asks for speed, or for very large sets (over about 300 pages). It uses

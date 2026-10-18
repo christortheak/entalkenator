@@ -650,10 +650,17 @@ def local_worker(engine_name, jobs_file, speed):
     if engine_name == "qwen3":
         QwenRenderer().render_all(jobs)
     else:
+        import mlx.core as mx
         engine = KokoroEngine(speed)
+        clear = os.environ.get("ENTALKENATOR_KOKORO_CLEAR", "1") != "0"
         for j in jobs:
+            t0 = time.time()
             engine.render(j["text"], j["voice"], j["path"])
-            log("  %s done" % j["label"])
+            if clear:
+                mx.clear_cache()  # MLX's buffer cache otherwise grows over a long render and slows it down
+            with wave.open(j["path"]) as w:
+                secs = w.getnframes() / float(w.getframerate())
+            log("  %s done (%.0f s of audio in %.1f s)" % (j["label"], secs, time.time() - t0))
     sys.stderr.flush()
     os._exit(0)
 

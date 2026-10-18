@@ -21,47 +21,59 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
 - `VOICE_OPTIONS` = `python3 scripts/voices.py`
 - `PUBLISH` = `python3 scripts/publish.py`
 
-## 1. Settings
+## 1. Plan the reading
 
-Run `SOURCES prefs`. If it has saved choices and the arguments don't override them, say what
-they are in one line ("Footnotes after their paragraph, citations dropped, your usual voices")
-and go on; the person can say "change" to see the menu. Otherwise ask in one AskUserQuestion
-call:
-- **Footnotes** (header "Footnotes"):
-  - "Read the important ones after their paragraph (Recommended)": substantive notes, in a
-    second voice, right after the paragraph that cites them. Citation-only notes are never
-    read.
-  - "Read them at the end of each section"
-  - "Skip footnotes"
-- **Citations** (header "Citations"):
-  - "Drop them (Recommended)": reporter citations, string cites, and page pins go; a case or
-    author name stays when the sentence needs it
-  - "Keep names only"
-  - "Keep them all": for checking the text, hard listening
-- **Voices** (header "Voices"): from `VOICE_OPTIONS list`, as in the entalkenate skill. Say that
-  notes and figure descriptions get a second voice.
-- **Readers** (header "Readers"), only for documents over 40 pages:
-  - "Same model as this session (Recommended)"
-  - "Sonnet (lighter on usage)"
+Make a run directory: `programs/narration-<short name>-<YYYYmmdd-HHMMSS>`. Then run
+`SOURCES plan <dir> --source <file> [--source <file>...] [--pages A-B]`. A source can be a
+folder, or `file.pdf:15-24` for some pages. It copies each document and cuts each PDF into
+reader tasks of up to 8 pages. Each task gets its own small PDF, because Claude Code reads a
+small PDF whole with nothing installed.
 
-Save the footnote and citation choices with
-`SOURCES prefs --notes <after-paragraph|section-end|none> --citations <drop|names|keep>`.
-Figures are always described unless the person says otherwise (`--figures skip`).
+## 2. Survey each document and write its brief
 
-## 2. Plan the reading
+Every reader follows the same brief, so the document is narrated one way from start to
+finish. Writing it is your job, and it's the step that matters most.
 
-Make a run directory: `programs/narration-<short name>-<YYYYmmdd-HHMMSS>`. Then run:
+1. **Look at the document.**
+   - `SOURCES map <dir>` sketches every page from the PDF's text layer: its size, opening
+     and closing words, contents-page dots, and footnote-like lines.
+   - Read the first task's small PDF (the `chunk` in the map) to see the layout and the
+     opening.
+   - If the map suggests something unusual, look at that part too: an appendix of tables,
+     a long Methods section, columns, block quotes, or endnotes. Don't read the whole
+     document; the readers will.
+   - A document with `scanned: true` has no text layer. The readers can still read it from
+     the page images, but the faithfulness check in step 4 can't run on it. Say so.
+2. **Decide how it should sound**, for someone listening on a walk:
+   - what it is
+   - what to read and what to leave out (front and back matter, contents pages, reference
+     lists, appendices)
+   - inline citations
+   - footnotes or endnotes: which kind to read, and where (after their paragraph, or at the
+     section's end)
+   - figures and tables
+   - anything odd: columns, equations, foreign-language passages, long quotations
 
-`SOURCES plan <dir> --source <file> [--source <file>...] [--pages A-B] --citations <choice>`
+   `SOURCES prefs` holds the person's usual choices, and the arguments (`--notes`,
+   `--citations`, `--figures`) settle those choices for this run. Follow both unless the
+   document gives a good reason not to, and then say why.
+3. **Ask only about real choices.** Use AskUserQuestion, recommended option first, at most
+   two or three questions. Ask when a choice is genuinely the person's and the document
+   makes it matter. For example:
+   - "The appendix is 12 payoff tables. Describe them briefly, or skip them?"
+   - "About 300 footnotes, a tenth substantive. Read those after their paragraph?"
+   - "Methods runs 9 pages. Read it, or stop at the Discussion?"
 
-It copies each document and cuts each PDF into reader tasks of up to 8 pages, each with
-its own small PDF, so nothing needs installing. In a line, tell the person:
-- how many pages and reader tasks
-- roughly how long the audio will be: about 1.5 minutes per page of body text for a typical
-  article, before footnotes
-
-If a document is `scanned` (no text layer), the readers still read it from the page images,
-but the faithfulness check in step 4 can't run on it. Say so.
+   Don't ask what the brief can settle sensibly by itself. If the person states a general
+   preference ("never read footnotes"), save it with
+   `SOURCES prefs --notes ... --citations ... --figures ...`.
+4. **Write the brief** to the `brief` path the plan printed (`sources/<doc>/brief.md`). Use
+   plain sentences, under about 250 words, for readers who will see only their own pages.
+   The same note placement goes to `SOURCES script` in step 5 (`--notes after-paragraph`,
+   `section-end`, or `none`).
+5. **Tell the person** what you decided, in two or three lines. Include how long the
+   narration will be: roughly 1.5 minutes per page of body text, plus the notes and figure
+   descriptions.
 
 ## 3. Read
 
@@ -105,7 +117,7 @@ don't poll. Each replies with one line.
 
 ## 5. Script and voices
 
-`SOURCES script <dir> --notes <choice> --figures describe` writes `<dir>/narration.txt`:
+`SOURCES script <dir> --notes <as in the brief> --figures <describe|skip>` writes `<dir>/narration.txt`:
 - `[Narrator]:` turns for the text; each section starts with its heading, so the chapters
   are named after the sections
 - `[Notes]:` turns for the footnotes ("Footnote 12. …") and the figure descriptions

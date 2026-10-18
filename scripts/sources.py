@@ -3,16 +3,19 @@
 for conversations. Claude does the reading; this script does the bookkeeping.
 
 A PDF is split into page ranges, and each range goes to a reader agent (.claude/agents/
-reader.md). The agent reads those pages directly, layout and images included, and writes them
-out word for word: running heads, page numbers and footnote numbers removed, headings marked,
-figures and tables described, each footnote judged substantive or citation-only. This script
-then joins the ranges, places footnotes, builds a narration script, and checks the reading
-against the PDF's own text layer.
+reader.md). Before the readers start, Claude surveys the document (`map` helps) and writes a
+short brief, sources/<doc>/brief.md, saying how this document should sound: what to read and
+leave out, how to treat citations, notes, figures and tables. Every reader follows the same
+brief, so eleven readers narrate one article one way. The readers read their pages directly,
+layout and images included, and write them out word for word. This script then joins the
+ranges, places footnotes, builds a narration script, and checks the reading against the PDF's
+own text layer.
 
 Commands (each prints JSON):
   plan RUN --source FILE [--source FILE ...]   set up the reading; lists the reader tasks
-       [--pages 1-12] [--pages-per-task 8] [--kind auto|academic|legal|web|book|other]
-       [--citations drop|names|keep]
+       [--pages 1-12] [--pages-per-task 8]       (FILE may be a folder, or file.pdf:15-24)
+  map RUN [--doc d1]   a page-by-page sketch from the text layer (words, opening and closing
+                   words, contents-page dots, footnote-like lines) to help write the brief
   stitch RUN       join the readers' output into sources/<doc>/reading.json and reading.md,
                    and sources/combined.md (every document, for conversations)
   audit RUN        compare each reading with the PDF's text layer: how much of the reading is
@@ -205,31 +208,7 @@ def expand_sources(paths):
     return out
 
 
-def guess_kind(text):
-    t = text[:20000]
-    legal = len(re.findall(r"\b(?:U\.S\.|F\.\s?(?:2d|3d|4th)|S\.\s?Ct\.|v\.|Petitioner|Respondent|Appellant|Appellee|"
-                           r"Plaintiff|Defendant|Court of Appeals|§)", t))
-    academic = len(re.findall(r"\b(?:Abstract|Introduction|Conclusion|et al\.|Journal|Review|Professor|University)\b", t))
-    if legal >= 25 and re.search(r"\b(?:Brief|Opinion|Petitioner|Respondent|Appellant|Appellee|Motion)\b", t):
-        return "legal"
-    if academic >= 3 or legal >= 25:
-        return "academic"
-    return "other"
-
-
-KIND_LABELS = {"academic": "an academic article or book chapter", "legal": "a legal brief, opinion, or filing",
-               "web": "an article from the web", "book": "a book", "other": "a document"}
-CITATION_RULES = {
-    "drop": "Drop inline citations from the body text: reporter citations, string cites, page pins, "
-            "parenthetical author-year references, and citation-only sentences such as \"See id.\". "
-            "If a sentence needs a case or author name to make sense, keep just the name.",
-    "names": "Keep inline citations only as names: \"Smith v. Jones\" or \"Smith\", never reporters, volumes, "
-             "pages, or years. Drop citation-only sentences such as \"See id.\".",
-    "keep": "Keep inline citations as they appear, read naturally (\"five hundred ninety U.S. at twelve\" is fine).",
-}
-
-
-def task_sheet(doc, task, total, opts):
+def task_sheet(doc, task, total):
     if task.get("chunk"):
         where = ["Your pages are %d to %d of the document, cut into a PDF of their own. Read all of it with the "
                  "Read tool (no page range needed):" % (task["first"], task["last"]), task["chunk"]]
@@ -239,11 +218,15 @@ def task_sheet(doc, task, total, opts):
     return "\n".join([
         "READING TASK %s (%d of %d for this document)" % (task["id"], task["n"], total),
         "",
-        "Document: %s, %d pages, which looks like %s." % (doc["name"], doc["pages"], KIND_LABELS[doc["kind"]]),
+        "Document: %s, %d pages." % (doc["name"], doc["pages"]),
+        "",
+        "First read the brief for this document, which says how it should sound:",
+        doc["brief"],
+        "(If that file doesn't exist, use your own judgment toward the goal, and report your calls.)",
+        "",
     ] + where + [
         "",
         "Other readers handle the pages before and after yours, so start and stop exactly at your pages.",
-        "Inline citations: " + CITATION_RULES[opts["citations"]],
         "",
         "Write your reading, in the format your instructions describe, to:",
         task["output"],
@@ -261,8 +244,8 @@ def cmd_plan(args):
     if args.pages and len(args.source) > 1:
         fail("--pages works with one source; for several, write file.pdf:15-24 for each.")
     os.makedirs(sdir, exist_ok=True)
-    m = {"version": 1, "created": _dt.datetime.now().isoformat(timespec="seconds"),
-         "options": {"citations": args.citations, "pagesPerTask": args.pages_per_task}, "docs": []}
+    m = {"version": 2, "created": _dt.datetime.now().isoformat(timespec="seconds"),
+         "options": {"pagesPerTask": args.pages_per_task}, "docs": []}
     tasks_out = []
     for i, (src, src_pages) in enumerate(expand_sources(args.source), 1):
         if not os.path.isfile(src):
@@ -284,8 +267,7 @@ def cmd_plan(args):
             layer = sum(len(p.split()) for p in pages[first - 1:last])
             doc.update({"type": "pdf", "pdf": pdf, "pages": len(pages), "range": [first, last],
                         "textLayerWords": layer, "scanned": layer < 20 * (last - first + 1),
-                        "kind": args.kind if args.kind != "auto" else guess_kind("\n".join(pages[:20])),
-                        "tasks": []})
+                        "brief": os.path.join(ddir, "brief.md"), "tasks": []})
             os.makedirs(os.path.join(ddir, "read"), exist_ok=True)
             per = max(1, min(MAX_PAGES_PER_TASK, args.pages_per_task))
             starts = list(range(first, last + 1, per))
@@ -299,21 +281,47 @@ def cmd_plan(args):
                     t["chunk"] = chunk
                 doc["tasks"].append(t)
             for t in doc["tasks"]:
-                write_text(t["sheet"], task_sheet(doc, t, len(doc["tasks"]), m["options"]))
+                write_text(t["sheet"], task_sheet(doc, t, len(doc["tasks"])))
                 tasks_out.append({"doc": did, "task": t["id"], "pages": "%d-%d" % (t["first"], t["last"]),
                                   "sheet": t["sheet"], "output": t["output"]})
         else:
             text = convert_to_text(src)
             write_text(os.path.join(ddir, "text.txt"), text)
-            doc.update({"type": "text", "words": len(text.split()), "kind": args.kind if args.kind != "auto" else guess_kind(text),
-                        "tasks": []})
+            doc.update({"type": "text", "words": len(text.split()), "tasks": []})
         m["docs"].append(doc)
     save_manifest(run, m)
-    emit({"ok": True, "run": run, "docs": [{k: d.get(k) for k in ("id", "name", "type", "pages", "range", "kind", "scanned", "words")}
+    emit({"ok": True, "run": run, "docs": [{k: d.get(k) for k in ("id", "name", "type", "pages", "range", "scanned", "words", "brief")}
                                           for d in m["docs"]],
           "tasks": tasks_out,
-          "note": "Spawn one reader agent per task (subagent_type reader), several at a time; "
-                  "then run `sources.py stitch`." if tasks_out else "No PDFs, so no readers are needed; run `sources.py stitch`."})
+          "note": "Survey each PDF (`sources.py map`, and read a chunk or two) and write its brief; then spawn one "
+                  "reader agent per task (subagent_type reader), several at a time; then `sources.py stitch`."
+                  if tasks_out else "No PDFs, so no readers are needed; run `sources.py stitch`."})
+
+
+def cmd_map(args):
+    """A cheap sketch of each page from the text layer, for writing the brief. Hints, not decisions."""
+    run = os.path.abspath(args.run)
+    m = load_manifest(run)
+    out = []
+    for doc in m["docs"]:
+        if doc["type"] != "pdf" or (args.doc and args.doc not in (doc["id"], doc["name"])):
+            continue
+        ddir = os.path.join(sources_dir(run), doc["id"])
+        rows = []
+        for n in range(doc["range"][0], doc["range"][1] + 1):
+            text = read_text(os.path.join(ddir, "pages", "%04d.txt" % n))
+            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            flat = " ".join(text.split())
+            rows.append({"page": n, "words": len(flat.split()),
+                         "starts": flat[:90], "ends": flat[-60:] if len(flat) > 90 else "",
+                         "dotLeaders": len(re.findall(r"\.{6,}", text)),
+                         "numberedLines": sum(1 for l in lines if re.match(r"^\d{1,4}\s+\S", l))})
+        tasks = [{"task": t["id"], "pages": "%d-%d" % (t["first"], t["last"]), "chunk": t.get("chunk")} for t in doc["tasks"]]
+        out.append({"doc": doc["id"], "name": doc["name"], "pages": doc["pages"], "range": doc["range"],
+                    "scanned": doc.get("scanned"), "brief": doc["brief"], "briefWritten": os.path.isfile(doc["brief"]),
+                    "tasks": tasks, "map": rows})
+    emit({"docs": out, "note": "dotLeaders suggest contents pages; numberedLines at a page's foot suggest footnotes "
+                               "or a reference list. Look at the pages themselves (the chunk PDFs) where it matters."})
 
 
 # ---------------------------------------------------------------------------
@@ -525,7 +533,25 @@ def cmd_stitch(args):
 
 SPOKEN = [(r"§§", " sections "), (r"§", " section "), (r"¶", " paragraph "), (r"\be\.g\.,?", " for example "),
           (r"\bi\.e\.,?", " that is "), (r"\bet al\.", " and others "), (r"\bcf\.", " compare "),
-          (r"&", " and ")]
+          (r"&", " and "), (r"±", " plus or minus "), (r"[×✕]", " by "), (r"[~≈∼]", " approximately "),
+          (r"%", " percent "), (r"°\s?C\b", " degrees celsius "), (r"°", " degrees "), (r"≤", " less than or equal to "),
+          (r"≥", " greater than or equal to "), (r"<", " less than "), (r">", " greater than "), (r"=", " equals ")]
+# Units read aloud, canonicalized on both sides: the reader says "micrometers", the page says "μm".
+UNITS = {}
+for canon, forms in {"um": "μm µm um micrometer micrometers micrometre micrometres micron microns",
+                     "nm": "nm nanometer nanometers nanometre nanometres", "mm": "mm millimeter millimeters millimetre millimetres",
+                     "cm": "cm centimeter centimeters centimetre centimetres", "mw": "mw milliwatt milliwatts",
+                     "ghz": "ghz gigahertz", "mhz": "mhz megahertz", "khz": "khz kilohertz", "hz": "hz hertz",
+                     "ms": "ms millisecond milliseconds", "us": "μs µs microsecond microseconds",
+                     "ns": "ns nanosecond nanoseconds", "ml": "ml milliliter milliliters millilitre millilitres",
+                     "ul": "μl µl ul microliter microliters microlitre microlitres", "kda": "kda kilodalton kilodaltons",
+                     "mg": "mg milligram milligrams", "ug": "μg µg ug microgram micrograms", "kg": "kg kilogram kilograms"}.items():
+    for f in forms.split():
+        UNITS[f] = canon
+AFTER_NUMBER = {"h": "h", "hr": "h", "hrs": "h", "hour": "h", "hours": "h", "min": "min", "mins": "min", "minute": "min",
+                "minutes": "min", "s": "s", "sec": "s", "second": "s", "seconds": "s", "d": "d", "day": "d", "days": "d",
+                "w": "w", "watt": "w", "watts": "w", "m": "m", "meter": "m", "meters": "m", "metre": "m", "metres": "m"}
+LIGATURES = ("ffi", "ffl", "ff", "fi", "fl")
 
 
 def norm_words(text, spoken=True):
@@ -539,7 +565,71 @@ def norm_words(text, spoken=True):
     t = t.lower()
     t = re.sub(r"[\u2010-\u2015\-/]", " ", t)
     t = re.sub(r"[^\w\s']", " ", t)
-    return [w.strip("'") for w in t.split() if w.strip("'")]
+    t = re.sub(r"\b([a-z]{3,})(\d{1,3})\b", r"\1 \2", t)  # reference numbers fused to a word: "cameras43"
+    words = [w.strip("'") for w in t.split() if w.strip("'")]
+    out = []
+    for w in words:
+        if w in UNITS:
+            w = UNITS[w]
+        elif out and out[-1].isdigit() and w in AFTER_NUMBER:
+            w = AFTER_NUMBER[w]
+        out.append(w)
+    return out
+
+
+def segment(token, vocab, longest=30):
+    """Split a run-together token ("microscopeequippedwithahalogen") into words the reading uses,
+    with as few words as possible; None if it can't be done."""
+    n = len(token)
+    if n > 200:
+        return None
+    best = [None] * (n + 1)
+    best[0] = []
+    for i in range(1, n + 1):
+        for j in range(max(0, i - longest), i):
+            if best[j] is not None and token[j:i] in vocab and (best[i] is None or len(best[j]) + 1 < len(best[i])):
+                best[i] = best[j] + [token[j:i]]
+    return best[n] if best[n] and len(best[n]) > 1 else None
+
+
+def repair_ligatures(src, vocab):
+    """Repair a PDF text layer against the reading's own vocabulary. Text layers often drop the
+    fi/fl/ff ligatures ("speci city", "uorescence") and the spaces of justified lines
+    ("theneedformore"). Re-insert a ligature, or split a run, where that makes words the reading uses."""
+    out, i = [], 0
+    while i < len(src):
+        w = src[i]
+        if w not in vocab:
+            nxt = src[i + 1] if i + 1 < len(src) else None
+            fixed = None
+            for lig in LIGATURES:
+                if nxt is not None and w + lig + nxt in vocab:
+                    fixed, i = w + lig + nxt, i + 1
+                    break
+                inner = [w[:k] + lig + w[k:] for k in range(len(w) + 1)]  # also "brighteld", "uorescence"
+                hit = next((x for x in inner if x in vocab), None)
+                if hit:
+                    fixed = hit
+                    break
+            if not fixed and len(w) > 6:
+                # Run-together words, possibly with a lost ligature at the join to the next token.
+                for cand, extra in ([(w, 0)] + ([(w + lig + nxt, 1) for lig in LIGATURES] if nxt else [])):
+                    parts = segment(cand, vocab)
+                    if parts:
+                        out.extend(parts)
+                        i += 1 + extra
+                        break
+                else:
+                    out.append(w)
+                    i += 1
+                continue
+            if fixed:
+                out.append(fixed)
+                i += 1
+                continue
+        out.append(w)
+        i += 1
+    return out
 
 
 def spans(words, opcodes, side, min_len, bridge=3):
@@ -574,9 +664,18 @@ def task_text(blocks, task_id):
     return " ".join(out)
 
 
-def audit_task(src_text, nar_text, note_texts, title_words=()):
-    src = norm_words(src_text)
+def audit_task(src_text, nar_text, note_texts, title_words=(), page_starts=None, skipped=()):
+    """page_starts: [(page number, offset in src words)] so missing text can be traced to a page
+    the reader said it skipped."""
     nar = norm_words(nar_text)
+    vocab = set(nar)
+    if page_starts:
+        src, starts = [], []
+        for page, text in page_starts:
+            starts.append((page, len(src)))
+            src += repair_ligatures(norm_words(text), vocab)
+    else:
+        src, starts = repair_ligatures(norm_words(src_text), vocab), []
     if not nar:
         return {"readWords": 0, "sourceWords": len(src)}
     sm = difflib.SequenceMatcher(None, src, nar, autojunk=False)
@@ -588,17 +687,24 @@ def audit_task(src_text, nar_text, note_texts, title_words=()):
     dropped = []
     for a, b in spans(src, ops, "src", 12):
         piece = src[a:b]
-        overlap = sum(w in note_words for w in piece) / float(len(piece))
+        content = [w for w in piece if len(w) >= 4 and not w.isdigit()] or piece
+        overlap = sum(w in note_words for w in content) / float(len(content))
         excerpt = " ".join(piece[:24])
+        page = max([p for p, off in starts if off <= a] or [None])
+        said = [x for x in skipped if page is not None and re.search(r"\b%d\b" % page, x)]
         if title_words and sum(w in title_words for w in piece) / float(len(piece)) > 0.5:
             kind = "title page"
-        elif overlap > 0.6 or re.match(r"^\d+\s", " ".join(piece)):
+        elif any(w in ("fig", "figure", "table") for w in piece[:12]):
+            kind = "figure caption or labels"
+        elif said:
+            kind = "skipped by the reader: " + "; ".join(said)
+        elif overlap > 0.5 or re.match(r"^\d+\s", " ".join(piece)):
             kind = "footnotes"
         elif _looks_citation(piece):
             kind = "citations"
         else:
             kind = "possibly dropped"
-        dropped.append({"kind": kind, "words": b - a, "excerpt": excerpt + (" …" if b - a > 24 else "")})
+        dropped.append({"kind": kind, "words": b - a, "page": page, "excerpt": excerpt + (" …" if b - a > 24 else "")})
     return {"readWords": len(nar), "sourceWords": len(src), "matchedWords": matched,
             "faithfulness": round(matched / float(len(nar)), 3),
             "added": added[:8], "dropped": dropped}
@@ -630,11 +736,10 @@ def cmd_audit(args):
         tot_read = tot_match = 0
         title_words = norm_words(" ".join(reading.get(k) or "" for k in ("title", "author", "intro")))
         for t in doc["tasks"]:
-            src = "\n".join(read_text(os.path.join(ddir, "pages", "%04d.txt" % n))
-                            for n in range(t["first"], t["last"] + 1))
+            pages = [(n, read_text(os.path.join(ddir, "pages", "%04d.txt" % n))) for n in range(t["first"], t["last"] + 1)]
             nt = [n["text"] for n in reading["notes"].values() if n.get("task") == t["id"]]
-            r = audit_task(src, task_text(reading["blocks"], t["id"]), nt, title_words)
             skipped = [b["text"] for b in reading["blocks"] if b["type"] == "skipped" and b.get("task") == t["id"]]
+            r = audit_task("", task_text(reading["blocks"], t["id"]), nt, title_words, pages, skipped)
             r.update({"task": t["id"], "pages": "%d-%d" % (t["first"], t["last"])})
             if skipped:
                 r["readerSkipped"] = skipped
@@ -881,10 +986,12 @@ def main():
     p.add_argument("--source", action="append", required=True)
     p.add_argument("--pages", help="only these pages, e.g. 3-12 (one source)")
     p.add_argument("--pages-per-task", type=int, default=8)
-    p.add_argument("--kind", default="auto", choices=["auto", "academic", "legal", "web", "book", "other"])
-    p.add_argument("--citations", default="drop", choices=["drop", "names", "keep"])
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=cmd_plan)
+    p = sub.add_parser("map")
+    p.add_argument("run")
+    p.add_argument("--doc")
+    p.set_defaults(func=cmd_map)
     for name, fn in (("stitch", cmd_stitch), ("audit", cmd_audit), ("status", cmd_status)):
         p = sub.add_parser(name)
         p.add_argument("run")

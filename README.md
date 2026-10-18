@@ -54,8 +54,10 @@ The whole thing takes about 20 minutes, most of it waiting for downloads.
 
 > Narrate pages 12–40 of this book chapter, skip the footnotes
 
-The first time, Claude asks how you like footnotes and citations handled, and remembers. Each
-narration comes with a faithfulness check: a comparison with the PDF's own text, which
+Claude looks over each document first: what it is, how it's laid out, what to read and what
+to skip. It asks you only when there's a real choice to make ("The appendix is 12 payoff
+tables. Describe them, or skip them?"), and it remembers your usual preferences. Each
+narration comes with a faithfulness check, a comparison with the PDF's own text, which
 confirms Claude read the document rather than summarizing it. Chapters follow the
 document's sections.
 

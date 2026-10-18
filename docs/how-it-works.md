@@ -314,6 +314,21 @@ reading itself, and the footnotes are judged rather than deleted.
   PDF needs poppler's `pdftoppm`, which most Macs don't have. Without the cut, two test
   readers loaded the whole 67-page brief, about 206,000 tokens each for 8 pages of work; with
   it, about 76,000.
+- **The survey and the brief.** Before any reader starts, the showrunner surveys each
+  document:
+  - `sources.py map` sketches every page from the text layer: its size, opening and closing
+    words, contents-page dots, and footnote-like lines
+  - it looks at the first pages, and wherever the map suggests something unusual
+
+  It then writes `sources/<doc>/brief.md`: what the document is, what to read and skip, and
+  how to handle citations, notes, figures, columns, numbers and units. It asks the person
+  only about real choices. Every reader follows the same brief, so a document split eleven
+  ways is still narrated one way.
+
+  This replaced a regex "kind detector" and fixed rule sets. The detector misfiled both a
+  Supreme Court brief and a Nature article as "other", and no rule set anticipates an
+  appendix of payoff tables. The reader instructions shrank from about 1,300 words to 700:
+  the goal, the word-for-word rule, and the output format the stitcher needs.
 - **What a reader writes** (`.claude/agents/reader.md`): the body text word for word, in a
   small line format. Page furniture is gone, citations follow the chosen rule, and § becomes
   "section". Headings are marked by level. Figures and tables get a description to be read
