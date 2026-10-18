@@ -1,8 +1,8 @@
 ---
 name: entalkenate
-description: Turn a document (PDF, text, or pasted text) into an enTalkenator audio program, such as a debate, podcast, seminar, oral argument, or quiz show. It runs one of the enTalkenator app's templates inside Claude Code, voices each role with its own subagent, renders a multi-voice .m4a locally with Kokoro, and packages an .enTalkenator bundle the app can import. Use when asked to "entalkenate" something or to make a debate, podcast, or similar audio conversation from a paper.
+description: Turn a document (PDF, text, or pasted text) into an enTalkenator audio program, such as a debate, podcast conversation, seminar, oral argument, or quiz show. It runs one of the templates in templates/, voices each role with its own speaker subagent, renders a multi-voice .m4a on this Mac (Kokoro or the macOS voices), and can publish it to the person's own library and podcast feed. Use when asked to "entalkenate" something, or to make a debate, podcast, or similar audio program from a paper, article, or notes.
 argument-hint: <document.pdf|.txt> [template] [--model opus|fable|sonnet|haiku] [--single|--fresh] [--loop-scale 0.3] [--engine kokoro|gemini|say] [--voices "Role=voice;..."] [--user-input "..."] [--no-audio] [--publish|--no-publish] [--tag "..."]
-allowed-tools: Read Write Bash(python3 *)
+allowed-tools: Read Write Bash(python3 scripts/*) Bash(bash scripts/*)
 ---
 
 # enTalkenate
@@ -13,24 +13,25 @@ spoken lines yourself unless single-writer mode is on.
 
 Arguments: `$ARGUMENTS`
 
-Scripts (always quote the paths, which may contain spaces):
+Scripts run from the enTalkenator folder, `${CLAUDE_PROJECT_DIR}`. If an earlier command
+changed directory, `cd` back there first. Quote other paths; they may contain spaces.
 
-- `ENGINE` = `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/engine.py"`. This is the template
-  state machine. Every subcommand prints JSON.
-- `RENDER` = `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/render_audio.py"` turns the
-  transcript into one .m4a.
-- `SETUP` = `bash "${CLAUDE_PLUGIN_ROOT}/scripts/setup_tts.sh"` installs the local
-  Kokoro voices, but only with the user's permission.
-- `PUBLISH` = `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/publish.py"` uploads the result to
-  the user's own library, if they have one (section 5).
+- `ENGINE` = `python3 scripts/engine.py`. This is the template state machine. Every
+  subcommand prints JSON.
+- `RENDER` = `python3 scripts/render_audio.py` turns the transcript into one .m4a.
+- `SETUP` = `bash scripts/setup_tts.sh` installs the local Kokoro voices, but only with
+  the user's permission.
+- `PUBLISH` = `python3 scripts/publish.py` uploads the result to the user's own library,
+  if they have one (section 5).
 
 ## 1. Set up the run
 
 1. Read the arguments:
    - **Source**: a PDF, `.txt`, or `.md` path. If the user pasted text instead, save it to
      `<run dir>/pasted.txt` and use that.
-   - **Template**: a file stem, id, or display name from the app's templates. If none is
-     given, run `ENGINE templates` and ask the user to pick one.
+   - **Template**: a file stem, id, or display name from `templates/`. If none is
+     given, run `ENGINE templates` and ask the user to pick one, describing each in a few
+     plain words (its format, roles, and rough length) rather than listing file names.
    - **Flags**:
      - `--single`: single-writer mode. You write every turn.
      - `--fresh`: a new speaker agent every turn. This is the app's stateless behaviour, kept
@@ -85,7 +86,7 @@ Scripts (always quote the paths, which may contain spaces):
      The file stays for next time.
    - The user's organization may restrict models. If a spawn on a pinned model fails,
      say so and fall back to an alias.
-3. Choose a run directory in the current project: `entalkenator-runs/<template>-<YYYYmmdd-HHMMSS>`.
+3. Choose a run directory in this folder: `programs/<template>-<YYYYmmdd-HHMMSS>`.
 4. Run `ENGINE init --template <t> --source <path> --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh] [--form F]`.
    Its `models` field echoes each role's speaker model ("session" means inherit). Its
    `form` is the engine's guess at what kind of program this is: debate, hearing,
@@ -141,12 +142,12 @@ so far, loop target). If it reports `problems` instead, some turns are still ope
 details are under `pending`.
 
 **Cast mode (default): one persistent speaker per role.** Each role is played by one
-`entalkenator:speaker` agent for the whole run. It is cast on its first turn and
+`speaker` agent for the whole run. It is cast on its first turn and
 continued on every later turn, so it keeps the document, its notes, and the
 conversation in its own context:
 
 - `action: "spawn"` means this role has no speaker yet. Call the Agent tool with:
-  - `subagent_type: <agentType>`. This is `entalkenator:speaker`, or a pinned agent for
+  - `subagent_type: <agentType>`. This is `speaker`, or a pinned agent for
     a past model version.
   - `model: <model>`, only when the item has one.
   - `run_in_background: true`.
@@ -294,7 +295,10 @@ dropped, duplicated, or out of order. If it isn't `ok`, report the turns it list
    speaker. The library uses it to follow the transcript, and podcast apps show it as
    chapters.
 
-## 4. Package for the app
+## 4. Package for the enTalkenator app
+
+This bundle is for people who also use the enTalkenator iPhone or Mac app; it's cheap,
+so always make it.
 
 `ENGINE package <dir> --audio "<dir>/<Template displayName>.m4a"` writes
 `<dir>/<Title>.enTalkenator`. It's a zip laid out like the app's bundled examples:
@@ -304,11 +308,13 @@ With `--no-audio`, run `package` without `--audio`.
 ## 5. Publish to your library (only if one is configured)
 
 The user may have their own enTalkenator library: a Cloudflare Worker with a web player and
-a private podcast feed, set up with `/entalkenator:setup-library`. Check, without network:
+a private podcast feed, set up with the setup-library skill. Check, without network:
 
-`PUBLISH status --config "${CLAUDE_PLUGIN_DATA}/library.json" --url "${user_config.library_url}"`
+`PUBLISH status`
 
-- If `configured` is false, skip this section and don't mention the library.
+- If `configured` is false, skip publishing. At the end, mention in one line that the
+  setup-library skill can put programs on their phone and in their podcast app, unless
+  they've already said no to a library this session.
 - Skip it with `--no-audio` too. The library needs audio.
 - With `--no-publish`, skip. With `--publish`, publish without asking.
 - Otherwise ask with AskUserQuestion (header "Library"):
@@ -321,7 +327,7 @@ a private podcast feed, set up with `/entalkenator:setup-library`. Check, withou
 
 Then run:
 
-`PUBLISH push "<dir>" --config "${CLAUDE_PLUGIN_DATA}/library.json" --url "${user_config.library_url}" [--tag "..."]... [--draft]`
+`PUBLISH push "<dir>" [--tag "..."]... [--draft]`
 
 - It uploads the .m4a, `transcript.txt`, the chapters file, and the bundle, then adds the
   program to the feeds. Pushing the same run again updates the same item.
@@ -342,5 +348,6 @@ Tell the user:
 - whether it was published to their library, with its `appUrl`
 - anything that went wrong
 
-To import, the user opens the `.enTalkenator` file with the enTalkenator app: double-click
-it on macOS, or use AirDrop or the Files app on iOS.
+To hear it on this Mac right away, `open` the .m4a. If they use the enTalkenator app, the
+`.enTalkenator` file imports there: double-click it on macOS, or use AirDrop or the Files
+app on iOS.

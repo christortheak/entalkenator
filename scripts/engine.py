@@ -66,7 +66,9 @@ OUTPUT_TRANSCRIPT_PROMPT_ADDITION = (
 )
 NO_CONVERSATION_YET = "There has been no conversation yet."
 
-PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# The enTalkenator folder: scripts/, templates/, .claude/agents/ ...
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SPEAKER_AGENT = "speaker"
 
 
 # ---------------------------------------------------------------------------
@@ -124,10 +126,8 @@ def find_templates_dir(explicit=None):
         candidates.append(explicit)
     if os.environ.get("ENTALKENATOR_TEMPLATES"):
         candidates.append(os.environ["ENTALKENATOR_TEMPLATES"])
-    # Plugin inside the enTalkenator repo: <repo>/plugin/scripts -> <repo>/enTalkenator/Templates
-    candidates.append(os.path.join(os.path.dirname(PLUGIN_ROOT), "enTalkenator", "Templates"))
-    # Snapshot shipped with the plugin for installs outside the repo.
-    candidates.append(os.path.join(PLUGIN_ROOT, "templates"))
+    # The templates that ship with enTalkenator (a snapshot of the app's).
+    candidates.append(os.path.join(ROOT, "templates"))
     for c in candidates:
         if c and os.path.isdir(c) and any(n.endswith(".json") for n in os.listdir(c)):
             return c
@@ -980,9 +980,9 @@ def speaker_for(model):
     """
     model = (model or "").strip()
     if model.lower() in SESSION_MODEL:
-        return {"agentType": "entalkenator:speaker"}
+        return {"agentType": SPEAKER_AGENT}
     if model.lower() in MODEL_ALIASES:
-        return {"agentType": "entalkenator:speaker", "model": model.lower()}
+        return {"agentType": SPEAKER_AGENT, "model": model.lower()}
     return {"agentType": pinned_agent_name(model), "pinnedModel": model}
 
 
@@ -1511,7 +1511,7 @@ def cmd_pin_agent(args):
     if not model.startswith("claude-"):
         fail("pin-agent takes a full model ID such as claude-opus-4-8. Aliases (fable, opus, sonnet, "
              "haiku) need no pinned agent.")
-    src = os.path.join(PLUGIN_ROOT, "agents", "speaker.md")
+    src = os.path.join(ROOT, ".claude", "agents", SPEAKER_AGENT + ".md")
     text = read_text(src)
     m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
     if not m:
@@ -1786,7 +1786,7 @@ def main():
 
     p = sub.add_parser("pin-agent", help="write a project speaker agent pinned to a full model ID")
     p.add_argument("--model", required=True)
-    p.add_argument("--project-dir", default=".")
+    p.add_argument("--project-dir", default=ROOT)
     p.set_defaults(func=cmd_pin_agent)
 
     p = sub.add_parser("audit", help="check from the sheet files that every speaker saw the whole transcript")

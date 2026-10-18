@@ -1,0 +1,5 @@
+# Left out of the download zip (tools/make_release.sh): development-only files.
+tests/ export-ignore
+cloud/test/ export-ignore
+tools/ export-ignore
+.gitattributes export-ignore

@@ -3,7 +3,7 @@
   // Your library's address is https://<name>.<your-subdomain>.workers.dev
   "name": "entalkenator-library",
   "main": "src/index.ts",
-  // Tested with the workerd bundled in wrangler 4.124 (supports up to 2026-08-15).
+  // Tested with wrangler 4.124 and 4.145 (scripts/library.py pins 4.145.0).
   "compatibility_date": "2026-08-15",
   "workers_dev": true,
   // Preview URLs would be extra hostnames for the same library; keep them off.

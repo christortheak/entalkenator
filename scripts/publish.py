@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish enTalkenator programs to your own library (the Cloudflare Worker in plugin/cloud).
+"""Publish enTalkenator programs to your own library (the Cloudflare Worker in cloud/).
 
 Commands (every one prints JSON):
   push [RUN_DIR]     upload a run's audio, transcript, chapters and bundle, and add it to
@@ -12,18 +12,13 @@ Commands (every one prints JSON):
                      would, and report problems (feed behind Access, secrets missing...)
   status             is a library configured? (no network)
   configure          save the library address and upload token in the config file
-  setup-secrets      generate UPLOAD_TOKEN and FEED_TOKEN, set them on the Worker with
-                     `wrangler secret bulk`, and save the upload token locally. The
-                     values never appear in the output.
-  sync-config        (SessionStart hook) copy the plugin's library_url / library_token
-                     settings into the config file. Prints nothing.
 
+Setting the library up (and the tokens) is library.py's job; this script uses what it saved.
 The library address and upload token come from, in order:
   --url / --token-file / --token
   ENTALKENATOR_LIBRARY_URL / ENTALKENATOR_LIBRARY_TOKEN
-  CLAUDE_PLUGIN_OPTION_LIBRARY_URL / CLAUDE_PLUGIN_OPTION_LIBRARY_TOKEN (the plugin's userConfig)
   the config file: --config, else $ENTALKENATOR_LIBRARY_CONFIG, else
-  $CLAUDE_PLUGIN_DATA/library.json, else ~/.config/entalkenator/library.json
+  ~/.config/entalkenator/library.json
 
 Python 3.9+, standard library only.
 """
@@ -34,10 +29,7 @@ import hashlib
 import json
 import os
 import re
-import secrets
-import shlex
 import struct
-import subprocess
 import sys
 import time
 import urllib.error
@@ -70,13 +62,11 @@ def fail(msg, code=1):
 def default_config_path():
     if os.environ.get("ENTALKENATOR_LIBRARY_CONFIG"):
         return os.environ["ENTALKENATOR_LIBRARY_CONFIG"]
-    if os.environ.get("CLAUDE_PLUGIN_DATA"):
-        return os.path.join(os.environ["CLAUDE_PLUGIN_DATA"], "library.json")
     return os.path.join(os.path.expanduser("~"), ".config", "entalkenator", "library.json")
 
 
 def unset(value):
-    """Empty, or an unsubstituted ${user_config.*} placeholder from a skill."""
+    """Empty, or an unsubstituted ${...} placeholder."""
     return not value or not value.strip() or value.strip().startswith("${")
 
 
@@ -106,7 +96,6 @@ def resolve(args):
     url, url_from = None, None
     for value, source in ((args.url, "--url"),
                           (os.environ.get("ENTALKENATOR_LIBRARY_URL"), "ENTALKENATOR_LIBRARY_URL"),
-                          (os.environ.get("CLAUDE_PLUGIN_OPTION_LIBRARY_URL"), "plugin setting library_url"),
                           (cfg.get("url"), config_path)):
         if not unset(value):
             url, url_from = value.strip().rstrip("/"), source
@@ -122,7 +111,6 @@ def resolve(args):
     for value, source in ((file_token, "--token-file"),
                           (args.token, "--token"),
                           (os.environ.get("ENTALKENATOR_LIBRARY_TOKEN"), "ENTALKENATOR_LIBRARY_TOKEN"),
-                          (os.environ.get("CLAUDE_PLUGIN_OPTION_LIBRARY_TOKEN"), "plugin setting library_token"),
                           (cfg.get("token"), config_path)):
         if not unset(value):
             token, token_from = value.strip(), source
@@ -136,8 +124,8 @@ def need(args):
     url, token, sources = resolve(args)
     if not url or not token:
         missing = [n for n, v in (("the library URL", url), ("the upload token", token)) if not v]
-        fail("No library configured: %s %s missing. Run /entalkenator:setup-library, set the plugin's "
-             "library_url and library_token settings, or pass --url and --token-file."
+        fail("No library configured: %s %s missing. Set one up with the setup-library skill "
+             "(scripts/library.py deploy), or pass --url and --token-file."
              % (" and ".join(missing), "are" if len(missing) > 1 else "is"))
     return url, token
 
@@ -196,7 +184,7 @@ def call(url, token, *a, **kw):
         if e.status == 401:
             hint = " The upload token doesn't match the Worker's UPLOAD_TOKEN secret."
         elif e.status == 503:
-            hint = " The Worker's secrets aren't set yet (see /entalkenator:setup-library)."
+            hint = " The Worker's secrets aren't set yet; re-run scripts/library.py deploy."
         elif e.status == 404 and "/api/library" in str(e):
             hint = " Is the library URL right?"
         fail(str(e) + hint)
@@ -550,56 +538,6 @@ def cmd_configure(args):
     emit({"configFile": path, "url": cfg.get("url"), "hasToken": bool(cfg.get("token"))})
 
 
-def cmd_setup_secrets(args):
-    """Generate the Worker's tokens and set them without printing them."""
-    cloud = os.path.abspath(args.cloud_dir)
-    if not os.path.isfile(os.path.join(cloud, "wrangler.jsonc")):
-        fail("%s has no wrangler.jsonc" % cloud)
-    path = args.config or default_config_path()
-    cfg = read_config(path)
-    secrets_out = {"UPLOAD_TOKEN": secrets.token_urlsafe(32)}
-    if not args.keep_feed_token:
-        secrets_out["FEED_TOKEN"] = secrets.token_urlsafe(32)
-    cmd = shlex.split(args.wrangler) + ["secret", "bulk"]
-    proc = subprocess.run(cmd, cwd=cloud, input=json.dumps(secrets_out), text=True, capture_output=True)
-    if proc.returncode != 0:
-        # wrangler's own messages; they never contain the values, which only went to stdin.
-        fail("`%s` failed (exit %d): %s" % (" ".join(cmd), proc.returncode, (proc.stderr or proc.stdout).strip()[-800:]))
-    cfg["token"] = secrets_out["UPLOAD_TOKEN"]
-    if args.url:
-        cfg["url"] = args.url.strip().rstrip("/")
-    cfg["source"] = "setup-secrets"
-    write_config(path, cfg)
-    emit({"set": sorted(secrets_out), "configFile": path, "url": cfg.get("url"),
-          "note": "The values went straight to Cloudflare and to the config file (mode 600); they are not shown."})
-
-
-def cmd_sync_config(args):
-    """SessionStart hook: mirror the plugin's userConfig into the config file. Silent, never fails."""
-    try:
-        data_dir = os.environ.get("CLAUDE_PLUGIN_DATA")
-        if not data_dir:
-            return
-        path = os.path.join(data_dir, "library.json")
-        url = os.environ.get("CLAUDE_PLUGIN_OPTION_LIBRARY_URL", "")
-        token = os.environ.get("CLAUDE_PLUGIN_OPTION_LIBRARY_TOKEN", "")
-        cfg = read_config(path)
-        if unset(url) and unset(token):
-            if cfg.get("source") == "userConfig":
-                os.remove(path)
-            return
-        new = dict(cfg)
-        if not unset(url):
-            new["url"] = url.strip().rstrip("/")
-        if not unset(token):
-            new["token"] = token.strip()
-        new["source"] = "userConfig"
-        if new != cfg:
-            write_config(path, new)
-    except Exception:  # a hook must never break session start
-        pass
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     common = argparse.ArgumentParser(add_help=False)
@@ -610,7 +548,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("push", parents=[common], help="upload a run and add it to your feeds")
-    p.add_argument("run_dir", nargs="?", help="an entalkenator-runs/<...> directory")
+    p.add_argument("run_dir", nargs="?", help="a programs/<...> run directory")
     p.add_argument("--audio")
     p.add_argument("--transcript")
     p.add_argument("--chapters")
@@ -659,16 +597,6 @@ def main():
     p = sub.add_parser("configure", parents=[common])
     p.add_argument("--token-stdin", action="store_true", help="read the upload token from stdin")
     p.set_defaults(func=cmd_configure)
-
-    p = sub.add_parser("setup-secrets", parents=[common])
-    p.add_argument("--cloud-dir", required=True, help="the deployed copy of plugin/cloud")
-    p.add_argument("--wrangler", default="npx wrangler", help='how to run wrangler (default: "npx wrangler")')
-    p.add_argument("--keep-feed-token", action="store_true",
-                   help="leave FEED_TOKEN alone (changing it breaks existing podcast subscriptions)")
-    p.set_defaults(func=cmd_setup_secrets)
-
-    p = sub.add_parser("sync-config", help="SessionStart hook")
-    p.set_defaults(func=cmd_sync_config)
 
     args = ap.parse_args()
     args.func(args)

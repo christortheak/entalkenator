@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 scripts/engine.py *)",
+      "Bash(python3 scripts/render_audio.py *)",
+      "Bash(python3 scripts/publish.py *)",
+      "Bash(python3 scripts/library.py *)",
+      "Bash(python3 scripts/status.py *)",
+      "Bash(bash scripts/setup_tts.sh --check)",
+      "Edit(/programs/**)"
+    ],
+    "ask": [
+      "Bash(python3 scripts/library.py remove *)",
+      "Bash(python3 scripts/publish.py delete *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/session_start.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

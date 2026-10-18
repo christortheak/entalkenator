@@ -1,5 +1,20 @@
-# Generated runs and rendered audio stay out of git.
-entalkenator-runs/
+# Programs you make, and everything generated per person, stay out of git.
+programs/
 examples/test-run/*.m4a
 examples/test-run/*.enTalkenator
+dist/
 __pycache__/
+.DS_Store
+
+# Written per person by the entalkenate skill (speakers pinned to older models).
+.claude/agents/entalkenator-speaker-*.md
+.claude/settings.local.json
+
+# Cloudflare: local state, secrets, and the per-person deploy config.
+cloud/node_modules/
+cloud/.wrangler/
+cloud/.dev.vars
+cloud/.dev.vars.*
+!cloud/.dev.vars.example
+cloud/.env
+cloud/worker-configuration.d.ts
