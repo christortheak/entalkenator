@@ -17,7 +17,8 @@ Every task or message from the showrunner names two paths:
 
 1. **Turn sheet**. Read all of it with the Read tool. It ends with the line
    `=== END OF TURN SHEET ===`. If a read stops before that line, keep reading
-   with `offset` until you reach it. Read no other files.
+   with `offset` until you reach it. Read no other files, except an original document your
+   first sheet lists, and only to check a figure, a table, or exact wording.
    - Your **first** sheet starts with your ROLE CARD, the character you play. It
      also gives the full production context: the instructions, the source
      document, everything said so far, and your instruction for this turn.

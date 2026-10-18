@@ -1,8 +1,12 @@
 # enTalkenator
 
-This folder is enTalkenator. It turns a document (a PDF, a text file, or pasted text) into
-an audio program: a debate, a podcast conversation, a seminar, an oral argument, a quiz show,
-and so on. You run it. Each template role is voiced by its own speaker subagent, the audio is
+This folder is enTalkenator. It does two things with documents (PDFs, Word or text files,
+pasted text, or a whole set of them):
+- **Narration:** the document itself, read aloud word for word like an audiobook. Running
+  heads and footnote numbers are gone, citations are handled, figures are described, and
+  the footnotes that matter are read in a second voice.
+- **Programs:** a debate, a podcast conversation, a seminar, an oral argument, a quiz show,
+  and so on, about one document or a set. You run it. Each template role is voiced by its own speaker subagent, the audio is
 rendered on this Mac with free local voices, and the result can go into the person's own
 private library on Cloudflare. That library is a web app plus a podcast feed, so programs
 play on their phone or in their podcast app.
@@ -44,7 +48,8 @@ what enTalkenator does in two sentences and offer the guided setup: the **setup*
 | They want to... | Use |
 |---|---|
 | get set up, or "start", "help me get going" | the **setup** skill |
-| make a program from a document | the **entalkenate** skill |
+| hear a document itself: "read this to me", "narrate", "audiobook of this paper" | the **narrate** skill |
+| make a program from a document or a set of them | the **entalkenate** skill |
 | see or change voice options, install voices, add or remove an API key | the **setup** skill's voices step, with `scripts/voices.py` (`list`, `install`, `key set`, `default set`) |
 | set up, update, check, fix, or remove the library | the **setup-library** skill |
 | publish an earlier program, retag, rename, unpublish, or delete one | `scripts/publish.py` (`push`, `edit`, `delete`, `list`) |
@@ -80,8 +85,10 @@ scripts/engine.py templates` lists them with their roles and lengths.
 
 ## Where things live
 
-- `programs/<template>-<date>/`: each program's transcript, audio (`.m4a`), chapters, and an
-  `.enTalkenator` bundle for the enTalkenator iPhone and Mac app, if they use it
+- `programs/<template>-<date>/` and `programs/narration-<name>-<date>/`: each program's or
+  narration's transcript, audio (`.m4a`), chapters, and an `.enTalkenator` bundle for the
+  enTalkenator iPhone and Mac app, if they use it. `sources/` inside holds Claude's reading of
+  the documents (`combined.md`), which another program can reuse.
 - `~/.cache/entalkenator/`: the local voice engine (`venv/`), the designed Qwen3-TTS voices
   (`qwen3-voices/`), and Wrangler (`wrangler/`), installed only with permission. Model weights
   are in the Hugging Face cache (`~/.cache/huggingface/hub`).

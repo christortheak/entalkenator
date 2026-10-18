@@ -1,11 +1,16 @@
 # enTalkenator
 
-Turn any document into a podcast you can listen to anywhere.
+Listen to what you read: papers, briefs, articles, chapters, anywhere.
 
-Give enTalkenator a PDF, an article, or your notes, and pick a format: a debate, a podcast
-conversation, a class, an oral argument, a quiz show, and more. Claude writes it with a
-separate performer for each speaker, your Mac voices it, and it shows up in your own private
-podcast feed and web library.
+- **Narration.** Claude reads the document itself to you, word for word, like an audiobook,
+  but made for listening. Running heads, page numbers and footnote numbers are gone, and
+  citations are dropped or kept as names. Figures and tables are described. The footnotes
+  that matter are read in a second voice right after their paragraph.
+- **Programs.** Turn one document, or a whole set, into a debate, a podcast conversation,
+  a class, an oral argument, a quiz show, and more. Claude writes it with a separate
+  performer for each speaker.
+
+Your Mac voices it, and it shows up in your own private podcast feed and web library.
 
 There's no enTalkenator account and no subscription. It runs on:
 - **your Claude plan**, for the writing
@@ -43,11 +48,24 @@ Claude checks what's on your Mac and asks before installing anything. It then:
 
 The whole thing takes about 20 minutes, most of it waiting for downloads.
 
-## Making programs
+## Narrations
+
+> Read me ~/Downloads/the-article.pdf
+
+> Narrate pages 12–40 of this book chapter, skip the footnotes
+
+The first time, Claude asks how you like footnotes and citations handled, and remembers. Each
+narration comes with a faithfulness check: a comparison with the PDF's own text, which
+confirms Claude read the document rather than summarizing it. Chapters follow the
+document's sections.
+
+## Programs
 
 Open the folder in Claude and ask in your own words:
 
 > Make a debate from ~/Downloads/the-paper.pdf
+
+> A seminar on the three articles in ~/Documents/Week 6
 
 > Turn this article into a podcast conversation: (paste the text)
 

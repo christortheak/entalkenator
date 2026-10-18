@@ -678,6 +678,15 @@ def cmd_init(args):
         text = read_text(src)
         source_type = "txt"
     text = clean_document_text(text)
+    originals = []
+    for o in args.original or []:
+        o = os.path.abspath(os.path.expanduser(o))
+        if not os.path.isfile(o):
+            fail("Original not found: %s" % o)
+        originals.append({"path": o, "name": os.path.basename(o)})
+    if len(originals) == 1 and originals[0]["path"].lower().endswith(".pdf") and source_type != "pdf":
+        # A prepared reading of one PDF: the bundle carries the PDF, with the reading as its transcript.
+        src, source_type = originals[0]["path"], "pdf"
     source_copy = os.path.join(run, "source", "original." + source_type)
     if source_type == "pdf":
         shutil.copyfile(src, source_copy)
@@ -695,6 +704,7 @@ def cmd_init(args):
         "template_name": template["displayName"],
         "source_path": src,
         "source_type": source_type,
+        "originals": originals,
         "title": title,
         "author": args.author or "Unknown Author",
         "user_input": args.user_input or "",
@@ -885,10 +895,11 @@ def issue(st, template, index):
     sketch = ("\nCHARACTER SKETCH (how you sound and who you are; stay consistent with it):\n%s\n"
               % role["sketch"]) if role.get("sketch") else ""
     sketch += "\n" + performance_block(st, template, role)
+    originals = "" if use_delta else originals_block(st)
     sheet = (
         "ROLE CARD: you are %s.\n%s\n%s\n"
         "Turn %d. %s\n\n"
-        "=== PROMPT (as the enTalkenator app would send it) ===\n\n%s\n\n%s%s\n"
+        "=== PROMPT (as the enTalkenator app would send it) ===\n\n%s\n\n%s%s%s\n"
     ) % (
         role_name,
         role["roleDescription"],
@@ -898,6 +909,7 @@ def issue(st, template, index):
         else "This is a private preparation step: nobody hears it, but your notes are saved for later steps.",
         wrap_long_lines(full_prompt),
         "" if use_delta else notes_block(notes),
+        originals,
         END_MARKER,
     )
     write_text(prompt_file, sheet)
@@ -930,6 +942,17 @@ def issue(st, template, index):
                                    st, template, step, role_name, variables, writer_knows_all=True)
                                + ("\n\n" + notes_block(notes).strip() if notes else ""))
     return pend, role_prompt
+
+
+def originals_block(st):
+    """Where the speaker may check the source documents themselves (prepared readings only)."""
+    if not st.get("originals"):
+        return ""
+    lines = ["ORIGINAL DOCUMENTS: the document text above is a clean reading of these files. You may open "
+             "one with the Read tool, but only to check a figure, a table, or exact wording (a PDF of more "
+             "than 10 pages needs a page range, which may fail; then rely on the reading):"]
+    lines += ["- %s: %s" % (o["name"], o["path"]) for o in st["originals"]]
+    return "\n".join(lines) + "\n\n"
 
 
 def depends_on_batch(step, batch_keys):
@@ -1710,7 +1733,9 @@ def main():
 
     p = sub.add_parser("init")
     p.add_argument("--template", required=True, help="file stem (debate), id, displayName, or a .json path")
-    p.add_argument("--source", required=True, help="PDF, .txt, or .md file")
+    p.add_argument("--source", required=True, help="PDF, .txt, or .md file (a prepared reading from sources.py is a .md)")
+    p.add_argument("--original", action="append", help="an original document the reading came from (repeatable); "
+                                                       "speakers may open it to check a figure or exact wording")
     p.add_argument("--run-dir", required=True)
     p.add_argument("--title")
     p.add_argument("--author")

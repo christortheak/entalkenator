@@ -105,8 +105,11 @@ be published later.
 
 ## 5. A first program
 
-Offer a short demo:
-- Use their own document if they have one handy. Otherwise use
+Offer a short demo, either kind:
+- **A narration** of a paper they have handy, or of a few pages of a long one (the
+  **narrate** skill, `--pages`). It's the quickest way to hear what enTalkenator does with a
+  PDF: about 1½ minutes of audio per page, ready in a few minutes.
+- **A program:** use their own document if they have one handy. Otherwise use
   `examples/plain-language-opinions.txt`, a short essay arguing that judges should write
   opinions in plain language.
 - A good first template is `explainer` at `--loop-scale 0.3`: two friends talk the document
@@ -125,8 +128,11 @@ it's done:
 
 - Run `STATUS --welcomed`.
 - Tell them, briefly:
-  - To make a program, open this folder in Claude and say something like "make a podcast
-    conversation from ~/Downloads/paper.pdf". Or type `/entalkenate`.
+  - To hear a paper itself, open this folder in Claude and say "read me ~/Downloads/paper.pdf"
+    (or type `/narrate`).
+  - To make a program, say something like "make a podcast conversation from
+    ~/Downloads/paper.pdf" or "a seminar on the articles in this folder", or type
+    `/entalkenate`.
   - Templates can be listed ("what formats are there?").
   - Programs are kept in `programs/`.
   - If they downloaded a newer enTalkenator, saying "update my library" redeploys it,

@@ -21,14 +21,18 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
 - `RENDER` = `python3 scripts/render_audio.py` turns the transcript into one .m4a.
 - `PUBLISH` = `python3 scripts/publish.py` uploads the result to the user's own library,
   if they have one (section 5).
+- `SOURCES` = `python3 scripts/sources.py` prepares the documents (step 3).
 - `VOICE_OPTIONS` = `python3 scripts/voices.py` lists the voice options, their costs and
   readiness, and the person's default (section 3).
 
 ## 1. Set up the run
 
 1. Read the arguments:
-   - **Source**: a PDF, `.txt`, or `.md` path. If the user pasted text instead, save it to
-     `<run dir>/pasted.txt` and use that.
+   - **Sources**: one document or a whole set: PDFs, Word, RTF, HTML, text, or Markdown
+     files, or a folder of them. Pasted text goes into `<run dir>/pasted.txt`. A web page you
+     fetch goes into a `.md` file in the run directory. A set is discussed as a set: a
+     seminar on three articles, a debate between two briefs, a podcast on a week of
+     reading. A finished narration's `sources/combined.md` can be reused as is.
    - **Template**: a file stem, id, or display name from `templates/`. If none is
      given, run `ENGINE templates` and ask the user to pick one, describing each in a few
      plain words (its format, roles, and rough length) rather than listing file names.
@@ -92,15 +96,40 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
      The file stays for next time.
    - The user's organization may restrict models. If a spawn on a pinned model fails,
      say so and fall back to an alias.
-3. Choose a run directory in this folder: `programs/<template>-<YYYYmmdd-HHMMSS>`.
-4. Run `ENGINE init --template <t> --source <path> --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh] [--form F]`.
+3. Choose a run directory in this folder: `programs/<template>-<YYYYmmdd-HHMMSS>`. Then
+   **prepare the documents**, so that every speaker gets a clean text once, in their first
+   sheet (later sheets carry only what's new):
+   - **PDFs are read by Claude** (the default). Run
+     `SOURCES plan <dir> --source <file> [--source ...] --citations names`. Then run its reader
+     tasks, then `SOURCES stitch <dir>` and `SOURCES audit <dir>`, exactly as in steps 3–4 of
+     the narrate skill. Readers see the pages themselves, so the speakers get the text
+     without running heads, page numbers, or footnote clutter. They also get substantive
+     footnotes inline, and descriptions of the figures and tables.
+     - Keep case and author names (`--citations names`): speakers argue better when they can
+       name the authorities.
+     - A finished narration's `sources/combined.md` (same document) can be used directly.
+   - **Quick extraction** (`SOURCES quick <dir> --source ...`) skips the readers. It's for
+     when the person asks for speed, or for very large sets (over about 300 pages). It uses
+     the PDF's own text layer, clutter and all, and doesn't work on scans.
+   - Text, Markdown, Word, RTF and HTML files need no reader. `plan` and `stitch` convert
+     them along with the PDFs.
+   - With several documents, `combined.md` labels each one ("What follows is the text
+     entitled …") as the app's Topics do.
+   - If `combinedWords` is over about 150,000, say that's a lot for every speaker to hold.
+     Offer to narrow the set.
+4. Run `ENGINE init --template <t> --source <dir>/sources/combined.md --original <file> [--original ...] --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh] [--form F]`.
+   `--original` lists the documents themselves. Speakers may open one to check a figure or
+   exact wording, and a single original PDF goes into the app bundle with the reading as its
+   text.
    Its `models` field echoes each role's speaker model ("session" means inherit). Its
    `form` is the engine's guess at what kind of program this is: debate, hearing,
    conversation, workshop, class, quiz, or written (a piece read aloud as narration).
    The form decides the speakers' performance notes and which director's checks apply.
    Mention it in a few words. If the user says it's wrong, or the template plainly
    isn't that (a custom template, say), change it with `ENGINE meta <dir> --form <form>`.
-5. From `documentHead`, work out the document's title and author, as the app does.
+5. From `documentHead` (or the stitch report's titles), work out the title and author, as the
+   app does. For a set, the title names the topic ("Two Briefs in St. Mary v. Roy"), and the
+   author is the authors' names or "Various authors".
    Use the title if one is evident, otherwise a concise title-case title. Use the author's
    name, or "Unknown Author". Save them with `ENGINE meta <dir> --title "..." --author "..."`.
 6. If the template's `userInputConfig.isRequired` is true and no `--user-input` was given,

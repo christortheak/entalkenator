@@ -735,6 +735,8 @@ def chapter_title(role, text, limit=60):
     words = " ".join(text.split())
     if len(words) > limit:
         words = words[:limit].rsplit(" ", 1)[0].rstrip(",;:.-") + "…"
+    if not role:
+        return words
     return "%s: %s" % (role, words) if words else role
 
 
@@ -746,11 +748,20 @@ def write_chapters(path, turns, spans, seconds, engine_name, model, voices, tran
     where its speech ends; the silence between turns belongs to no chapter.
     """
     chapters = []
+    heading = None  # narrations: turns that open with "# Heading" title their chapter, and the ones after it
     for i, ((role, text), (start, end)) in enumerate(zip(turns, spans)):
+        m = re.match(r"^\s*#{1,4}\s+(.+)", text)
+        if m:
+            heading = m.group(1).strip()
+            title = chapter_title("", heading, 80).lstrip(": ")
+        elif heading and role == "Narrator":
+            title = "%s (continued)" % chapter_title("", heading, 60).lstrip(": ")
+        else:
+            title = chapter_title(role, speakable(text))
         chapters.append({
             "startTime": 0 if i == 0 else round(start, 3),
             "endTime": round(end, 3),
-            "title": chapter_title(role, speakable(text)),
+            "title": title,
             "speaker": role,
             "turn": i + 1,
         })

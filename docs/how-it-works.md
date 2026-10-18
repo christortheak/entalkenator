@@ -301,6 +301,54 @@ cast members "listen". I tried the idea on paper and left it out:
 The template's hidden prep steps are the right place for speakers to think ahead, and
 they already run in parallel.
 
+## Reading documents: narrations and sets
+
+The original enTalkenator app's first job was narration, so you could listen to papers on the
+go. Its "AI Clean-Up" sent each page to a model with instructions to remove headers, footers
+and footnotes, describe figures, and keep the body text exactly. Here, Claude does that
+reading itself, and the footnotes are judged rather than deleted.
+
+- **Readers.** `sources.py plan` splits each PDF into tasks of up to 8 pages. It cuts each
+  task's pages into a small PDF of their own with PDFKit. Claude Code's Read tool reads a small
+  PDF whole, text and page images, with nothing installed. Reading selected pages of a long
+  PDF needs poppler's `pdftoppm`, which most Macs don't have. Without the cut, two test
+  readers loaded the whole 67-page brief, about 206,000 tokens each for 8 pages of work; with
+  it, about 76,000.
+- **What a reader writes** (`.claude/agents/reader.md`): the body text word for word, in a
+  small line format. Page furniture is gone, citations follow the chosen rule, and § becomes
+  "section". Headings are marked by level. Figures and tables get a description to be read
+  aloud. Every footnote is sorted: `@note 14 citation` (not copied) or
+  `@note 15 substantive | text`. `@continues` and `@incomplete` mark paragraphs cut by a task
+  boundary, and `@skipped` records tables of contents and reference lists that were left out.
+- **Stitching** joins the tasks, rejoins split paragraphs (and words hyphenated across the
+  cut), and matches each note to the paragraph that cites it. `reading.md` carries
+  substantive notes and figure descriptions inline. `combined.md` labels each document in a
+  set the way the app's Topics do ("What follows is the text entitled …"), and it becomes the
+  `{{transcript}}` for any template.
+- **The faithfulness check** (`sources.py audit`) aligns each task's reading with the PDF's own
+  text layer for those pages, word by word (difflib, after normalizing case, punctuation, and
+  spoken forms). It reports the share of the reading that matches the author's text in order.
+  It also lists stretches of 12 or more of the author's words that are missing, and of 6 or
+  more read words that aren't the author's. Missing footnote text, citations, and the title
+  page are recognized and not flagged. A scan has no text layer, so it can't be checked.
+- **Narration script** (`sources.py script`): `[Narrator]` turns open with the section
+  heading, so chapters are named after sections. `[Notes]` turns carry substantive footnotes,
+  after their paragraph or at the section's end, and figure descriptions. The two voices make
+  it clear what is the author's main text.
+- **Sets for conversations.** Persistent speakers get `combined.md` once, in their first
+  sheet, and only what's new after that. The sheet also lists the original files: a speaker
+  may open one to check a figure or exact wording.
+
+Test (St. Mary v. Roy, petitioners' brief, pages 1–24, three readers):
+- Each reader took 32–121 seconds.
+- The tables of contents and authorities were skipped and the case caption became the
+  spoken opening.
+- Faithfulness was 0.987. The only flags were two citation-only sentences a reader had
+  reduced to "reported in the Federal Reporter and reproduced in the petition appendix",
+  which it had also reported.
+- Kokoro voiced the 18.6 minutes in 36 seconds, with chapters by section and both
+  substantive footnotes in the second voice.
+
 ## Your own library on Cloudflare
 
 To listen on a phone or in a podcast app, each program can be published to a private
