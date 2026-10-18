@@ -33,10 +33,17 @@ exactly; `docs/how-it-works.md` has the details.
 ## Tests
 
 ```bash
-python3 tests/test_library.py
+for t in tests/test_*.py; do python3 "$t" || echo "FAILED: $t"; done
 ```
 
-That one needs no account: it runs `library.py`'s setup paths against `tests/fake_wrangler.py`.
+None needs an account or touches real settings:
+- `test_library.py` runs `library.py`'s setup paths against `tests/fake_wrangler.py`.
+- `test_voices.py` checks the voice options and the cloud engines against a stand-in server,
+  with `tests/fake_security.py` in place of the Keychain.
+- `test_sources.py` checks reading, stitching and the faithfulness audit.
+- `test_chapters.py` renders with `say` and checks the chapters AVFoundation reads (macOS).
+- `test_status.py` checks that off a Mac (Cowork, say) the status tells Claude to stop and
+  send the person to Claude Code.
 The library Worker's own suites (`cloud/test/`) need a local `wrangler dev`; see
 `cloud/README.md`.
 

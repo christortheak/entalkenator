@@ -51,6 +51,21 @@ def node():
         return None
 
 
+def where():
+    """'mac', 'cowork' (Cowork mounts connected folders at /sessions/<name>/mnt/ in a Linux VM), or 'other'."""
+    if sys.platform == "darwin":
+        return "mac"
+    for path in (ROOT, os.getcwd()):
+        if path.startswith("/sessions/") and "/mnt/" in path:
+            return "cowork"
+    return "other"
+
+
+START_HERE = ("In the Claude desktop app on their Mac, open the Code tab, choose the enTalkenator folder, "
+              "say yes when it asks whether to trust the folder, and say \"Set me up\". "
+              "(Or, in Terminal: cd into the folder and run claude.)")
+
+
 def _prefs():
     import prefs
     data = prefs.load()
@@ -59,6 +74,9 @@ def _prefs():
 
 
 def gather():
+    if sys.platform != "darwin":
+        # Nothing else here applies off the Mac, and listing it would invite setting it up.
+        return {"version": version(), "folder": ROOT, "mac": False, "where": where(), "startHere": START_HERE}
     lib_path = os.environ.get("ENTALKENATOR_LIBRARY_CONFIG") or os.path.join(CONFIG_DIR, "library.json")
     lib = read_json(lib_path)
     kokoro = bool(glob.glob(os.path.join(ENT_HOME, "venv", "lib", "python3.*", "site-packages", "mlx_audio")))
@@ -75,6 +93,8 @@ def gather():
         "voicesReady": ready,
         "folder": ROOT,
         "mac": sys.platform == "darwin",
+        "where": where(),
+        "startHere": None if sys.platform == "darwin" else START_HERE,
         "appleSilicon": apple_silicon,
         "voices": "kokoro" if kokoro else "none",
         "geminiKey": bool(os.environ.get("GEMINI_API_KEY")),
@@ -90,7 +110,17 @@ def gather():
     }
 
 
+def not_here_text(s):
+    sandbox = " This looks like Cowork, which runs commands in a Linux sandbox." if s["where"] == "cowork" else ""
+    return ("enTalkenator %s: NOT on the person's Mac.%s enTalkenator runs only in Claude Code on a Mac: it needs "
+            "the Mac's Keychain, PDF tools and voices, and anything installed here would never reach their Mac. "
+            "Don't install, set up, or make anything here. Tell them, in plain words, where to run it instead: %s"
+            % (s["version"], sandbox, START_HERE))
+
+
 def hook_text(s):
+    if not s["mac"]:
+        return not_here_text(s)
     lines = ["enTalkenator %s, status at session start (local checks, no network):" % s["version"]]
     ready = ", ".join(s["voicesReady"]) or "none"
     if s["voiceChoice"]:

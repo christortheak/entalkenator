@@ -9,6 +9,9 @@ allowed-tools: Read Bash(python3 scripts/*)
 
 Arguments: `$ARGUMENTS`
 
+Off a Mac (`uname -s` isn't `Darwin`, as in Cowork), make nothing: follow "Only in Claude
+Code, on their Mac" in CLAUDE.md.
+
 The library runs on the person's **own** Cloudflare account; nobody else can see it. It's one
 Cloudflare Worker (the code in `cloud/`) with:
 - `/app`: a web app with search, a player that remembers its place, a transcript that

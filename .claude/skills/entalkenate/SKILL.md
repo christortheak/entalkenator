@@ -13,6 +13,9 @@ spoken lines yourself unless single-writer mode is on.
 
 Arguments: `$ARGUMENTS`
 
+Off a Mac (`uname -s` isn't `Darwin`, as in Cowork), make nothing: follow "Only in Claude
+Code, on their Mac" in CLAUDE.md.
+
 **No questions.** If the person said "no questions", "use your best judgment", or "I'm walking
 away", or `PREFS show` has `questions=none`, ask nothing from start to finish. Skip:
 - the settings menu

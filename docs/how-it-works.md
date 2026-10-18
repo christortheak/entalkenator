@@ -31,7 +31,7 @@ enTalkenator/
 │   └── requirements-kokoro.{in,txt}   pinned dependency set for that venv
 ├── cloud/                    the library Worker (TypeScript, R2 + D1); see cloud/README.md
 ├── templates/                snapshot of the app's enTalkenator/Templates/*.json
-├── tests/                    library.py against a stand-in Wrangler
+├── tests/                    checks that need no account (see developing.md)
 ├── tools/make_release.sh     builds the download zip
 └── examples/
     ├── plain-language-opinions.txt   ~500-word sample used for the test runs
@@ -650,9 +650,16 @@ Observations:
   builds released before that still have the bug. Until the fix ships, `package` swaps
   ASCII hyphens in the display name for U+2011, which looks identical. `--keep-hyphens`
   turns that off.
-- **Cowork is untested.** There's no `bin/`, but Kokoro (MLX), PDF extraction (PDFKit
-  via `osascript`), and `afconvert` all need macOS on the host. In a Linux sandbox only
-  `--engine gemini` plus `ffmpeg` would work.
+- **Not Cowork.** Opened in Cowork, Claude found the setup skill but stopped. Cowork runs
+  commands in a Linux VM, so Kokoro (MLX), PDFKit via `osascript`, `say`, `afconvert` and
+  the Keychain are out of reach, and anything installed there never reaches the Mac.
+  Anthropic's docs say a plugin's local MCP server runs on the Mac even in Cowork, so a
+  plugin with a Mac helper should work. But uploading one shows a warning that it can
+  access everything on the Mac, which is too much to ask of the people this is for. That
+  route wasn't tested live; the test plugin is in commit `ded4b75`. So enTalkenator runs in
+  Claude Code only. Off a Mac, `status.py` reports `"mac": false` (with `"where":
+  "cowork"` for a Cowork mount), the session hook says to stop, and setup points the
+  person to the Code tab.
 
 ### App issues noticed
 

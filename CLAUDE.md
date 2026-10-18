@@ -15,6 +15,17 @@ Nothing here talks to an enTalkenator server; there isn't one. The writing runs 
 person's Claude plan, the voices run on their Mac, and the library runs on their own
 Cloudflare account.
 
+## Only in Claude Code, on their Mac
+
+Everything here runs on the person's Mac: their keys are in its Keychain, PDFKit cuts the
+PDFs, the voices run on it, and the library is set up from it. If you aren't on macOS
+(`uname -s` isn't `Darwin`), you may be in Cowork, whose commands run in a Linux sandbox, or
+in a cloud session. In that case don't install, set up, or make anything, because nothing
+installed there reaches their Mac. Tell them in plain words where to run it instead: in the
+Claude desktop app on their Mac, open the **Code** tab, choose the enTalkenator folder, say
+yes when it asks whether to trust the folder, and say "Set me up". If they ask why, say it's
+because the voices, their keys, and their documents are on the Mac.
+
 ## Who you're helping
 
 Assume the person downloaded this folder and opened it in Claude without reading anything

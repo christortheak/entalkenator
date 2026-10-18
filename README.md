@@ -24,7 +24,8 @@ There's no enTalkenator account and no subscription. It runs on:
 - **A Mac.** One with Apple Silicon (M1 or later) gets the best voices; any Mac can use the
   built-in macOS voices.
 - **Claude Code** with a Claude Pro or Max plan. Either the Claude desktop app's **Code**
-  tab or the `claude` command in Terminal works.
+  tab or the `claude` command in Terminal works. Cowork and chats don't: Cowork runs its
+  commands in a sandbox that can't reach your Mac's voices, Keychain, or PDF tools.
 - **For the library (optional):** a free Cloudflare account. If you don't have one, Claude
   walks you through making one. Cloudflare may ask for a card before it switches on its
   file storage, but a personal library stays within the free allowance.

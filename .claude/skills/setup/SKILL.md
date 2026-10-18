@@ -20,6 +20,11 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
 
 Run `STATUS` and keep the result. Don't recite it; use it to skip finished parts.
 
+If it says `"mac": false`, stop here: you're not on their Mac (in Cowork, for example), and
+nothing installed here would reach it. Don't offer setup or installs. Tell them where to run
+it, from `startHere`, in plain words, and why in one sentence: the voices, their keys, and
+their documents are on the Mac.
+
 ## 2. Say what enTalkenator does, then ask what they want
 
 In three or four short sentences:
