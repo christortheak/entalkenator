@@ -65,6 +65,8 @@ QWEN_BASE_REPO = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit"
 BREEZE_REPO = "mlx-community/Breeze-TTS-2-mlx"
 QWEN_PRESET_REPO = "mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-8bit"
 SPEEDS_FILE = os.path.join(ENT_HOME, "speeds.json")
+# Raised when an engine's renderer gets much faster, so renders timed before don't skew estimates.
+SPEED_VERSIONS = {"breeze": 2}  # 2: several lines at once (breeze_fast.py)
 
 KEY_ENV = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "elevenlabs": "ELEVENLABS_API_KEY"}
 KEY_PAGES = {
@@ -283,7 +285,8 @@ def hardware():
 def measured_ratio(engine):
     """Render seconds per second of audio for this engine on this Mac: the median of recent renders."""
     rows = (read_json(SPEEDS_FILE).get(engine) or [])[-8:]
-    ratios = sorted(r["ratio"] for r in rows if r.get("ratio"))
+    version = SPEED_VERSIONS.get(engine, 1)
+    ratios = sorted(r["ratio"] for r in rows if r.get("ratio") and r.get("v", 1) == version)
     return ratios[len(ratios) // 2] if ratios else None
 
 
@@ -292,8 +295,11 @@ def record_speed(engine, audio_seconds, render_seconds):
     if audio_seconds < 60 or render_seconds <= 0:
         return
     data = read_json(SPEEDS_FILE)
-    data.setdefault(engine, []).append({"ratio": round(render_seconds / audio_seconds, 3),
-                                        "audioSeconds": round(audio_seconds), "at": time.strftime("%Y-%m-%d")})
+    row = {"ratio": round(render_seconds / audio_seconds, 3), "audioSeconds": round(audio_seconds),
+           "at": time.strftime("%Y-%m-%d")}
+    if engine in SPEED_VERSIONS:
+        row["v"] = SPEED_VERSIONS[engine]
+    data.setdefault(engine, []).append(row)
     data[engine] = data[engine][-8:]
     write_private(SPEEDS_FILE, data)
 

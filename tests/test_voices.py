@@ -271,9 +271,11 @@ def main():
         check("before any render here, a local voice gives its relative work, not a time",
               "renderMinutes" not in e and "about 20 times Kokoro's work" in e["renderNote"], e)
         with open(os.path.join(home, "speeds.json"), "w") as f:
-            json.dump({"kokoro": [{"ratio": 0.08}, {"ratio": 0.1}, {"ratio": 0.09}]}, f)
+            json.dump({"kokoro": [{"ratio": 0.08}, {"ratio": 0.1}, {"ratio": 0.09}],
+                       "breeze": [{"ratio": 1.632, "audioSeconds": 237}]}, f)
         e = est("breeze")
-        check("after Kokoro has rendered here, the others are guessed from its speed",
+        check("after Kokoro has rendered here, the others are guessed from its speed (Breeze renders from "
+              "before it voiced several lines at once don't count)",
               e.get("renderMinutes") == 18.0 and "rough guess" in e["renderNote"], e)
         sys.path.insert(0, os.path.join(ROOT, "scripts"))
         os.environ["ENTALKENATOR_HOME"] = home

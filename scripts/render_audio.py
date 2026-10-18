@@ -96,7 +96,8 @@ BREEZE_MODEL = voice_options.BREEZE_REPO
 BREEZE_VOICE_DIR = os.path.join(ENT_HOME, "breeze-voices")
 BREEZE_REF_LINE = ("Well, that's the interesting part, isn't it? I'd have said the opposite a year ago. "
                    "But the evidence kept pointing the same way, so here we are.")
-BREEZE_CFG = 4.0  # the model card's guidance strength for following a direction (it doubles the work)
+BREEZE_CFG = 4.0  # the model card's guidance strength for following a direction
+BREEZE_BATCH = 8  # pieces voiced together by breeze_fast.py
 # Vocal sounds a speaker may write; Breeze performs them, the other engines leave them out.
 EVENT_RE = re.compile(r"\s*\((laughs?|laughing|chuckles?|sighs?|coughs?|clears (?:his |her |their )?throat)\)\s*", re.I)
 BREEZE_EVENTS = {"laugh": "laugh", "laughs": "laugh", "laughing": "laugh", "chuckle": "laugh", "chuckles": "laugh",
@@ -460,8 +461,9 @@ class QwenPresetRenderer:
 
 class BreezeRenderer:
     """Breeze TTS 2 in the child process: design each described voice once, then clone it for every
-    turn, directed by the turn's note. It doesn't batch, so turns go one at a time, each written as
-    soon as it's done."""
+    turn, directed by the turn's note. Pieces are voiced BREEZE_BATCH at a time by breeze_fast.py
+    (windows of whole turns, sorted by length, each written as soon as it's done).
+    ENTALKENATOR_BREEZE_ORIGINAL=1 uses mlx-audio's own generate instead, one piece at a time."""
     name = "breeze"
 
     def __init__(self):
@@ -471,6 +473,10 @@ class BreezeRenderer:
         self.np, self.mx = np, mx
         self.model = load_model(BREEZE_MODEL)
         self.rate = self.model.sample_rate
+        self.fast = None
+        if os.environ.get("ENTALKENATOR_BREEZE_ORIGINAL") != "1":
+            from breeze_fast import BatchedBreeze
+            self.fast = BatchedBreeze(self.model)
 
     @staticmethod
     def ref_path(description, line=None):
@@ -482,41 +488,77 @@ class BreezeRenderer:
         return self.np.concatenate(parts) if parts else None
 
     def design(self, voices):
+        missing = [(d, l) for d, l in voices if not os.path.exists(self.ref_path(d, l))]
+        if not missing:
+            return
         os.makedirs(BREEZE_VOICE_DIR, exist_ok=True)
-        for d, l in voices:
-            path = self.ref_path(d, l)
-            if os.path.exists(path):
-                continue
-            a = self._audio(self.model.generate(text=l or BREEZE_REF_LINE, instruct=d + QWEN_PACE,
-                                                cfg_scale=BREEZE_CFG, seed=7))
-            if a is None:
+        if self.fast:
+            made = self.fast.generate([{"text": l or BREEZE_REF_LINE, "instruct": d + QWEN_PACE, "cfg_scale": BREEZE_CFG}
+                                       for d, l in missing], seed=7)
+        else:
+            made = [self._audio(self.model.generate(text=l or BREEZE_REF_LINE, instruct=d + QWEN_PACE,
+                                                    cfg_scale=BREEZE_CFG, seed=7)) for d, l in missing]
+        for (d, l), a in zip(missing, made):
+            if a is None or not len(a):
                 raise RuntimeError("Breeze couldn't design a voice for: %s" % d)
+            path = self.ref_path(d, l)
             write_float_wav(path, a, self.rate, self.np)
             with open(path[:-4] + ".json", "w", encoding="utf-8") as f:
                 json.dump({"description": d, "pace": QWEN_PACE, "line": l or BREEZE_REF_LINE, "model": BREEZE_MODEL}, f, indent=1)
             log("  designed a voice: %s" % d[:70])
 
-    def render_all(self, jobs):
+    def _piece(self, j, text):
+        return {"text": text, "voice": "S0", "ref_audio": self.ref_path(j["voice"], j.get("line")),
+                "ref_text": j.get("line") or BREEZE_REF_LINE, "instruct": j.get("style"),
+                "cfg_scale": BREEZE_CFG if j.get("style") else None}
+
+    def render_all(self, jobs, batch=BREEZE_BATCH, window=QWEN_WINDOW):
         np = self.np
         self.design(sorted({(j["voice"], j.get("line") or "") for j in jobs}))
         gap = np.zeros(int(0.12 * self.rate), dtype="float32")
-        for j in jobs:
+        k = 0
+        while k < len(jobs):
+            group, pieces = [], []
+            if self.fast:
+                while k < len(jobs) and (not group or len(pieces) < window):
+                    group.append(jobs[k])
+                    pieces += [(len(group) - 1, i, p) for i, p in
+                               enumerate(split_text(jobs[k]["text"], max_words=QWEN_CHUNK_WORDS))]
+                    k += 1
+            else:
+                group = [jobs[k]]
+                pieces = [(0, i, p) for i, p in enumerate(split_text(jobs[k]["text"], max_words=QWEN_CHUNK_WORDS))]
+                k += 1
             t0 = time.time()
-            line = j.get("line") or BREEZE_REF_LINE
-            parts = []
-            for piece in split_text(j["text"], max_words=QWEN_CHUNK_WORDS):
-                a = self._audio(self.model.generate(text=piece, voice="S0", ref_audio=self.ref_path(j["voice"], j.get("line")),
-                                                    ref_text=line, instruct=j.get("style"),
-                                                    cfg_scale=BREEZE_CFG if j.get("style") else None))
-                if parts:
-                    parts.append(gap)
-                parts.append(a if a is not None else np.zeros(0, dtype="float32"))
-            if not parts or sum(len(x) for x in parts) == 0:
-                raise RuntimeError("Breeze produced no audio for %s" % j["label"])
-            joined = np.concatenate(parts)
-            write_float_wav(j["path"], joined, self.rate, np)
-            self.mx.clear_cache()
-            log("  %s done (%.0f s of audio in %.1f s)" % (j["label"], len(joined) / float(self.rate), time.time() - t0))
+            audio = {}
+            if self.fast:
+                order = sorted(pieces, key=lambda x: len(x[2].split()))
+                for start in range(0, len(order), batch):
+                    chunk = order[start:start + batch]
+                    out = self.fast.generate([self._piece(group[n], p) for n, _, p in chunk])
+                    for (n, i, _), a in zip(chunk, out):
+                        audio[(n, i)] = a
+                    self.mx.clear_cache()
+            else:
+                for n, i, p in pieces:
+                    a = self._audio(self.model.generate(**self._piece(group[n], p)))
+                    audio[(n, i)] = a if a is not None else np.zeros(0, dtype="float32")
+                self.mx.clear_cache()
+            secs = 0.0
+            for n, j in enumerate(group):
+                parts = []
+                for i in sorted(i for (m, i) in audio if m == n):
+                    if parts:
+                        parts.append(gap)
+                    parts.append(audio[(n, i)])
+                if not parts or sum(len(x) for x in parts) == 0:
+                    raise RuntimeError("Breeze produced no audio for %s" % j["label"])
+                joined = np.concatenate(parts)
+                write_float_wav(j["path"], joined, self.rate, np)
+                secs += len(joined) / float(self.rate)
+            log("  %s done (%.0f s of audio in %.1f s)" % (
+                group[0]["label"] if len(group) == 1 else "%s and %d more" % (group[0]["label"], len(group) - 1),
+                secs, time.time() - t0))
 
 
 class SayEngine:
@@ -1330,7 +1372,8 @@ def main():
     render_s = time.time() - t1
     gaps = [args.gap] * len(jobs) if args.gap is not None else turn_gaps(turns, deliveries)
     seconds, spans = stitch([j["path"] for j in jobs], gaps, out, args.bitrate, work)
-    if engine_name in LOCAL_IN_CHILD + ("say",) and fresh:
+    if engine_name in LOCAL_IN_CHILD + ("say",) and fresh and not (
+            engine_name == "breeze" and os.environ.get("ENTALKENATOR_BREEZE_ORIGINAL") == "1"):
         # How fast this engine runs on this Mac, for voices.py's estimates.
         voice_options.record_speed(engine_name, sum(b - a for (a, b), j in zip(spans, jobs) if j["path"] in fresh), render_s)
     chapters = os.path.splitext(out)[0] + ".chapters.json"
