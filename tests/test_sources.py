@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Checks scripts/sources.py without Claude: a generated three-page PDF, stand-in reader output
 (including a dropped paragraph and an invented sentence for the audit to catch), stitching across
-pages, footnote placement, the narration script, quick mode, and the app bundle.
+pages, footnote placement, the narration script, the app bundle, and the text-layer path that
+conversations use (with readers only for scans, and the parts speakers can open).
 
     python3 tests/test_sources.py
 
@@ -20,6 +21,7 @@ ROOT = os.path.dirname(HERE)
 SOURCES = os.path.join(ROOT, "scripts", "sources.py")
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import sources  # noqa: E402
+import engine  # noqa: E402
 
 passed, failed = 0, []
 
@@ -185,14 +187,45 @@ def main():
         check("the bundle imports as the PDF with its text and narration", code == 0 and entries.get("transcript") == ["m4a", "txt"]
               and out["info"]["sourceFileType"] == "pdf", out)
 
-        print("quick, folders, prefs")
+        print("text layer (conversations), folders, prefs")
         folder = os.path.join(tmp, "set")
         os.makedirs(folder)
         shutil.copy(pdf, os.path.join(folder, "a.pdf"))
         shutil.copy(notes_md, os.path.join(folder, "b.md"))
-        code, out = run("quick", os.path.join(tmp, "run3"), "--source", folder, env=env)
+        run3 = os.path.join(tmp, "run3")
+        code, out = run("plan", run3, "--text-layer", "--source", folder, env=env)
+        d1 = out["docs"][0] if code == 0 else {}
+        check("with --text-layer, a PDF with text needs no readers", code == 0 and out["tasks"] == []
+              and d1.get("reading") == "text-layer" and "INTRODUCTION" in d1.get("opening", ""), out)
+        chunks = json.load(open(os.path.join(run3, "sources", "manifest.json")))["docs"][0].get("chunks") or [{}]
+        check("...and is cut into parts a speaker can open", len(chunks) == 1 and chunks[0].get("path")
+              and len(sources.pdf_pages(chunks[0]["path"])) == 3, chunks)
+        code, out = run("stitch", run3, env=env)
         combined = open(out["combined"]).read() if code == 0 else ""
-        check("a folder becomes a labelled set", code == 0 and out["docs"] == ["a", "b"] and "What follows is the text entitled a:" in combined, out)
+        check("a folder becomes a labelled set, the PDF's own text marked by page",
+              "What follows is the text entitled a:" in combined and "[PDF page 2]" in combined
+              and "Courts have long treated silence" in combined and "Some notes on silence" in combined, combined[:300])
+        code, out = run("audit", run3, env=env)
+        check("the audit has nothing to check in a text layer", code == 0 and out["docs"][0]["checked"] is False, out)
+        o = engine.describe_original(os.path.join(run3, "sources", "d1", "original.pdf"))
+        block = engine.originals_block({"originals": [o]})
+        check("speakers see the original by its own name, with its parts by page",
+              o["name"] == "a.pdf" and "a.pdf (3 pages), in parts:" in block and "pages 1-3: " in block
+              and "[PDF page N]" in block, block)
+        code, out = run("read", run3, "d1", env=env)
+        check("`read` sends a garbled text layer to readers after all", code == 0 and len(out["tasks"]) == 1
+              and out["tasks"][0]["pages"] == "1-3" and os.path.isfile(out["tasks"][0]["sheet"]), out)
+        scan_txt = os.path.join(tmp, "scan.txt")
+        with open(scan_txt, "w") as f:
+            f.write("1\f2\n")
+        scan = os.path.join(tmp, "scan.pdf")
+        with open(scan, "wb") as outf:
+            subprocess.run(["/usr/sbin/cupsfilter", "-i", "text/plain", "-m", "application/pdf", scan_txt],
+                           stdout=outf, stderr=subprocess.DEVNULL, check=True)
+        code, out = run("plan", os.path.join(tmp, "run4"), "--text-layer", "--source", scan, "--source", pdf, env=env)
+        check("a scan still goes to readers; the PDF with text doesn't", code == 0 and out["docs"][0]["scanned"]
+              and out["docs"][0]["reading"] == "readers" and out["docs"][1]["reading"] == "text-layer"
+              and {t["doc"] for t in out["tasks"]} == {"d1"}, out)
         code, out = run("prefs", "--notes", "section-end", env=env)
         code, out = run("prefs", env=env)
         check("preferences are remembered", out["prefs"].get("notes") == "section-end")

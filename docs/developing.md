@@ -40,7 +40,8 @@ None needs an account or touches real settings:
 - `test_library.py` runs `library.py`'s setup paths against `tests/fake_wrangler.py`.
 - `test_voices.py` checks the voice options and the cloud engines against a stand-in server,
   with `tests/fake_security.py` in place of the Keychain.
-- `test_sources.py` checks reading, stitching and the faithfulness audit.
+- `test_sources.py` checks reading, stitching, the faithfulness audit, and the text-layer path
+  conversations use.
 - `test_chapters.py` renders with `say` and checks the chapters AVFoundation reads (macOS).
 - `test_status.py` checks that off a Mac (Cowork, say) the status tells Claude to stop and
   send the person to Claude Code.

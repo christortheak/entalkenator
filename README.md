@@ -83,7 +83,8 @@ main parts only", "never read footnotes"), and it remembers.
 > What formats are there?
 
 Claude shows you the speakers and lets you flesh them out, then writes the program one
-speaker at a time. You can also type `/entalkenate`. Programs are saved in the
+speaker at a time. The speakers work from each PDF's own text and can open the PDF itself to
+check a figure or a table; only a scanned PDF needs Claude to read it first. You can also type `/entalkenate`. Programs are saved in the
 `programs` folder. If you set up the library, Claude offers to publish each one when it's
 done.
 

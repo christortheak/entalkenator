@@ -306,7 +306,8 @@ they already run in parallel.
 The original enTalkenator app's first job was narration, so you could listen to papers on the
 go. Its "AI Clean-Up" sent each page to a model with instructions to remove headers, footers
 and footnotes, describe figures, and keep the body text exactly. Here, Claude does that
-reading itself, and the footnotes are judged rather than deleted.
+reading itself, and the footnotes are judged rather than deleted. Conversations skip all this and use the PDF's own
+text (below).
 
 - **Readers.** `sources.py plan` splits each PDF into tasks of up to 8 pages. It cuts each
   task's pages into a small PDF of their own with PDFKit. Claude Code's Read tool reads a small
@@ -365,9 +366,17 @@ reading itself, and the footnotes are judged rather than deleted.
   heading, so chapters are named after sections. `[Notes]` turns carry substantive footnotes,
   after their paragraph or at the section's end, and figure descriptions. The two voices make
   it clear what is the author's main text.
+- **Conversations use the PDF's own text.** Speakers discuss a document rather than read it
+  aloud, so they don't need a clean reading. `sources.py plan --text-layer` takes each PDF's
+  text layer (PDFKit) as it is, marked `[PDF page N]`, and cuts the PDF into parts of up to
+  10 pages. Readers run only for a scan (too few words in the text layer), or for a document
+  whose text layer the showrunner finds garbled (`sources.py read RUN d2`). Two test
+  articles, 98 pages, were ready in 3 seconds with no reader tasks; read by Claude, the same
+  pages took a dozen readers and several minutes.
 - **Sets for conversations.** Persistent speakers get `combined.md` once, in their first
-  sheet, and only what's new after that. The sheet also lists the original files: a speaker
-  may open one to check a figure or exact wording.
+  sheet, and only what's new after that. The sheet lists each original by its file name, with
+  its parts by page, so a speaker can open the part that holds a figure, a table, or the exact
+  wording. (Reading selected pages of a long PDF would need poppler.)
 
 Test (St. Mary v. Roy, petitioners' brief, pages 1–24, three readers):
 - Each reader took 32–121 seconds.

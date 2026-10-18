@@ -683,7 +683,7 @@ def cmd_init(args):
         o = os.path.abspath(os.path.expanduser(o))
         if not os.path.isfile(o):
             fail("Original not found: %s" % o)
-        originals.append({"path": o, "name": os.path.basename(o)})
+        originals.append(describe_original(o))
     if len(originals) == 1 and originals[0]["path"].lower().endswith(".pdf") and source_type != "pdf":
         # A prepared reading of one PDF: the bundle carries the PDF, with the reading as its transcript.
         src, source_type = originals[0]["path"], "pdf"
@@ -944,14 +944,48 @@ def issue(st, template, index):
     return pend, role_prompt
 
 
+CHUNK_RE = re.compile(r"^\d+-p(\d+)-(\d+)\.pdf$")
+
+
+def describe_original(path):
+    """An original document for the speakers' sheet: its name and, for a PDF that sources.py
+    prepared, the small parts it was cut into (the Read tool reads a PDF of up to 10 pages whole)."""
+    o = {"path": path, "name": os.path.basename(path)}
+    ddir = os.path.dirname(path)
+    try:  # sources.py keeps each document as sources/<doc>/original.pdf; its manifest has the real name.
+        with open(os.path.join(os.path.dirname(ddir), "manifest.json"), encoding="utf-8") as f:
+            doc = next(d for d in json.load(f)["docs"] if os.path.abspath(d.get("pdf") or "") == path)
+        o["name"] = doc["name"]
+        o["pages"] = doc.get("pages")
+    except (OSError, ValueError, KeyError, StopIteration):
+        pass
+    cdir = os.path.join(ddir, "chunks")
+    if path.lower().endswith(".pdf") and os.path.isdir(cdir):
+        parts = []
+        for fn in os.listdir(cdir):
+            m = CHUNK_RE.match(fn)
+            if m:
+                parts.append({"first": int(m.group(1)), "last": int(m.group(2)), "path": os.path.join(cdir, fn)})
+        if parts:
+            o["parts"] = sorted(parts, key=lambda c: c["first"])
+    return o
+
+
 def originals_block(st):
-    """Where the speaker may check the source documents themselves (prepared readings only)."""
+    """Where the speaker may check the source documents themselves."""
     if not st.get("originals"):
         return ""
-    lines = ["ORIGINAL DOCUMENTS: the document text above is a clean reading of these files. You may open "
-             "one with the Read tool, but only to check a figure, a table, or exact wording (a PDF of more "
-             "than 10 pages needs a page range, which may fail; then rely on the reading):"]
-    lines += ["- %s: %s" % (o["name"], o["path"]) for o in st["originals"]]
+    lines = ["ORIGINAL DOCUMENTS: the document text above comes from these files. You may open one with the "
+             "Read tool, but only to check a figure, a table, or exact wording. Where the text is marked "
+             "[PDF page N], open the part that holds that page:"]
+    for o in st["originals"]:
+        if o.get("parts"):
+            lines.append("- %s%s, in parts:" % (o["name"], " (%d pages)" % o["pages"] if o.get("pages") else ""))
+            lines += ["  - pages %d-%d: %s" % (c["first"], c["last"], c["path"]) for c in o["parts"]]
+        else:
+            lines.append("- %s: %s" % (o["name"], o["path"]))
+    if any(not o.get("parts") and o["path"].lower().endswith(".pdf") for o in st["originals"]):
+        lines.append("(A PDF of more than 10 pages needs a page range, which may fail; then rely on the text above.)")
     return "\n".join(lines) + "\n\n"
 
 

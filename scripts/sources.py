@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
-"""Turn documents into clean readings: for narration (audiobooks of papers) and as the source
+"""Prepare documents: clean readings for narration (audiobooks of papers), and the source text
 for conversations. Claude does the reading; this script does the bookkeeping.
+
+A conversation doesn't need a clean reading: its speakers discuss the document rather than read
+it aloud, so `plan --text-layer` takes each PDF's own text (PDFKit) as it is, marked by page,
+and cuts the PDF into small parts a speaker can open to check a figure. Only a PDF with no
+usable text layer (a scan), or one whose text layer turns out garbled, goes to readers.
 
 A PDF is split into page ranges, and each range goes to a reader agent (.claude/agents/
 reader.md). Before the readers start, Claude surveys the document (`map` helps) and writes a
@@ -14,6 +19,8 @@ own text layer.
 Commands (each prints JSON):
   plan RUN --source FILE [--source FILE ...]   set up the reading; lists the reader tasks
        [--pages 1-12] [--pages-per-task 8]       (FILE may be a folder, or file.pdf:15-24)
+       [--text-layer]    use each PDF's own text instead of readers, except for scans
+  read RUN DOC [DOC ...]   send a document to readers after all (its text layer is garbled)
   map RUN [--doc d1]   a page-by-page sketch from the text layer (words, opening and closing
                    words, contents-page dots, footnote-like lines) to help write the brief
   stitch RUN       join the readers' output into sources/<doc>/reading.json and reading.md,
@@ -25,7 +32,6 @@ Commands (each prints JSON):
                    descriptions as "[Notes]: ..." turns, for render_audio.py
   package RUN --audio FILE   an .enTalkenator bundle: the PDF, the reading as its transcript,
                    and the narration as the transcript's audio (as the app names them)
-  quick RUN --source FILE ...   skip the readers: plain text extraction into combined.md
   status RUN
   meta RUN DOC [--title T] [--author A]   name a document whose title page wasn't read; then stitch again
   prefs [--notes ...] [--citations ...] [--figures ...]   the person's usual narration choices
@@ -235,6 +241,46 @@ def task_sheet(doc, task, total):
     ])
 
 
+def cut_chunks(doc, per):
+    """Cut the document's pages into PDFs of up to `per` pages. Readers read them, and a speaker
+    opens one to check a figure: the Read tool reads a PDF of up to 10 pages whole."""
+    ddir = os.path.dirname(doc["pdf"])
+    first, last = doc["range"]
+    doc["chunks"] = []
+    for n, a in enumerate(range(first, last + 1, per), 1):
+        b = min(a + per - 1, last)
+        path = os.path.join(ddir, "chunks", "%02d-p%03d-%03d.pdf" % (n, a, b))
+        doc["chunks"].append({"n": n, "first": a, "last": b, "path": path if split_pdf(doc["pdf"], path, a, b) else None})
+
+
+def add_tasks(doc):
+    """One reader task per chunk."""
+    ddir = os.path.dirname(doc["pdf"])
+    os.makedirs(os.path.join(ddir, "read"), exist_ok=True)
+    doc["tasks"] = []
+    for c in doc["chunks"]:
+        n, a, b = c["n"], c["first"], c["last"]
+        t = {"id": "%s-%02d" % (doc["id"], n), "n": n, "first": a, "last": b,
+             "sheet": os.path.join(ddir, "tasks", "%02d-p%03d-%03d.md" % (n, a, b)),
+             "output": os.path.join(ddir, "read", "%02d-p%03d-%03d.txt" % (n, a, b))}
+        if c["path"]:
+            t["chunk"] = c["path"]
+        doc["tasks"].append(t)
+    for t in doc["tasks"]:
+        write_text(t["sheet"], task_sheet(doc, t, len(doc["tasks"])))
+    doc["reading"] = "readers"
+
+
+def task_rows(doc):
+    return [{"doc": doc["id"], "task": t["id"], "pages": "%d-%d" % (t["first"], t["last"]),
+             "sheet": t["sheet"], "output": t["output"]} for t in doc["tasks"]]
+
+
+READERS_NOTE = ("Survey each PDF that has reader tasks (`sources.py map`, and read a chunk or two) and write its "
+                "brief; then spawn one reader agent per task (subagent_type reader), several at a time; then "
+                "`sources.py stitch`.")
+
+
 def cmd_plan(args):
     run = os.path.abspath(args.run)
     sdir = sources_dir(run)
@@ -264,37 +310,56 @@ def cmd_plan(args):
                 write_text(os.path.join(ddir, "pages", "%04d.txt" % n), text)
             first, last = parse_pages(src_pages or args.pages, len(pages))
             layer = sum(len(p.split()) for p in pages[first - 1:last])
+            scanned = layer < 20 * (last - first + 1)
             doc.update({"type": "pdf", "pdf": pdf, "pages": len(pages), "range": [first, last],
-                        "textLayerWords": layer, "scanned": layer < 20 * (last - first + 1),
+                        "textLayerWords": layer, "scanned": scanned,
                         "brief": os.path.join(ddir, "brief.md"), "tasks": []})
-            os.makedirs(os.path.join(ddir, "read"), exist_ok=True)
-            per = max(1, min(MAX_PAGES_PER_TASK, args.pages_per_task))
-            starts = list(range(first, last + 1, per))
-            for n, a in enumerate(starts, 1):
-                b = min(a + per - 1, last)
-                t = {"id": "%s-%02d" % (did, n), "n": n, "first": a, "last": b,
-                     "sheet": os.path.join(ddir, "tasks", "%02d-p%03d-%03d.md" % (n, a, b)),
-                     "output": os.path.join(ddir, "read", "%02d-p%03d-%03d.txt" % (n, a, b))}
-                chunk = os.path.join(ddir, "chunks", "%02d-p%03d-%03d.pdf" % (n, a, b))
-                if split_pdf(pdf, chunk, a, b):
-                    t["chunk"] = chunk
-                doc["tasks"].append(t)
-            for t in doc["tasks"]:
-                write_text(t["sheet"], task_sheet(doc, t, len(doc["tasks"])))
-                tasks_out.append({"doc": did, "task": t["id"], "pages": "%d-%d" % (t["first"], t["last"]),
-                                  "sheet": t["sheet"], "output": t["output"]})
+            if args.text_layer and not scanned:
+                doc["reading"] = "text-layer"
+                doc["opening"] = " ".join(" ".join(pages[first - 1:last]).split()[:60])
+                cut_chunks(doc, MAX_PAGES_PER_TASK)
+            else:
+                cut_chunks(doc, max(1, min(MAX_PAGES_PER_TASK, args.pages_per_task)))
+                add_tasks(doc)
+                tasks_out += task_rows(doc)
         else:
             text = convert_to_text(src)
             write_text(os.path.join(ddir, "text.txt"), text)
             doc.update({"type": "text", "words": len(text.split()), "tasks": []})
         m["docs"].append(doc)
     save_manifest(run, m)
-    emit({"ok": True, "run": run, "docs": [{k: d.get(k) for k in ("id", "name", "type", "pages", "range", "scanned", "words", "brief")}
-                                          for d in m["docs"]],
-          "tasks": tasks_out,
-          "note": "Survey each PDF (`sources.py map`, and read a chunk or two) and write its brief; then spawn one "
-                  "reader agent per task (subagent_type reader), several at a time; then `sources.py stitch`."
-                  if tasks_out else "No PDFs, so no readers are needed; run `sources.py stitch`."})
+    keys = ("id", "name", "type", "reading", "pages", "range", "scanned", "words", "opening", "brief")
+    text_layer = [d["id"] for d in m["docs"] if d.get("reading") == "text-layer"]
+    note = READERS_NOTE if tasks_out else "No readers are needed; run `sources.py stitch`."
+    if text_layer:
+        note += (" %s use the PDF's own text: if an `opening` looks garbled or out of order, check with "
+                 "`sources.py map`, and `sources.py read RUN <doc>` sends that document to readers instead."
+                 % ", ".join(text_layer))
+    emit({"ok": True, "run": run, "docs": [{k: d[k] for k in keys if k in d} for d in m["docs"]],
+          "tasks": tasks_out, "note": note})
+
+
+def find_doc(m, key):
+    doc = next((d for d in m["docs"] if d["id"] == key or d["name"] == key), None)
+    if not doc:
+        fail("No document %r; they are %s" % (key, ", ".join(d["id"] for d in m["docs"])))
+    return doc
+
+
+def cmd_read(args):
+    """Send documents taken from their text layer to readers after all."""
+    run = os.path.abspath(args.run)
+    m = load_manifest(run)
+    tasks_out = []
+    for key in args.doc:
+        doc = find_doc(m, key)
+        if doc["type"] != "pdf":
+            fail("%s isn't a PDF; it needs no reader." % doc["name"])
+        if doc.get("reading") != "readers":
+            add_tasks(doc)
+        tasks_out += task_rows(doc)
+    save_manifest(run, m)
+    emit({"ok": True, "tasks": tasks_out, "note": READERS_NOTE})
 
 
 def cmd_map(args):
@@ -483,6 +548,17 @@ def reading_markdown(doc, blocks, notes, with_notes=True):
     return "\n\n".join(out) + "\n"
 
 
+def text_layer_markdown(doc):
+    """The PDF's own text, page by page, marked so a speaker can find the page in the original."""
+    ddir = os.path.dirname(doc["pdf"])
+    out = []
+    for n in range(doc["range"][0], doc["range"][1] + 1):
+        text = read_text(os.path.join(ddir, "pages", "%04d.txt" % n)).replace("\r\n", "\n").replace("\r", "\n")
+        text = re.sub(r"\n{3,}", "\n\n", re.sub(r"[ \t]+\n", "\n", text)).strip()
+        out.append(("[PDF page %d]\n%s" % (n, text)).strip())
+    return "\n\n".join(out) + "\n"
+
+
 def doc_label(doc):
     title = doc.get("title") or os.path.splitext(doc["name"])[0]
     return "%s%s" % (title, (" by " + doc["author"]) if doc.get("author") else "")
@@ -494,7 +570,12 @@ def cmd_stitch(args):
     report, problems, parts = [], [], []
     for doc in m["docs"]:
         ddir = os.path.join(sources_dir(run), doc["id"])
-        if doc["type"] == "pdf":
+        if doc.get("reading") == "text-layer":
+            md = text_layer_markdown(doc)
+            write_text(os.path.join(ddir, "reading.md"), md)
+            report.append({"doc": doc["id"], "name": doc["name"], "reading": "text-layer", "title": doc.get("title"),
+                           "author": doc.get("author"), "bodyWords": len(md.split())})
+        elif doc["type"] == "pdf":
             blocks, notes, probs = stitch_doc(doc)
             for p in probs:
                 p["doc"] = doc["id"]
@@ -504,8 +585,8 @@ def cmd_stitch(args):
             md = reading_markdown(doc, blocks, notes)
             write_text(os.path.join(ddir, "reading.md"), md)
             body = sum(len(MARK_RE.sub("", b["text"]).split()) for b in blocks if b["type"] == "para")
-            report.append({"doc": doc["id"], "name": doc["name"], "title": doc.get("title"), "author": doc.get("author"),
-                           "bodyWords": body, "headings": sum(b["type"] == "heading" for b in blocks),
+            report.append({"doc": doc["id"], "name": doc["name"], "reading": "readers", "title": doc.get("title"),
+                           "author": doc.get("author"), "bodyWords": body, "headings": sum(b["type"] == "heading" for b in blocks),
                            "figures": sum(b["type"] in ("figure", "table") for b in blocks),
                            "notes": {"substantive": sum(n["cls"] == "substantive" for n in notes.values()),
                                      "citation": sum(n["cls"] == "citation" for n in notes.values())},
@@ -721,6 +802,10 @@ def cmd_audit(args):
     for doc in m["docs"]:
         if doc["type"] != "pdf":
             continue
+        if doc.get("reading") == "text-layer":
+            out.append({"doc": doc["id"], "name": doc["name"], "checked": False,
+                        "why": "Taken from the PDF's own text layer, so there's no reading to check."})
+            continue
         if doc.get("scanned"):
             out.append({"doc": doc["id"], "name": doc["name"], "checked": False,
                         "why": "The PDF has no usable text layer (a scan), so there's nothing to compare with."})
@@ -916,26 +1001,6 @@ def cmd_package(args):
     emit({"ok": True, "bundle": bundle, "info": info, "appImport": check})
 
 
-def cmd_quick(args):
-    run = os.path.abspath(args.run)
-    parts = []
-    for src, src_pages in expand_sources(args.source):
-        if src.lower().endswith(".pdf"):
-            pages = pdf_pages(src)
-            a, b = parse_pages(src_pages, len(pages))
-            text = "\n\n".join(pages[a - 1:b])
-            if len(text.split()) < 50:
-                fail("%s has no usable text layer (a scan?). Use `plan` so Claude reads it instead." % os.path.basename(src))
-        else:
-            text = convert_to_text(src)
-        parts.append((os.path.splitext(os.path.basename(src))[0], re.sub(r"\n{3,}", "\n\n", text).strip()))
-    combined = parts[0][1] + "\n" if len(parts) == 1 else "".join(
-        "What follows is the text entitled %s:\n\n%s\n[End of the text entitled %s]\n\n" % (n, t, n) for n, t in parts)
-    out = os.path.join(sources_dir(run), "combined.md")
-    write_text(out, combined)
-    emit({"ok": True, "combined": out, "words": len(combined.split()), "docs": [n for n, _ in parts]})
-
-
 def cmd_status(args):
     run = os.path.abspath(args.run)
     m = load_manifest(run)
@@ -951,9 +1016,7 @@ def cmd_status(args):
 def cmd_meta(args):
     run = os.path.abspath(args.run)
     m = load_manifest(run)
-    doc = next((d for d in m["docs"] if d["id"] == args.doc or d["name"] == args.doc), None)
-    if not doc:
-        fail("No document %r; they are %s" % (args.doc, ", ".join(d["id"] for d in m["docs"])))
+    doc = find_doc(m, args.doc)
     if args.title:
         doc["title"] = args.title
     if args.author:
@@ -983,6 +1046,7 @@ def main():
     p.add_argument("--source", action="append", required=True)
     p.add_argument("--pages", help="only these pages, e.g. 3-12 (one source)")
     p.add_argument("--pages-per-task", type=int, default=8)
+    p.add_argument("--text-layer", action="store_true", help="use each PDF's own text instead of readers, except for scans")
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=cmd_plan)
     p = sub.add_parser("map")
@@ -1003,10 +1067,10 @@ def main():
     p.add_argument("--audio", required=True)
     p.add_argument("--title")
     p.set_defaults(func=cmd_package)
-    p = sub.add_parser("quick")
+    p = sub.add_parser("read")
     p.add_argument("run")
-    p.add_argument("--source", action="append", required=True)
-    p.set_defaults(func=cmd_quick)
+    p.add_argument("doc", nargs="+")
+    p.set_defaults(func=cmd_read)
     p = sub.add_parser("meta")
     p.add_argument("run")
     p.add_argument("doc")

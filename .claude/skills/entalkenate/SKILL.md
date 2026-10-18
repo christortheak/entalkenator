@@ -115,34 +115,40 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
    - The user's organization may restrict models. If a spawn on a pinned model fails,
      say so and fall back to an alias.
 3. Choose a run directory in this folder: `programs/<template>-<YYYYmmdd-HHMMSS>`. Then
-   **prepare the documents**, so that every speaker gets a clean text once, in their first
-   sheet (later sheets carry only what's new):
-   - **PDFs are read by Claude** (the default). Run `SOURCES plan <dir> --source <file>
-     [--source ...]`. Then survey each document and write its brief, as in step 2 of the
-     narrate skill, but aimed at speakers who will discuss it:
+   **prepare the documents**. Every speaker gets their text once, in their first sheet
+   (later sheets carry only what's new). Speakers discuss a document rather than read it
+   aloud, so they don't need a clean reading: the PDF's own text does, running heads and
+   all.
+   - Run `SOURCES plan <dir> --text-layer --source <file> [--source ...]`. Each PDF's text
+     comes from its text layer, marked `[PDF page N]`, and the PDF is cut into parts of up
+     to 10 pages that speakers can open to check a figure, a table, or exact wording.
+   - Glance at each document's `opening` in the result. If one looks garbled (stray
+     symbols, words run together, columns interleaved), check with `SOURCES map <dir>`.
+     If it is, `SOURCES read <dir> <doc>` sends that document to readers instead.
+   - **Readers only where needed.** A document without a usable text layer (`scanned`: a
+     scan or an image-only PDF), or one sent with `read`, gets reader tasks. For each,
+     survey it and write its brief as in step 2 of the narrate skill, but aimed at speakers
+     who will discuss it:
      - keep case and author names, so they can cite authorities
      - keep substantive footnotes, and describe figures and tables
      - leave out what no discussion needs, such as contents pages and reference lists
 
-     Ask the person only if a choice really matters for this program. Then run the reader
-     tasks, `SOURCES stitch <dir>`, and `SOURCES audit <dir>`, as in steps 3–4 of the narrate
-     skill. The speakers get the text without running heads, page numbers or footnote
-     clutter, with substantive footnotes inline and descriptions of the figures and tables.
-     - A finished narration's `sources/combined.md` (same document) can be used directly.
-   - **Quick extraction** (`SOURCES quick <dir> --source ...`) skips the readers. It's for
-     when the person asks for speed, or for very large sets (over about 300 pages). It uses
-     the PDF's own text layer, clutter and all, and doesn't work on scans.
+     Then run its reader tasks as in step 3 of the narrate skill.
+   - Then `SOURCES stitch <dir>` (and `SOURCES audit <dir>` if any readers ran).
+   - A finished narration's `sources/combined.md` (same document) can be used directly.
    - Text, Markdown, Word, RTF and HTML files need no reader. `plan` and `stitch` convert
      them along with the PDFs.
    - With several documents, `combined.md` labels each one ("What follows is the text
-     entitled …") as the app's Topics do.
+     entitled …") as the app's Topics do. A document taken from its text layer is labelled
+     by its file name until you name it: `SOURCES meta <dir> d2 --title "..." --author "..."`
+     from its opening, then stitch again.
    - If `combinedWords` is over about 150,000, say that's a lot for every speaker to hold.
      Offer to narrow the set.
 4. Run `ENGINE init --template <t> --source <dir>/sources/combined.md --original <dir>/sources/<doc>/original.pdf [--original ...] --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh] [--form F]`.
    `--original` lists the copies of the documents inside the run directory (not the
-   person's own files elsewhere, which could need a permission prompt mid-run). Speakers may
-   open one to check a figure or exact wording, and a single original PDF goes into the app
-   bundle with the reading as its text.
+   person's own files elsewhere, which could need a permission prompt mid-run). The speakers'
+   sheets list each one with its parts by page, so a speaker can open the part that holds a
+   figure. A single original PDF goes into the app bundle with the text as its transcript.
    Its `models` field echoes each role's speaker model ("session" means inherit). Its
    `form` is the engine's guess at what kind of program this is: debate, hearing,
    conversation, workshop, class, quiz, or written (a piece read aloud as narration).
