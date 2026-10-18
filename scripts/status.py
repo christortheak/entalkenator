@@ -17,6 +17,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+import voices  # noqa: E402
 ENT_HOME = os.environ.get("ENTALKENATOR_HOME", os.path.expanduser("~/.cache/entalkenator"))
 CONFIG_DIR = os.environ.get("ENTALKENATOR_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".config", "entalkenator")
 STATE = os.path.join(CONFIG_DIR, "setup.json")
@@ -56,8 +58,14 @@ def gather():
     wrangler = os.path.exists(os.path.join(ENT_HOME, "wrangler", "node_modules", ".bin", "wrangler"))
     runs = sorted((p for p in glob.glob(os.path.join(ROOT, "programs", "*", "state.json"))), key=os.path.getmtime)
     apple_silicon = sys.platform == "darwin" and os.uname().machine == "arm64"
+    hw = voices.hardware()
+    ready = [o["id"] for o in voices.OPTIONS if not voices.needs_for(o, hw)]
+    chosen = voices.chosen_default()
     return {
         "version": version(),
+        "voiceChoice": chosen,
+        "voiceChoiceLabel": voices.BY_ID[chosen]["label"] if chosen else None,
+        "voicesReady": ready,
         "folder": ROOT,
         "mac": sys.platform == "darwin",
         "appleSilicon": apple_silicon,
@@ -76,13 +84,12 @@ def gather():
 
 def hook_text(s):
     lines = ["enTalkenator %s, status at session start (local checks, no network):" % s["version"]]
-    if s["voices"] == "kokoro":
-        lines.append("- Voices: Kokoro is installed.")
-    elif s["appleSilicon"]:
-        lines.append("- Voices: Kokoro isn't installed yet (the built-in macOS voices work meanwhile).")
+    ready = ", ".join(s["voicesReady"]) or "none"
+    if s["voiceChoice"]:
+        state = "ready" if s["voiceChoice"] in s["voicesReady"] else "NOT ready on this Mac (falls back to free voices)"
+        lines.append("- Voices: the person chose %s (%s). Ready here: %s." % (s["voiceChoiceLabel"], state, ready))
     else:
-        lines.append("- Voices: Kokoro needs an Apple Silicon Mac; use the macOS voices%s." %
-                     (" or Gemini (GEMINI_API_KEY is set)" if s["geminiKey"] else ""))
+        lines.append("- Voices: no choice made yet (`voices.py list` has the options). Ready here: %s." % ready)
     lib = s["library"]
     if lib["configured"]:
         extra = ""

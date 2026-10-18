@@ -9,7 +9,8 @@ podcast feed and web library.
 
 There's no enTalkenator account and no subscription. It runs on:
 - **your Claude plan**, for the writing
-- **your Mac**, for the voices (a free model, or the voices built into macOS)
+- **your Mac**, for the voices (free models that run on it), or a cloud voice service you
+  choose, with your own key
 - **your own free Cloudflare account**, for the library and podcast feed. This part is
   optional.
 
@@ -36,7 +37,7 @@ You don't need GitHub, a website, a domain name, or any coding.
 3. Say **"Set me up."**
 
 Claude checks what's on your Mac and asks before installing anything. It then:
-- installs the voices: free, about 660 MB
+- shows you the voice options and installs the ones you choose (see [Voices](#voices))
 - helps you create the library on Cloudflare
 - makes a short first program so you can hear it on your phone
 
@@ -57,6 +58,24 @@ speaker at a time. You can also type `/entalkenate`. Programs are saved in the
 `programs` folder. If you set up the library, Claude offers to publish each one when it's
 done.
 
+## Voices
+
+You choose, and can change your mind for any program:
+
+| | Where | Cost for a 20-minute program | Notes |
+|---|---|---|---|
+| **Kokoro** | your Mac | free | Natural and fast: about a minute to voice 20 minutes. 660 MB download. |
+| **Qwen3-TTS** | your Mac | free | More expressive: each character's voice is designed from a description. Needs 16 GB of memory, 6.2 GB download, about 6 minutes for 20. |
+| **macOS voices** | your Mac | free | Built in, nothing to install, robotic. |
+| **Google Gemini** | cloud | about $0.19–$0.28 | Best value; excellent quality. Needs a Google AI Studio key. |
+| **OpenAI** | cloud | about $0.30–$0.65 | gpt-4o-mini-tts, tts-1 and tts-1-hd. Needs an OpenAI key with credit. |
+| **ElevenLabs** | cloud | about $0.85–$1.75 | The best-sounding voices. Needs an ElevenLabs key. |
+
+Prices were checked in October 2026 and change. Cloud voices are billed by the provider to
+your own account; enTalkenator never sees your key: you type it into a small Mac window,
+and it's saved on your Mac where only your account can read it. Every program in your
+library says its voices are AI-generated.
+
 ## Your library
 
 The library is a small website on **your** Cloudflare account. It has:
@@ -73,8 +92,7 @@ that address to yourself.
 - **enTalkenator:** free.
 - **Claude:** programs use your plan's usage. A 20-minute debate takes about 10 minutes to
   make.
-- **Voices:** free (Kokoro or macOS). Google's Gemini voices are an option if you have a
-  Gemini API key, at about $0.40 per 30 minutes.
+- **Voices:** free on your Mac, or paid cloud voices with your own key (see [Voices](#voices)).
 - **Cloudflare:** free for a personal library. The free plan includes 10 GB of storage,
   about 650 twenty-minute programs.
 
@@ -96,7 +114,8 @@ same.
 
 ## Licences
 
-- The voice model **Kokoro-82M** and its **misaki** pronunciation library are Apache-2.0.
+- The voice models **Kokoro-82M** and **Qwen3-TTS**, and Kokoro's **misaki** pronunciation
+  library, are Apache-2.0.
 - **mlx-audio** is MIT.
 - The installer also fetches **espeak-ng** (GPL-3.0), used for pronunciation.
 - Cloudflare's **Wrangler** is MIT/Apache-2.0.
@@ -107,5 +126,6 @@ The enTalkenator templates come from the enTalkenator app.
 
 - [docs/how-it-works.md](docs/how-it-works.md): how programs are made, test results, and
   design notes
+- [docs/voices.md](docs/voices.md): the voice options compared, with sources
 - [cloud/README.md](cloud/README.md): how the library works
 - [docs/developing.md](docs/developing.md): for changing enTalkenator itself

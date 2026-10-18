@@ -87,7 +87,7 @@ turn's text, `transcript.txt`, the `.m4a`, its chapters, and the bundle.
 project's own scripts (`python3 scripts/engine.py ...` and so on), so a run doesn't prompt
 on every turn. Deleting a program and removing the library still ask.
 
-**Voices.** On first render the skill checks for the Kokoro engine and, if it's missing,
+**Voices.** The person chooses among free local voices and cloud voices with their own key ([voices.md](voices.md)); `scripts/voices.py` keeps the catalogue and their default. On first render the skill checks for the Kokoro engine and, if it's missing,
 asks before running `scripts/setup_tts.sh`. That install is about 660 MB of downloads and
 about 1.3 GB on disk, in `~/.cache/entalkenator/venv` plus the Hugging Face cache. Delete
 those two to uninstall. The alternatives are `--engine say` (built-in macOS voices, no
@@ -371,6 +371,8 @@ The content type is the template's `displayName`, as the app uses. `engine.py ve
 Python, as fixed on main in `9ccccaa`, and lists the library entries the app would show.
 
 ## Voice engines and licences
+
+The full set of options (Kokoro, Qwen3-TTS, macOS voices, Gemini, OpenAI, ElevenLabs), how they compare, and how each is wired are in [voices.md](voices.md). The notes below are from the first three engines' test runs.
 
 | Engine | What runs | Cost | Licence notes |
 | :- | :- | :- | :- |

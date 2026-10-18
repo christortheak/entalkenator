@@ -17,13 +17,17 @@ function enclosureType(contentType: string): string {
   return contentType === "audio/mpeg" ? "audio/mpeg" : "audio/x-m4a";
 }
 
+// Every episode says its voices are synthetic. OpenAI's usage policy requires telling listeners,
+// and it's true of every engine enTalkenator uses.
+const AI_VOICES = "The speakers and their voices are AI-generated.";
+
 export function itemDescription(item: Item): string {
-  if (item.description) return item.description;
+  if (item.description) return /AI-generated/i.test(item.description) ? item.description : `${item.description} ${AI_VOICES}`;
   const parts: string[] = [];
   const what = item.template ? `${item.template} on` : "A program about";
   parts.push(`${what} “${item.title}”${item.author && item.author !== "Unknown Author" ? ` by ${item.author}` : ""}.`);
   if (item.speakers.length) parts.push(`Voices: ${item.speakers.map((s) => s.name).join(", ")}.`);
-  parts.push("Generated with enTalkenator for private listening.");
+  parts.push(`Generated with enTalkenator for private listening. ${AI_VOICES}`);
   return parts.join(" ");
 }
 

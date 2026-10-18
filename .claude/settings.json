@@ -6,6 +6,7 @@
       "Bash(python3 scripts/publish.py *)",
       "Bash(python3 scripts/library.py *)",
       "Bash(python3 scripts/status.py *)",
+      "Bash(python3 scripts/voices.py *)",
       "Bash(bash scripts/setup_tts.sh --check)",
       "Edit(/programs/**)"
     ],

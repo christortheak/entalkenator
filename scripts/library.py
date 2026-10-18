@@ -43,6 +43,7 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
+import dialog  # noqa: E402
 import publish  # noqa: E402  (shares the config file and the library API client)
 
 CLOUD = os.path.join(ROOT, "cloud")
@@ -569,32 +570,12 @@ def cmd_deploy(args):
 # Passphrase
 
 
-DIALOG = [
-    "on run argv",
-    "  tell me to activate",
-    '  set r to display dialog (item 1 of argv) default answer "" with hidden answer with title "enTalkenator" '
-    'buttons {"Cancel", "OK"} default button "OK" cancel button "Cancel" with icon note',
-    "  return text returned of r",
-    "end run",
-]
-
-
-def ask(prompt):
-    cmd = ["osascript"]
-    for line in DIALOG:
-        cmd += ["-e", line]
-    p = subprocess.run(cmd + [prompt], capture_output=True, text=True)
-    if p.returncode != 0:
-        return None  # Cancel, or no window server
-    return p.stdout.rstrip("\n")
-
-
 def cmd_passphrase(args):
     path = config_path(args)
     cfg = publish.read_config(path)
     if not cfg.get("worker"):
         done({"ok": False, "error": "No library has been deployed from this computer yet. Run deploy first."}, 1)
-    if sys.platform != "darwin" or not shutil.which("osascript"):
+    if not dialog.available():
         done({"ok": False, "stage": "passphrase", "needs": [{
             "what": "terminal",
             "tell": "Ask the person to run this in their own terminal and type the passphrase when asked:",
@@ -603,13 +584,13 @@ def cmd_passphrase(args):
     first = "Choose a passphrase for your enTalkenator library: at least 10 characters. A few words is easiest to type on a phone."
     prompt = first
     for _ in range(4):
-        one = ask(prompt)
+        one = dialog.ask_secret(prompt)
         if one is None:
             done({"ok": False, "cancelled": True, "tell": "The passphrase dialog was cancelled; nothing changed."}, 1)
         if len(one.strip()) < 10:
             prompt = "That's shorter than 10 characters. " + first
             continue
-        two = ask("Type the same passphrase again to confirm it.")
+        two = dialog.ask_secret("Type the same passphrase again to confirm it.")
         if two is None:
             done({"ok": False, "cancelled": True, "tell": "The passphrase dialog was cancelled; nothing changed."}, 1)
         if one == two:

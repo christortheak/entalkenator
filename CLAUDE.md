@@ -45,6 +45,7 @@ what enTalkenator does in two sentences and offer the guided setup: the **setup*
 |---|---|
 | get set up, or "start", "help me get going" | the **setup** skill |
 | make a program from a document | the **entalkenate** skill |
+| see or change voice options, install voices, add or remove an API key | the **setup** skill's voices step, with `scripts/voices.py` (`list`, `install`, `key set`, `default set`) |
 | set up, update, check, fix, or remove the library | the **setup-library** skill |
 | publish an earlier program, retag, rename, unpublish, or delete one | `scripts/publish.py` (`push`, `edit`, `delete`, `list`) |
 | find their podcast feed address | the web app's **Podcast feeds** page: `python3 scripts/library.py open '#/feeds'` |
@@ -55,15 +56,19 @@ scripts/engine.py templates` lists them with their roles and lengths.
 
 ## Rules that always apply
 
-- **Secrets stay out of the chat.** Never print, echo, ask for, or paste the library's upload
-  token, its feed token, its web app passphrase, or a feed address (the address contains the
-  feed token). The scripts handle them without showing them. The passphrase is typed into a
-  macOS dialog, never into the chat. If the person pastes a secret anyway, don't repeat it,
-  and suggest changing it.
+- **Secrets stay out of the chat.** Never print, echo, ask for, or paste an API key, the
+  library's upload token, its feed token, its web app passphrase, or a feed address (the
+  address contains the feed token). The scripts handle them without showing them. Keys and
+  the passphrase are typed into a macOS dialog, never into the chat. If the person pastes a
+  secret anyway, don't repeat it, and suggest changing it.
 - **Accounts and payments are theirs.** Never create an account, sign in, or enter card or
   payment details for them. Open the page (`open <url>`) and talk them through it.
 - **Ask before installing or downloading anything.** Name it, say what it's for, its licence,
-  and its size, then wait for a yes. That covers the voices (Kokoro), Node.js, and Wrangler.
+  and its size, then wait for a yes. That covers the voices (Kokoro, Qwen3-TTS), Node.js, and
+  Wrangler.
+- **Voices are the person's choice, and so is spending.** Present the options with their
+  trade-offs (`scripts/voices.py list`) rather than picking for them. Cloud voices are billed
+  to their own account; say the estimated cost before a paid render.
 - **Ask before changing their Cloudflare account.** Deploying creates things there, and
   removing the library deletes every program in it. The setup-library skill says when to
   ask.
@@ -77,12 +82,16 @@ scripts/engine.py templates` lists them with their roles and lengths.
 
 - `programs/<template>-<date>/`: each program's transcript, audio (`.m4a`), chapters, and an
   `.enTalkenator` bundle for the enTalkenator iPhone and Mac app, if they use it
-- `~/.cache/entalkenator/`: the Kokoro voices (`venv/`) and Wrangler (`wrangler/`), both
-  installed only with permission
+- `~/.cache/entalkenator/`: the local voice engine (`venv/`), the designed Qwen3-TTS voices
+  (`qwen3-voices/`), and Wrangler (`wrangler/`), installed only with permission. Model weights
+  are in the Hugging Face cache (`~/.cache/huggingface/hub`).
+- `~/.config/entalkenator/keys.json` (mode 600): API keys for cloud voices, saved by
+  `voices.py key set`; `voices.json`: their default voice option
 - `~/.config/entalkenator/library.json` (mode 600): the library's address and upload token,
   written by `scripts/library.py`
 - `cloud/`: the library's code, which is deployed to their Cloudflare account
 - `docs/how-it-works.md`: how generation works, the test runs, and what was learned
+- `docs/voices.md`: the voice options compared, with sources and a listening test
 
 Run scripts from this folder with `python3 scripts/<name>.py`. Every script prints JSON and
 explains itself with `--help`. Python 3.9 or newer is enough; nothing else is needed until
