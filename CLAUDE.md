@@ -62,11 +62,24 @@ what enTalkenator does in two sentences and offer the guided setup: the **setup*
 | get set up, or "start", "help me get going" | the **setup** skill |
 | hear a document itself: "read this to me", "narrate", "audiobook of this paper" | the **narrate** skill |
 | make a program from a document or a set of them | the **entalkenate** skill |
-| see or change voice options, install voices, add or remove an API key | the **setup** skill's voices step, with `scripts/voices.py` (`list`, `install`, `key set`, `default set`) |
+| see or change voice options, install voices, add or remove an API key | the **setup** skill's voices step, with `scripts/voices.py` (`machine`, `list`, `install`, `key set`, `default set`) |
+| "use my voice", "can it sound like me", a colleague's voice (with their agreement) | the **setup** skill's "Recorded voices": they read a short script into Voice Memos, and Qwen3-TTS or Breeze speak in that voice (`voices.py recorded`) |
+| different voices or engines for different speakers, a livelier or older-sounding character | the **entalkenate** skill's casting step: `--engines` per role, voices from descriptions, per-turn delivery notes |
 | set up, update, check, fix, or remove the library | the **setup-library** skill |
 | publish an earlier program, retag, rename, unpublish, or delete one | `scripts/publish.py` (`push`, `edit`, `delete`, `list`) |
 | find their podcast feed address | the web app's **Podcast feeds** page: `python3 scripts/library.py open '#/feeds'` |
 | hear a program | the `.m4a` in its `programs/` folder (`open` it), or the library |
+
+**Voices: what you can offer.** Don't recite these; bring up the one that fits what the person
+asks or cares about, and only what this Mac has (`voices.py machine`, `voices.py list`):
+- a voice designed from a description ("an older judge, dry and unhurried") with Qwen3-TTS
+  or Breeze, kept the same in every program
+- a voice made from a recording: their own, or someone who agreed (Qwen3-TTS or Breeze)
+- a different engine per speaker: the leads in Breeze, minor roles in Kokoro, a caller on a
+  cloud voice, which also saves time
+- delivery directed turn by turn (Breeze, the Qwen3 preset voices, Gemini, gpt-4o-mini-tts),
+  and laughs or sighs where the script has them (Breeze)
+- hearing the start of a program in each installed voice before choosing
 
 A program is composed from what the person asks for ("an hour-long faculty workshop, a
 20-minute talk and the rest questions") and directed turn by turn. The templates in
@@ -88,6 +101,9 @@ written when someone asks for one; `python3 scripts/engine.py templates` lists t
 - **Voices are the person's choice, and so is spending.** Present the options with their
   trade-offs (`scripts/voices.py list`) rather than picking for them. Cloud voices are billed
   to their own account; say the estimated cost before a paid render.
+- **A recorded voice needs its owner's consent.** Make a voice from a recording only of the
+  person themselves, or of someone who has agreed to it (ask, and record how they agreed).
+  Never from a public figure, a clip found online, or anyone who hasn't agreed.
 - **Ask before changing their Cloudflare account.** Deploying creates things there, and
   removing the library deletes every program in it. The setup-library skill says when to
   ask.

@@ -108,7 +108,9 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
      about 60%". These map to `--loop-scale` 1, 0.3, and 0.6. Loops set the length, so a
      template without loops is unaffected. For a program, scale its segments' minutes
      instead. "Other" takes a custom scale. Skip this question when they gave a length.
-   - **Voices** (header "Voices"): run `VOICE_OPTIONS list` first. Offer up to three
+   - **Voices** (header "Voices"): run `VOICE_OPTIONS list` first (and `VOICE_OPTIONS
+     recorded list`: if they have a recorded voice, include "Use my recorded voice for
+     <a role>"). Offer up to three
      ready options, their default first, marked "(Recommended)". Label each with its cost
      ("Kokoro: free, on this Mac", "Gemini Flash: about $0.40 per 30 min"). Add "Show me all
      the voice options", which lists every option with its trade-offs, including ones
@@ -497,7 +499,30 @@ with its turn's opening words, so check they land where you meant. In section 3,
      and say how long it took in the report. With no figure yet, say this is the first
      render with that voice here and the time will be known after it.
 2. **Cast the voices**, unless the user gave `--voices`. Never cast a real person's voice
-   or ask for one ("sounds like" a named person).
+   or ask for one ("sounds like" a named person), except a recorded voice its owner made
+   (see below).
+   - **What you can offer** (once, briefly, in "Customize everything" or when they care
+     about the voices; only what this Mac has):
+     - a different engine per role (`--engines`)
+     - a voice they recorded (`VOICE_OPTIONS recorded list`)
+     - voices designed from descriptions
+     - delivery notes per turn
+     Pick the one that answers what they asked: "make it sound like me" is a recorded
+     voice; "the judge should sound older" is a description; "livelier" is lines in
+     character and delivery notes; "it's taking too long" is a lighter engine for the
+     minor roles.
+   - **Mixing engines:** `--engines "Role=breeze;Role=qwen3-preset;*=kokoro"` gives each role
+     its own engine ("*" is everyone else, default `--engine`), and each role's `--voices`
+     value is in its engine's terms: a description for qwen3 or breeze, `ryan` for the
+     presets, a Kokoro voice. Local engines run one after another, so the time is each
+     engine's share added up; heavy voices for the leads and Kokoro for minor roles keeps a
+     Breeze program quick. Breeze and Qwen3 share an audio codec and sit together naturally;
+     Kokoro or a cloud voice next to them can sound like a different room, which suits a
+     caller or a guest on the line.
+   - **Recorded voices:** `--voices "Role=@Name"` speaks in a voice kept with
+     `VOICE_OPTIONS recorded add` (the setup skill's "Recorded voices" says how to make
+     one). It needs qwen3 or breeze for that role, so pair it with `--engines "Role=breeze"`
+     (or qwen3). A natural use: the person themselves as host or presenter.
    - **Engines with preset voices** (kokoro, say, gemini, openai, elevenlabs): run
      `RENDER --list-voices --engine <option id>`. It lists each voice with how it sounds;
      for ElevenLabs these are the voices on the person's account. Give each role a distinct

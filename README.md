@@ -126,6 +126,15 @@ starting. If a heavy voice would take too long for a long program, or your
 Mac doesn't have the memory, it suggests a lighter voice or a cloud one, with what that
 would cost.
 
+**Mix and match.** Each speaker can have a different voice engine: the lead in Breeze, the
+others in Kokoro, a caller on a cloud voice. Heavy voices then go only where you'll notice
+them, which also makes the program quicker.
+
+**Your own voice.** With Qwen3-TTS or Breeze installed, you can read a 15-second script into
+Voice Memos, and your programs can have you as host or presenter. The same works for a
+colleague who agrees to it, never for someone who hasn't. Ask Claude "can it sound like me?"
+and it walks you through it. The recording stays on your Mac.
+
 Prices were checked in October 2026 and change. Cloud voices are billed by the provider to
 your own account; enTalkenator never sees your key: you type it into a small Mac window,
 and it's kept in your Mac's Keychain (look for "enTalkenator" in Keychain Access to see or

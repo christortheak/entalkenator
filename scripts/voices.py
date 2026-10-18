@@ -11,6 +11,12 @@ Commands (each prints JSON):
   install qwen3      the expressive local voices (Qwen3-TTS 1.7B, two models, 6.2 GB)
   install qwen3-preset  Qwen3-TTS's nine preset voices, directed line by line (3.1 GB)
   install breeze     the most natural local voices (Breeze TTS 2, 7.6 GB; non-commercial licence)
+  recorded script    the passage to read aloud when recording a voice (about 15 seconds)
+  recorded add NAME --audio FILE --whose own|consented [--consent "how they agreed"]
+                     [--transcript TEXT]   keep a recording as a voice that qwen3 and breeze
+                     can speak in (use it as --voices "Role=@NAME"). The transcript is the
+                     script unless given. A voice that isn't the person's own needs consent.
+  recorded list | recorded remove NAME
 
 How long a local voice takes depends on the Mac, so the catalog gives each one's work
 relative to Kokoro instead of times. render_audio.py records how fast each engine actually
@@ -65,6 +71,12 @@ QWEN_BASE_REPO = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit"
 BREEZE_REPO = "mlx-community/Breeze-TTS-2-mlx"
 QWEN_PRESET_REPO = "mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-8bit"
 SPEEDS_FILE = os.path.join(ENT_HOME, "speeds.json")
+RECORDED_DIR = os.path.join(CONFIG_DIR, "recorded-voices")
+# What a person reads to record a voice: conversational, with a question and a change of pace.
+RECORD_SCRIPT = ("Thanks for having me. I'll be honest: when I first read this paper, I wasn't convinced. "
+                 "But the more I thought about it, the more it held up. So here's my question for you. "
+                 "What would it actually take to change your mind?")
+CLONE_ENGINES = ("qwen3", "breeze")  # engines that can speak in a recorded voice
 
 KEY_ENV = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "elevenlabs": "ELEVENLABS_API_KEY"}
 KEY_PAGES = {
@@ -466,6 +478,75 @@ def check_key(engine, key):
         return None, "Couldn't reach the service to check the key (%s); it was saved anyway." % getattr(e, "reason", e)
 
 
+def recorded_slug(name):
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def recorded_voice(name):
+    """A recorded voice by name: {name, audio, transcript, whose, ...}, or None."""
+    meta = read_json(os.path.join(RECORDED_DIR, recorded_slug(name) + ".json"))
+    return meta or None
+
+
+def cmd_recorded(args):
+    if args.action == "script":
+        emit({"script": RECORD_SCRIPT, "seconds": "about 15",
+              "how": "Record it with Voice Memos or QuickTime Player (File > New Audio Recording) in a quiet room, "
+                     "about a hand's width from the microphone, reading naturally as if talking to someone. "
+                     "Then share or drag the recording somewhere Claude can read it (Downloads is fine)."})
+        return
+    if args.action == "list":
+        os.makedirs(RECORDED_DIR, exist_ok=True)
+        items = [read_json(os.path.join(RECORDED_DIR, f)) for f in sorted(os.listdir(RECORDED_DIR)) if f.endswith(".json")]
+        emit({"voices": [{k: v.get(k) for k in ("name", "whose", "consent", "seconds", "addedAt")} for v in items],
+              "use": "--voices \"Role=@NAME\" with --engine qwen3 or breeze (or --engines \"Role=breeze\")"})
+        return
+    if not args.name:
+        done({"ok": False, "error": "Name the voice, e.g. `recorded %s \"My voice\"`." % args.action}, 1)
+    slug = recorded_slug(args.name)
+    base = os.path.join(RECORDED_DIR, slug)
+    if args.action == "remove":
+        gone = [p for p in (base + ".wav", base + ".json") if os.path.exists(p)]
+        for p in gone:
+            os.remove(p)
+        emit({"ok": bool(gone), "removed": args.name if gone else None})
+        return
+    # add
+    if args.whose not in ("own", "consented"):
+        done({"ok": False, "error": "Say whose voice this is: --whose own (the person's own voice) or --whose "
+                                    "consented (someone who agreed to it, with --consent saying how). Never "
+                                    "record or clone someone's voice without their permission."}, 1)
+    if args.whose == "consented" and not (args.consent or "").strip():
+        done({"ok": False, "error": "For someone else's voice, say how they agreed: --consent \"...\"."}, 1)
+    src = os.path.abspath(os.path.expanduser(args.audio or ""))
+    if not os.path.isfile(src):
+        done({"ok": False, "error": "No recording at %s." % src}, 1)
+    os.makedirs(RECORDED_DIR, exist_ok=True)
+    wav = base + ".wav"
+    p = subprocess.run(["afconvert", "-f", "WAVE", "-d", "LEI16@24000", "-c", "1", src, wav], capture_output=True, text=True)
+    if p.returncode != 0 or not os.path.isfile(wav):
+        done({"ok": False, "error": "Couldn't read that recording (%s). Voice Memos (.m4a), WAV, MP3 and AIFF work."
+                                    % (p.stderr.strip()[:200] or "afconvert failed")}, 1)
+    import hashlib
+    import wave
+    with wave.open(wav) as w:
+        seconds = w.getnframes() / float(w.getframerate())
+    with open(wav, "rb") as f:
+        sha = hashlib.sha1(f.read()).hexdigest()[:12]
+    meta = {"name": args.name, "audio": wav, "transcript": (args.transcript or RECORD_SCRIPT).strip(),
+            "whose": args.whose, "consent": (args.consent or "").strip() or None, "seconds": round(seconds, 1),
+            "sha": sha, "addedAt": time.strftime("%Y-%m-%d")}
+    write_private(base + ".json", meta)
+    os.chmod(wav, 0o600)
+    advice = None
+    if seconds < 6:
+        advice = "That's short; 10 to 15 seconds gives a steadier voice. Record the script again if it sounds off."
+    elif seconds > 25:
+        advice = "That's long; 10 to 15 seconds is plenty, and a long clip slows every line (in Breeze especially)."
+    emit({"ok": True, "voice": args.name, "seconds": meta["seconds"], "use": "--voices \"Role=@%s\"" % args.name,
+          "engines": list(CLONE_ENGINES), "advice": advice})
+
+
 def cmd_key(args):
     eng = args.engine
     names = {"gemini": "Google AI Studio (Gemini)", "openai": "OpenAI", "elevenlabs": "ElevenLabs"}
@@ -533,6 +614,14 @@ def main():
     p.set_defaults(func=cmd_install)
     p = sub.add_parser("machine")
     p.set_defaults(func=cmd_machine)
+    p = sub.add_parser("recorded")
+    p.add_argument("action", choices=["script", "add", "list", "remove"])
+    p.add_argument("name", nargs="?")
+    p.add_argument("--audio")
+    p.add_argument("--transcript", help="the exact words in the recording (default: the script)")
+    p.add_argument("--whose", choices=["own", "consented"])
+    p.add_argument("--consent", help="for someone else's voice: how they agreed")
+    p.set_defaults(func=cmd_recorded)
     p = sub.add_parser("key")
     p.add_argument("action", choices=["set", "check", "remove"])
     p.add_argument("engine", choices=sorted(KEY_ENV))

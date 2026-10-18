@@ -34,6 +34,12 @@ reference clip; a clone copies its delivery, so a line in character makes a live
 --speeds "Role=0.95;..." (kokoro, say) sets a role's pace. Kokoro blends voices given as
 "af_heart,af_bella". Pauses between turns follow the conversation unless --gap is given.
 
+--engines "Professor Swift=breeze;Rigel=qwen3-preset;*=kokoro" gives roles different engines
+(each role's --voices value is then in its own engine's terms); the clips are loudness-matched
+and stitched together. Local engines run one after another, so only one model is in memory.
+A --voices value "@Name" is a recorded voice kept by `voices.py recorded add`: qwen3 and
+breeze speak in it, cloning the recording instead of designing a voice.
+
 Clips are cached in --work-dir by text and voice, so a re-run only renders what changed.
 --redo 5,23 renders those turns again (a local voice's new take, say, for a turn whose
 words-per-minute was flagged under checkTurns: much faster than the speaker's usual pace
@@ -356,13 +362,18 @@ class QwenRenderer:
     def render_all(self, jobs, batch=QWEN_BATCH, window=QWEN_WINDOW):
         np = self.np
         voices = sorted({(j["voice"], j.get("line") or "") for j in jobs})
-        self.design(voices)
+        self.design(sorted({(j["voice"], j.get("line") or "") for j in jobs if not j.get("ref")}))
         model = self.load_model(QWEN_BASE_MODEL)
         rate = model.sample_rate
         gap = np.zeros(int(0.12 * rate), dtype="float32")
         for voice, line in voices:
             # mlx-audio clones one shared reference per batch, so each voice's pieces are batched together.
             mine = [j for j in jobs if (j["voice"], j.get("line") or "") == (voice, line) and not os.path.exists(j["path"])]
+            if not mine:
+                continue
+            # A recorded voice clones the person's recording; a described one, its designed clip.
+            ref = mine[0].get("ref") or self.ref_path(voice, line)
+            ref_text = mine[0].get("refText") or line or QWEN_REF_LINE
             k = 0
             while k < len(mine):
                 # A window of whole turns: sorted by length inside it so batches stay even, and written
@@ -379,8 +390,8 @@ class QwenRenderer:
                 for start in range(0, len(order), batch):
                     chunk = order[start:start + batch]
                     out = [None] * len(chunk)
-                    for r in model.batch_generate(texts=[p for _, _, p in chunk], ref_audio=self.ref_path(voice, line),
-                                                  ref_text=line or QWEN_REF_LINE, lang_code="english", stream=False):
+                    for r in model.batch_generate(texts=[p for _, _, p in chunk], ref_audio=ref,
+                                                  ref_text=ref_text, lang_code="english", stream=False):
                         i = getattr(r, "sequence_idx", 0)
                         a = np.asarray(r.audio, dtype="float32").reshape(-1)
                         out[i] = a if out[i] is None else np.concatenate([out[i], a])
@@ -498,14 +509,16 @@ class BreezeRenderer:
 
     def render_all(self, jobs):
         np = self.np
-        self.design(sorted({(j["voice"], j.get("line") or "") for j in jobs}))
+        self.design(sorted({(j["voice"], j.get("line") or "") for j in jobs if not j.get("ref")}))
         gap = np.zeros(int(0.12 * self.rate), dtype="float32")
         for j in jobs:
             t0 = time.time()
-            line = j.get("line") or BREEZE_REF_LINE
+            # A recorded voice clones the person's recording; a described one, its designed clip.
+            ref = j.get("ref") or self.ref_path(j["voice"], j.get("line"))
+            line = j.get("refText") or j.get("line") or BREEZE_REF_LINE
             parts = []
             for piece in split_text(j["text"], max_words=QWEN_CHUNK_WORDS):
-                a = self._audio(self.model.generate(text=piece, voice="S0", ref_audio=self.ref_path(j["voice"], j.get("line")),
+                a = self._audio(self.model.generate(text=piece, voice="S0", ref_audio=ref,
                                                     ref_text=line, instruct=j.get("style"),
                                                     cfg_scale=BREEZE_CFG if j.get("style") else None))
                 if parts:
@@ -1228,6 +1241,8 @@ def main():
     ap.add_argument("--gap", type=float, help="seconds of silence between turns (default: fitted to the conversation)")
     ap.add_argument("--lines", help='qwen3, breeze: the line each designed voice reads, in character, e.g. '
                                     '"Professor Swift=Well, that is a brave word for it."')
+    ap.add_argument("--engines", help='an engine per role, e.g. "Professor Swift=breeze;Rigel=qwen3-preset;*=kokoro" '
+                                      '("*" is everyone else; default --engine)')
     ap.add_argument("--speeds", help='kokoro and say: a role\'s pace, e.g. "Professor Swift=0.95;Rigel=1.05"')
     ap.add_argument("--delivery", help="per-turn delivery notes (default: delivery.json beside the transcript)")
     ap.add_argument("--bitrate", type=int, default=48000)
@@ -1281,12 +1296,37 @@ def main():
     if args.audition:
         audition(args, engine_name, model, pool, turns, roles, styles)
         return
-    voices = assign_voices(roles, pool, parse_overrides(args.voices))
-    shared = {}
+    # An engine per role: --engines, else everyone gets --engine.
+    spec = parse_overrides(args.engines)
+    default = pick_engine(spec.pop("*"), None) if "*" in spec else (engine_name, model)
+    role_engine = {r: (pick_engine(spec[r], None) if r in spec else default) for r in roles}
+    warnings = ["--engines names %r, who isn't in the transcript." % r for r in spec if r not in roles]
+    groups = []
+    for r in roles:
+        if role_engine[r] not in groups:
+            groups.append(role_engine[r])
+    overrides = parse_overrides(args.voices)
+    voices = {}
+    for eng, mdl in groups:
+        rs = [r for r in roles if role_engine[r] == (eng, mdl)]
+        p = pool if (eng, mdl) == (engine_name, model) else voice_pool(eng, mdl)
+        mine = assign_voices(rs, p, {r: overrides[r] for r in rs if r in overrides})
+        voices.update(mine)
+        shared = {}
+        for r, v in mine.items():
+            shared.setdefault(v, []).append(r)
+        warnings += ["%s share a voice (%s): this engine has too few voices for the cast." % (" and ".join(x), v)
+                     for v, x in shared.items() if len(x) > 1]
+    recorded = {}
     for r, v in voices.items():
-        shared.setdefault(v, []).append(r)
-    warnings = ["%s share a voice (%s): this engine has too few voices for the cast." % (" and ".join(rs), v)
-                for v, rs in shared.items() if len(rs) > 1]
+        if v.startswith("@"):
+            meta = voice_options.recorded_voice(v[1:])
+            if not meta:
+                raise SystemExit("No recorded voice called %r. `voices.py recorded list` shows them." % v[1:])
+            if role_engine[r][0] not in voice_options.CLONE_ENGINES:
+                raise SystemExit("%s's recorded voice needs an engine that can clone (%s): add --engines \"%s=breeze\"."
+                                 % (r, " or ".join(voice_options.CLONE_ENGINES), r))
+            recorded[r] = meta
     lines = parse_overrides(args.lines)
     speeds = {r: float(v) for r, v in parse_overrides(args.speeds).items()}
     dfile = args.delivery or os.path.join(os.path.dirname(os.path.abspath(args.transcript)), "delivery.json")
@@ -1301,21 +1341,24 @@ def main():
 
     jobs = []
     for i, (role, text) in enumerate(turns):
-        spoken = vocal_events(speakable(text), keep=engine_name == "breeze")
+        eng, mdl = role_engine[role]
+        spoken = vocal_events(speakable(text), keep=eng == "breeze")
         # Only engines that take direction get a note, so adding notes doesn't re-render the others.
         note = (deliveries.get(i + 1) or {}).get("note")
         style = "; ".join(x for x in (styles.get(role), note) if x) or None
-        style = style if engine_name in DIRECTED else styles.get(role)
-        speed = args.speed * speeds.get(role, 1.0) if engine_name in ("kokoro", "say") else args.speed
-        line = lines.get(role) if engine_name in DESCRIBED_VOICES else None
-        job = {"text": spoken, "voice": voices[role], "style": style,
+        style = style if eng in DIRECTED else styles.get(role)
+        speed = args.speed * speeds.get(role, 1.0) if eng in ("kokoro", "say") else args.speed
+        line = lines.get(role) if eng in DESCRIBED_VOICES and role not in recorded else None
+        key = voices[role] + ("|" + line if line else "") + ("|" + recorded[role]["sha"] if role in recorded else "")
+        job = {"text": spoken, "voice": voices[role], "style": style, "engine": eng, "model": mdl,
                "label": "turn %d/%d (%s)" % (i + 1, len(turns), role),
-               "path": clip_path(work, "%03d" % (i + 1), engine_name, model,
-                                 voices[role] + ("|" + line if line else ""), speed, style, spoken)}
+               "path": clip_path(work, "%03d" % (i + 1), eng, mdl, key, speed, style, spoken)}
         if speed != args.speed:
             job["speed"] = speed
         if line:
             job["line"] = line
+        if role in recorded:
+            job["ref"], job["refText"] = recorded[role]["audio"], recorded[role]["transcript"]
         jobs.append(job)
     if args.redo:
         for n in [int(x) for x in args.redo.replace(" ", "").split(",") if x]:
@@ -1323,28 +1366,42 @@ def main():
                 raise SystemExit("--redo %d: the transcript has %d turns." % (n, len(jobs)))
             if os.path.exists(jobs[n - 1]["path"]):
                 os.remove(jobs[n - 1]["path"])
-    log("%s (%s): %d turns, voices %s" % (engine_name, model, len(jobs), voices))
-    t1 = time.time()
     fresh = {j["path"] for j in jobs if not os.path.exists(j["path"])}
-    rendered = render_jobs(engine_name, model, jobs, args.speed, work)
+    timing = {}
+    rendered = 0
+    t1 = time.time()
+    for eng, mdl in groups:
+        mine = [j for j in jobs if (j["engine"], j["model"]) == (eng, mdl)]
+        log("%s (%s): %d turns, voices %s" % (eng, mdl, len(mine),
+                                              {r: voices[r] for r in roles if role_engine[r] == (eng, mdl)}))
+        t = time.time()
+        rendered += render_jobs(eng, mdl, mine, args.speed, work)
+        timing[(eng, mdl)] = time.time() - t
     render_s = time.time() - t1
     gaps = [args.gap] * len(jobs) if args.gap is not None else turn_gaps(turns, deliveries)
     seconds, spans = stitch([j["path"] for j in jobs], gaps, out, args.bitrate, work)
-    if engine_name in LOCAL_IN_CHILD + ("say",) and fresh:
-        # How fast this engine runs on this Mac, for voices.py's estimates.
-        voice_options.record_speed(engine_name, sum(b - a for (a, b), j in zip(spans, jobs) if j["path"] in fresh), render_s)
+    for eng, mdl in groups:
+        if eng in LOCAL_IN_CHILD + ("say",):
+            # How fast this engine runs on this Mac, for voices.py's estimates.
+            done_here = sum(b - a for (a, b), j in zip(spans, jobs) if j["path"] in fresh and j["engine"] == eng)
+            if done_here:
+                voice_options.record_speed(eng, done_here, timing[(eng, mdl)])
+    mixed = len(groups) > 1
+    engine_out = "mixed" if mixed else groups[0][0]
+    model_out = "; ".join("%s: %s" % (r, role_engine[r][0]) for r in roles) if mixed else groups[0][1]
     chapters = os.path.splitext(out)[0] + ".chapters.json"
     plan = None
     if args.chapter_plan:
         with open(args.chapter_plan, encoding="utf-8") as f:
             plan = json.load(f).get("chapters")
-    write_chapters(chapters, turns, spans, seconds, engine_name, model, voices, args.transcript, plan, args.chapter_depth)
+    write_chapters(chapters, turns, spans, seconds, engine_out, model_out, voices, args.transcript, plan, args.chapter_depth)
     embedded = embed_chapters(out, chapters)
 
     emit({
         "out": out,
-        "engine": engine_name,
-        "model": model,
+        "engine": engine_out,
+        "model": model_out,
+        "engines": {r: role_engine[r][0] for r in roles} if mixed else None,
         "voices": voices,
         "turns": len(jobs),
         "rendered": rendered,
