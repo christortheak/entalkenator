@@ -34,8 +34,10 @@ You don't need GitHub, a website, a domain name, or any coding.
 
 ## Get started
 
-1. Unzip the download. Put the `enTalkenator` folder somewhere you'll keep it, such as
-   Documents.
+1. Unzip the download. (From GitHub the folder is called `entalkenator-main`; rename it if
+   you like.) Put it somewhere you'll keep it that iCloud Drive doesn't sync, such as your
+   home folder: programs are large audio files, and syncing them slows things down. If your
+   Mac syncs Desktop and Documents to iCloud, avoid those two.
 2. Open the folder in Claude:
    - **Claude desktop app:** open the **Code** tab, choose the `enTalkenator` folder, and
      say yes when asked whether you trust it.
@@ -125,6 +127,15 @@ Mac, Claude knows how fast it is there, and tells you how long a program will ta
 starting. If a heavy voice would take too long for a long program, or your
 Mac doesn't have the memory, it suggests a lighter voice or a cloud one, with what that
 would cost.
+
+**Mix and match.** Each speaker can have a different voice engine: the lead in Breeze, the
+others in Kokoro, a caller on a cloud voice. Heavy voices then go only where you'll notice
+them, which also makes the program quicker.
+
+**Your own voice.** With Qwen3-TTS or Breeze installed, you can read a 15-second script into
+Voice Memos, and your programs can have you as host or presenter. The same works for a
+colleague who agrees to it, never for someone who hasn't. Ask Claude "can it sound like me?"
+and it walks you through it. The recording stays on your Mac.
 
 Prices were checked in October 2026 and change. Cloud voices are billed by the provider to
 your own account; enTalkenator never sees your key: you type it into a small Mac window,

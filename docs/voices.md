@@ -116,6 +116,16 @@ deliberate, but can change between turns, so the engine designs once and clones.
   piece at a time 0.94. Preloading the reference and clearing MLX's cache made no measurable
   difference. A whole program runs at about 0.45–0.55: voice design, model loads, and a
   laptop's heat over a long render (the same batch ran 10% slower after 15 minutes of load).
+- **An engine per role:** `render_audio.py --engines "Role=breeze;*=kokoro"` groups the turns
+  by engine and renders the groups one after another (so only one local model is in memory),
+  then stitches everything with the same loudness matching. The chapters file says
+  `"engine": "mixed"` and which role used which.
+- **Recorded voices:** `voices.py recorded add NAME --audio FILE --whose own|consented`
+  converts a recording to 24 kHz mono and keeps it with its transcript (the script, unless
+  given) in `~/.config/entalkenator/recorded-voices/`, readable only by the person. A role
+  with `--voices "Role=@NAME"` on qwen3 or breeze clones that recording instead of a
+  designed clip. A 13.6-second reference made a Breeze line take 2.2× real time; 10–15
+  seconds is the advice. Someone else's voice needs `--consent` saying how they agreed.
 - **Pace check (all engines):** `render_audio.py` compares each turn's words per minute with
   that speaker's usual pace and lists outliers under `checkTurns`. A Qwen3 turn spoken far
   faster than usual has usually lost its last words; `--redo N` renders it again.

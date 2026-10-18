@@ -139,6 +139,37 @@ recommending the best-sounding one they set up. Save it with
 `VOICE_OPTIONS default set <id>`; with one option, set that. They can still pick other
 voices for any program.
 
+### Recorded voices
+
+Once Qwen3-TTS or Breeze is installed, mention in a sentence that either can speak in a
+voice made from a short recording: their own, say, as the host of their programs. Offer it;
+don't push it. If they want one, or ask for it any time later ("can it sound like me?"):
+
+1. **Whose voice?** Their own, or someone who has agreed to it. For someone else, ask how
+   they agreed (in person, by email), and record that with `--consent`. Never a public
+   figure, a clip from the internet, or anyone who hasn't agreed: say so plainly if asked.
+2. **The script:** `VOICE_OPTIONS recorded script` gives about 15 seconds of conversational
+   text. Show it to them as is.
+3. **Recording:** open Voice Memos (`open -a "Voice Memos"`) or QuickTime Player
+   (`open -a "QuickTime Player"`, then File › New Audio Recording). Ask them to:
+   - find a quiet room, without music or a fan
+   - sit about a hand's width from the Mac or a headset microphone
+   - read the script once, naturally, as if talking to someone
+   - aim for 10–15 seconds; a longer clip slows every line in Breeze
+   Then they share or drag the recording to Downloads (or into this chat) and tell you
+   where it is.
+4. **Keep it:** `VOICE_OPTIONS recorded add "<Name>" --audio <file> --whose own` (or
+   `--whose consented --consent "<how they agreed>"`). If they read something other than
+   the script, pass its exact words as `--transcript`. Pass on any `advice` (too short or
+   too long).
+5. **Hear it:** render the opening of their first program, or the example, with that voice
+   for one role: `RENDER ... --engines "<Role>=breeze" --voices "<Role>=@<Name>" --sample 60`,
+   and `open` it. If it sounds off, the usual fix is a quieter room or a more natural read.
+
+`VOICE_OPTIONS recorded list` shows their voices, and `recorded remove "<Name>"` deletes one
+(the recording is kept only in `~/.config/entalkenator/recorded-voices/`, readable only by
+them).
+
 ## 4. The library
 
 Follow the **setup-library** skill from its step 1. It covers the Cloudflare account,

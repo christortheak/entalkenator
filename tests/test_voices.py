@@ -251,6 +251,36 @@ def main():
         check("uses the chosen model and WAV replies", code == 0 and reqs and all(r["model"] == "gemini-3.8-flash-lite-tts" for r in reqs), raw[-300:])
         check("delivery notes go in speech_metadata", "quick, confident" in styles.get(out["voices"]["Counsel"], ""), styles)
 
+        print("mixing engines, and recorded voices")
+        seen.clear()
+        code, out, raw = run(RENDER, "--transcript", transcript, "--out", os.path.join(tmp, "mixed.m4a"),
+                             "--engine", "say", "--engines", "Counsel=gemini:gemini-3.8-flash-lite-tts")
+        reqs = [b for p, h, b in seen if p == "/v1beta/interactions"]
+        check("each role can have its own engine", code == 0 and out["engine"] == "mixed"
+              and out["engines"] == {"Judge": "say", "Counsel": "gemini"} and len(reqs) == 2, raw[-300:])
+        chap = json.load(open(os.path.join(tmp, "mixed.chapters.json")))["entalkenator"]
+        check("...and the chapters file says which", chap["engine"] == "mixed" and "Counsel: gemini" in chap["model"], chap)
+        clip = os.path.join(tmp, "me.aiff")
+        subprocess.run(["say", "-o", clip, "Thanks for having me. I will be honest about this paper."], check=True)
+        code, out, _ = run(VOICES, "recorded", "add", "Test Voice", "--audio", clip)
+        check("a recording isn't kept until it's said whose voice it is", code == 1 and "--whose" in out["error"], out)
+        code, out, _ = run(VOICES, "recorded", "add", "Test Voice", "--audio", clip, "--whose", "consented")
+        check("...and someone else's needs their consent stated", code == 1 and "--consent" in out["error"], out)
+        code, out, _ = run(VOICES, "recorded", "add", "Test Voice", "--audio", clip, "--whose", "own",
+                           "--transcript", "Thanks for having me. I will be honest about this paper.")
+        check("a recording is kept as a voice, converted for the engines", code == 0 and out["ok"]
+              and out["use"] == '--voices "Role=@Test Voice"' and out["seconds"] > 1, out)
+        code, out, _ = run(VOICES, "recorded", "list")
+        check("...listed with whose it is", [v["name"] for v in out["voices"]] == ["Test Voice"]
+              and out["voices"][0]["whose"] == "own", out)
+        code, out, raw = run(RENDER, "--transcript", transcript, "--out", os.path.join(tmp, "rec.m4a"), "--engine", "say",
+                             "--voices", "Judge=@Test Voice")
+        check("a recorded voice needs an engine that can clone", code != 0 and "needs an engine that can clone" in raw
+              and 'Judge=breeze' in raw, raw[-300:])
+        code, out, _ = run(VOICES, "recorded", "remove", "Test Voice")
+        code2, out2, _ = run(VOICES, "recorded", "list")
+        check("...and can be removed", out.get("ok") and out2["voices"] == [], (out, out2))
+
         print("key removal")
         code, out, _ = run(VOICES, "key", "remove", "openai")
         check("remove deletes the Keychain item", out.get("removed") is True and "enTalkenator|openai" not in keychain()["items"], out)
