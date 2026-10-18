@@ -21,6 +21,9 @@ from the environment or the macOS Keychain (see voices.py key set).
 gpt-4o-mini-tts follow it; the other engines ignore it.
 
 Clips are cached in --work-dir by text and voice, so a re-run only renders what changed.
+--redo 5,23 renders those turns again (a local voice's new take, say, for a turn whose
+words-per-minute was flagged under checkTurns: much faster than the speaker's usual pace
+often means words were dropped).
 Kokoro and Qwen3-TTS render in a child process (the setup_tts.sh venv) that hard-exits
 when done, so an MLX crash can't take the finished clips or the stitching with it. Clips
 are stitched in Python, loudness-matched, and encoded to AAC (24 kHz mono, like the app)
@@ -65,6 +68,13 @@ QWEN_REF_LINE = ("Thank you. Let me make sure I understand the point, because th
                  "matters a great deal to everything that follows.")
 QWEN_PACE = " Speaking at a natural, unhurried conversational pace."
 QWEN_CHUNK_WORDS = 90  # longer stretches can drift or lose their last words
+# A batch runs until its longest piece is done, so pieces of similar length go together.
+# Measured on an M5 Pro (860 words, one voice): batches of 4 in transcript order took 0.53x
+# the audio's length, sorted by length 0.44x, batches of 8 sorted 0.38x, one at a time 0.94x.
+# Preloading the reference clip and clearing MLX's cache made no measurable difference. A
+# whole program runs nearer 0.45-0.55x: voice design, model loads, and heat on a long render.
+QWEN_BATCH = 8
+QWEN_WINDOW = 16  # pieces sorted together; each window's turns are written as soon as it's done
 GEMINI_URL = os.environ.get("ENTALKENATOR_GEMINI_BASE", "https://generativelanguage.googleapis.com") + "/v1beta/interactions"
 OPENAI_URL = os.environ.get("ENTALKENATOR_OPENAI_BASE", "https://api.openai.com") + "/v1/audio/speech"
 ELEVENLABS_BASE = os.environ.get("ENTALKENATOR_ELEVENLABS_BASE", "https://api.elevenlabs.io")
@@ -294,37 +304,55 @@ class QwenRenderer:
         del model
         self.mx.clear_cache()
 
-    def render_all(self, jobs, batch=4):
+    def render_all(self, jobs, batch=QWEN_BATCH, window=QWEN_WINDOW):
         np = self.np
-        self.design(sorted({j["voice"] for j in jobs}))
+        voices = sorted({j["voice"] for j in jobs})
+        self.design(voices)
         model = self.load_model(QWEN_BASE_MODEL)
         rate = model.sample_rate
         gap = np.zeros(int(0.12 * rate), dtype="float32")
-        for voice in sorted({j["voice"] for j in jobs}):
-            # mlx-audio clones one shared reference per batch, so batch each voice's pieces together.
+        for voice in voices:
+            # mlx-audio clones one shared reference per batch, so each voice's pieces are batched together.
             mine = [j for j in jobs if j["voice"] == voice and not os.path.exists(j["path"])]
-            pieces = [(n, p) for n, j in enumerate(mine) for p in split_text(j["text"], max_words=QWEN_CHUNK_WORDS)]
-            audio = {}
-            for start in range(0, len(pieces), batch):
-                group = pieces[start:start + batch]
-                out = [None] * len(group)
-                for r in model.batch_generate(texts=[p for _, p in group], ref_audio=self.ref_path(voice),
-                                              ref_text=QWEN_REF_LINE, lang_code="english", stream=False):
-                    i = getattr(r, "sequence_idx", 0)
-                    a = np.asarray(r.audio, dtype="float32").reshape(-1)
-                    out[i] = a if out[i] is None else np.concatenate([out[i], a])
-                for (n, _), a in zip(group, out):
-                    audio.setdefault(n, []).append(a if a is not None else np.zeros(0, dtype="float32"))
-            for n, j in enumerate(mine):
-                parts = []
-                for a in audio.get(n, []):
-                    if parts:
-                        parts.append(gap)
-                    parts.append(a)
-                if not parts or sum(len(p) for p in parts) == 0:
-                    raise RuntimeError("Qwen3-TTS produced no audio for %s" % j["label"])
-                write_float_wav(j["path"], np.concatenate(parts), rate, np)
-                log("  %s done" % j["label"])
+            k = 0
+            while k < len(mine):
+                # A window of whole turns: sorted by length inside it so batches stay even, and written
+                # as soon as it's done, so a crash loses at most one window, not the whole voice.
+                group, pieces = [], []
+                while k < len(mine) and (not group or len(pieces) < window):
+                    group.append(mine[k])
+                    pieces += [(len(group) - 1, i, p) for i, p in
+                               enumerate(split_text(mine[k]["text"], max_words=QWEN_CHUNK_WORDS))]
+                    k += 1
+                t0 = time.time()
+                audio = {}
+                order = sorted(pieces, key=lambda x: len(x[2].split()))
+                for start in range(0, len(order), batch):
+                    chunk = order[start:start + batch]
+                    out = [None] * len(chunk)
+                    for r in model.batch_generate(texts=[p for _, _, p in chunk], ref_audio=self.ref_path(voice),
+                                                  ref_text=QWEN_REF_LINE, lang_code="english", stream=False):
+                        i = getattr(r, "sequence_idx", 0)
+                        a = np.asarray(r.audio, dtype="float32").reshape(-1)
+                        out[i] = a if out[i] is None else np.concatenate([out[i], a])
+                    for (n, i, _), a in zip(chunk, out):
+                        audio[(n, i)] = a if a is not None else np.zeros(0, dtype="float32")
+                self.mx.clear_cache()
+                took, secs = time.time() - t0, 0.0
+                for n, j in enumerate(group):
+                    parts = []
+                    for i in sorted(i for (m, i) in audio if m == n):
+                        if parts:
+                            parts.append(gap)
+                        parts.append(audio[(n, i)])
+                    if not parts or sum(len(x) for x in parts) == 0:
+                        raise RuntimeError("Qwen3-TTS produced no audio for %s" % j["label"])
+                    joined = np.concatenate(parts)
+                    write_float_wav(j["path"], joined, rate, np)
+                    secs += len(joined) / float(rate)
+                log("  %s done (%.0f s of audio in %.1f s)" % (
+                    group[0]["label"] if len(group) == 1 else "%s and %d more" % (group[0]["label"], len(group) - 1),
+                    secs, took))
 
 
 class SayEngine:
@@ -706,6 +734,31 @@ def render_jobs(engine_name, model, jobs, speed, work):
     return len(todo)
 
 
+def pace_outliers(jobs, spans, roles, fast=1.25, slow=0.7):
+    """Turns spoken much faster or slower than that speaker's usual pace. A synthetic voice that
+    drops a turn's last words, or stalls and repeats, shows up here; nobody has to listen for it."""
+    rows = []
+    for i, (j, (a, b)) in enumerate(zip(jobs, spans)):
+        words = len(j["text"].split())
+        if words >= 12 and b > a:
+            rows.append((i, roles[i], words, words * 60.0 / (b - a)))
+
+    def median(xs):
+        xs = sorted(xs)
+        return xs[len(xs) // 2] if len(xs) % 2 else (xs[len(xs) // 2 - 1] + xs[len(xs) // 2]) / 2
+
+    everyone = [r[3] for r in rows]
+    out = []
+    for i, role, words, wpm in rows:
+        mine = [r[3] for r in rows if r[1] == role]
+        usual = median(mine) if len(mine) >= 3 else (median(everyone) if len(everyone) >= 3 else None)
+        if usual and (wpm > usual * fast or wpm < usual * slow):
+            out.append({"turn": i + 1, "speaker": role, "words": words, "wpm": round(wpm), "usual": round(usual),
+                        "why": "much faster than usual: words may be missing" if wpm > usual * fast
+                        else "much slower than usual: a long pause or repeated words"})
+    return out
+
+
 def clip_path(work, prefix, engine_name, model, voice, speed, style, text):
     key = hashlib.sha1(("%s|%s|%s|%s|%s|%s" % (engine_name, model, voice, speed, style or "", text)).encode("utf-8"))
     return os.path.join(work, "%s-%s.wav" % (prefix, key.hexdigest()[:12]))
@@ -941,6 +994,7 @@ def main():
     ap.add_argument("--chapter-depth", type=int, default=4,
                     help="narrations: chapters for headings down to this level (1 = top level only; default all)")
     ap.add_argument("--speed", type=float, default=1.0)
+    ap.add_argument("--redo", help="turn numbers to render again, e.g. 5,23")
     ap.add_argument("--gap", type=float, default=0.45, help="seconds of silence between turns")
     ap.add_argument("--bitrate", type=int, default=48000)
     ap.add_argument("--work-dir", help="clip cache (default: <out>.clips/)")
@@ -993,6 +1047,12 @@ def main():
                      "label": "turn %d/%d (%s)" % (i + 1, len(turns), role),
                      "path": clip_path(work, "%03d" % (i + 1), engine_name, model, voices[role], args.speed,
                                        styles.get(role), spoken)})
+    if args.redo:
+        for n in [int(x) for x in args.redo.replace(" ", "").split(",") if x]:
+            if not 1 <= n <= len(jobs):
+                raise SystemExit("--redo %d: the transcript has %d turns." % (n, len(jobs)))
+            if os.path.exists(jobs[n - 1]["path"]):
+                os.remove(jobs[n - 1]["path"])
     log("%s (%s): %d turns, voices %s" % (engine_name, model, len(jobs), voices))
     t1 = time.time()
     rendered = render_jobs(engine_name, model, jobs, args.speed, work)
@@ -1018,6 +1078,7 @@ def main():
         "chapters": chapters,
         "embeddedChapters": embedded,
         "clips": work,
+        "checkTurns": pace_outliers(jobs, spans, [r for r, _ in turns]),
     })
 
 

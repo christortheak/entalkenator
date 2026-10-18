@@ -117,6 +117,15 @@ def main():
         dur = afinfo_seconds(out)
         check("the audio is intact", dur and abs(dur - res.get("durationSeconds", 0)) < 1.0, (dur, res.get("durationSeconds")))
 
+        sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        import render_audio
+        jobs = [{"text": " ".join(["word"] * 60)} for _ in range(5)]
+        spans = [(0, 20), (20, 40), (40, 60), (60, 72), (72, 92)]  # turn 4: 60 words in 12 s
+        flagged = render_audio.pace_outliers(jobs, spans, ["Gene"] * 5)
+        check("a turn spoken far faster than the speaker's usual pace is flagged",
+              [(f["turn"], f["wpm"], f["usual"]) for f in flagged] == [(4, 300, 180)] and "missing" in flagged[0]["why"], flagged)
+        check("...and the say render above has nothing flagged", res.get("checkTurns") == [], res.get("checkTurns"))
+
         mp4chapters.add_chapters(out, [(0, "One"), (1.0, "Two")])
         check("embedding again replaces the chapters", [c[1] for c in mp4chapters.read_chapters(out)] == ["One", "Two"]
               and (mp4chapters.verify(out) or {}).get("chapters") == ["One", "Two"])

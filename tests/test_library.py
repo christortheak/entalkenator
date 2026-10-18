@@ -207,6 +207,17 @@ def main():
         check("...and the local settings", e.cfg() is None)
         code, out, _ = e.lib("remove", "--yes")
         check("remove with nothing recorded refuses", code == 1 and "no record" in out.get("error", ""), out)
+
+        print("publishing within the library's limits")
+        sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        import publish
+        qwen = ("A warm, precise American woman in her fifties with a low, steady voice; patient and amused, "
+                "speaking with the clipped authority of a senior judge.")
+        label = publish.fit(qwen, publish.LIMITS["speaker voice"])
+        check("a long Qwen3 voice description becomes a label the library accepts, cut at a clause",
+              len(qwen) > 120 and len(label) <= 120 and label.endswith("steady voice…"), label)
+        check("...and a short one is left alone", publish.fit("bf_emma", 120) == "bf_emma")
+        check("a text with no breaks is still cut to the limit", len(publish.fit("x" * 500, 300)) == 300)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (passed, len(failed)))

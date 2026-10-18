@@ -66,7 +66,7 @@ here (an option whose `needs` say `unsupported`) and saying what's already insta
 - "Kokoro: free, on this Mac (Recommended)": about 660 MB to download, a 20-minute program
   in about 1–2 minutes
 - "Expressive voices (Qwen3-TTS): free, on this Mac": 6.2 GB more, about 10 GB of memory, a
-  20-minute program in about 6 minutes on a fast Mac
+  20-minute program in about 10 minutes on a fast Mac
 - "Cloud voices with my own key": Gemini, OpenAI or ElevenLabs, about $0.20–$1.75 for a
   20-minute program
 - "Just the macOS voices": nothing to install

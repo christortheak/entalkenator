@@ -106,7 +106,7 @@ You choose, and can change your mind for any program:
 | | Where | Cost for a 20-minute program | Notes |
 |---|---|---|---|
 | **Kokoro** | your Mac | free | Natural and fast: about a minute to voice 20 minutes. 660 MB download. |
-| **Qwen3-TTS** | your Mac | free | More expressive: each character's voice is designed from a description. Needs 16 GB of memory, 6.2 GB download, about 6 minutes for 20. |
+| **Qwen3-TTS** | your Mac | free | More expressive: each character's voice is designed from a description. Needs 16 GB of memory, 6.2 GB download, about 10 minutes for 20. |
 | **macOS voices** | your Mac | free | Built in, nothing to install, robotic. |
 | **Google Gemini** | cloud | about $0.19–$0.28 | Best value; excellent quality. Needs a Google AI Studio key. |
 | **OpenAI** | cloud | about $0.30–$0.65 | gpt-4o-mini-tts, tts-1 and tts-1-hd. Needs an OpenAI key with credit. |

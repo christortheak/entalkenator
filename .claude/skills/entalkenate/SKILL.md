@@ -519,25 +519,29 @@ with its turn's opening words, so check they land where you meant. In section 3,
      option a candidate labelled with its number, voice, and how it sounds, for example
      "2: am_fenrir (American male)". Use the picks as `--voices`.
 3. **Run**, in the background for anything longer than a few minutes:
-   `RENDER --transcript <dir>/transcript.txt --out "<dir>/<Template displayName>.m4a" --engine <id> --voices "Role=voice;Role=voice" --chapter-plan <dir>/chapters-plan.json [--styles "..."]`
+   `RENDER --transcript <dir>/transcript.txt --out "<dir>/<Title>.m4a" --engine <id> --voices "Role=voice;Role=voice" --chapter-plan <dir>/chapters-plan.json [--styles "..."]`
    - Rough render times on a recent Mac:
      - Kokoro: under a tenth of the audio's length
-     - Qwen3-TTS: about a third (its first use also designs each voice, a few seconds each)
+     - Qwen3-TTS: about half (its first use also designs each voice, a few seconds each)
      - cloud engines: a few minutes, four turns at a time
    - Clips are cached by text, voice, model, and delivery note, so a re-run after a failure,
      or with one role's voice changed, only renders what's missing.
-   - Next to the .m4a it writes `<Template displayName>.chapters.json`: your chapters, plus
+   - Next to the .m4a it writes `<Title>.chapters.json`: your chapters, plus
      every turn's timing, which the library uses to follow the transcript. The chapters are
      also embedded in the .m4a, because Overcast and Apple Podcasts read only those.
-   - With qwen3, listen for a turn whose last words went missing (a known quirk). A
-     re-run after deleting that turn's clip in `<name>.clips/` redoes just that turn.
+   - **`checkTurns`** lists turns spoken much faster or slower than that speaker's usual
+     pace. Much faster usually means the voice dropped words, a known Qwen3 quirk; much
+     slower, a stall or a repeat. Render those turns again once, with the same command plus
+     `--redo 5,23`: a local voice gives a new take, and only those turns are redone. If a
+     turn is still listed, tell the person which turn and roughly where it falls, so they
+     can listen to it.
 
 ## 4. Package for the enTalkenator app
 
 This bundle is for people who also use the enTalkenator iPhone or Mac app; it's cheap,
 so always make it.
 
-`ENGINE package <dir> --audio "<dir>/<Template displayName>.m4a"` writes
+`ENGINE package <dir> --audio "<dir>/<Title>.m4a"` writes
 `<dir>/<Title>.enTalkenator`. It's a zip laid out like the app's bundled examples:
 `info.txt`, the source file, `<base>-transcript.txt`, and `<base>-<Template>.txt/.m4a`.
 With `--no-audio`, run `package` without `--audio`.

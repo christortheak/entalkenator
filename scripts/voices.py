@@ -75,11 +75,11 @@ OPTIONS = [
      "cost": "free"},
     {"id": "qwen3", "engine": "qwen3", "label": "Qwen3-TTS (expressive)", "where": "this Mac",
      "summary": "Free expressive voices on this Mac. Each character's voice is designed from a description "
-                "(\"a gravelly older judge\") and kept the same throughout. About 4-5x slower than Kokoro.",
+                "(\"a gravelly older judge\") and kept the same throughout. About 7x slower than Kokoro.",
      "quality": "More expressive and varied than Kokoro; not yet on the public leaderboards. Occasionally drops "
                 "a turn's last words, so listen to the ends of turns.",
      "voices": "any voice you can describe: age, accent, temperament, pace",
-     "speedRatio": 0.3, "download": "6.2 GB (two models), plus Kokoro's install", "memory": "about 10 GB",
+     "speedRatio": 0.5, "download": "6.2 GB (two models), plus Kokoro's install", "memory": "about 10 GB",
      "requires": ["apple-silicon", "16gb"], "license": "Apache-2.0", "cost": "free"},
     {"id": "say", "engine": "say", "label": "macOS voices", "where": "this Mac",
      "summary": "The voices built into macOS. Nothing to install; robotic next to the others.",

@@ -9,7 +9,7 @@ page changes. Researched on 17 October 2026.
 | Option | Where | Licence / terms | Quality evidence | Speed (M5 Pro) | Cost per 30 min |
 |---|---|---|---|---|---|
 | Kokoro-82M | Mac (mlx-audio) | Apache-2.0; espeak-ng fallback GPL-3.0 | Artificial Analysis Elo 1061, 7th of 17 open models; TTS Arena V2 ties Chatterbox | 16× real time | free |
-| Qwen3-TTS 1.7B (VoiceDesign + Base, 8-bit) | Mac (mlx-audio), 16 GB+ | Apache-2.0, not gated | Not on the arenas; Seed-TTS English WER 1.24 (maker's figure) | 4× real time (batched per voice) | free |
+| Qwen3-TTS 1.7B (VoiceDesign + Base, 8-bit) | Mac (mlx-audio), 16 GB+ | Apache-2.0, not gated | Not on the arenas; Seed-TTS English WER 1.24 (maker's figure) | about 2× real time (sorted batches per voice) | free |
 | macOS `say` | Mac | Apple system voices | Clearly synthetic | instant | free |
 | Gemini 3.8 Flash TTS | Google | Free tier may use prompts for training; EEA/UK/CH paid only | Elo 1275, #5 overall | cloud | $0.41 (≈$0.81 from Jan 2027) |
 | Gemini 3.8 Flash-Lite TTS | Google | as above | Elo 1248, #8 | cloud | $0.28 (≈$0.55 from 2027) |
@@ -73,7 +73,17 @@ deliberate, but can change between turns, so the engine designs once and clones.
   take finished clips with it. For Qwen3, VoiceDesign renders a reference line once per
   description (kept in `~/.cache/entalkenator/qwen3-voices/`, keyed by the description), then
   the Base model clones it for every turn. Turns are batched per voice, since mlx-audio
-  clones one shared reference per batch.
+  clones one shared reference per batch. A batch runs until its longest piece is done, so
+  each voice's pieces (up to 90 words) are sorted by length and sent eight at a time, a
+  window of whole turns at a time; each window's turns are written as soon as it's done, so
+  a crash loses one window, not a voice. Measured on an M5 Pro (860 words, one voice, time ÷
+  audio): batches of 4 in transcript order 0.53, sorted 0.44, batches of 8 sorted 0.38, one
+  piece at a time 0.94. Preloading the reference and clearing MLX's cache made no measurable
+  difference. A whole program runs at about 0.45–0.55: voice design, model loads, and a
+  laptop's heat over a long render (the same batch ran 10% slower after 15 minutes of load).
+- **Pace check (all engines):** `render_audio.py` compares each turn's words per minute with
+  that speaker's usual pace and lists outliers under `checkTurns`. A Qwen3 turn spoken far
+  faster than usual has usually lost its last words; `--redo N` renders it again.
 - **gemini:** `POST /v1beta/interactions`, one request per turn, with the delivery note in
   `speech_metadata.style`. Replies are WAV.
 - **openai:** `POST /v1/audio/speech` with `response_format: "pcm"` (24 kHz 16-bit mono),

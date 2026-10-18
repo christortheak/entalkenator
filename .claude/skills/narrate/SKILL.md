@@ -163,8 +163,11 @@ For Gemini and gpt-4o-mini-tts, also pass `--styles`:
      nothing for all headings. The chapters are embedded in the .m4a for Overcast and Apple
      Podcasts, and listed in the feed for other apps.
    - Paid engines: state the estimated cost first (`VOICE_OPTIONS list --transcript <dir>/narration.txt`).
+   - If the result lists `checkTurns` (a turn read much faster or slower than usual, which
+     can mean dropped or repeated words), render again once with `--redo` and those turn
+     numbers. If one is still listed, tell the person where it falls.
    - A long document takes a while. Kokoro does three hours of audio in about 12 minutes on a
-     recent Mac; Qwen3-TTS takes about four times as long.
+     recent Mac; Qwen3-TTS takes about seven times as long.
 2. **Package** for the enTalkenator app (one document at a time):
    `SOURCES package <dir> --audio "<dir>/<Title>.m4a"`. The bundle holds:
    - the PDF

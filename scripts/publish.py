@@ -239,6 +239,26 @@ def newest(paths):
     return max(paths, key=os.path.getmtime) if paths else None
 
 
+# The library refuses longer values (cloud/src/api.ts, readFields), so they're shortened here.
+LIMITS = {"title": 300, "author": 300, "template": 120, "description": 4000, "speaker name": 120, "speaker voice": 120}
+
+
+def fit(text, limit):
+    """Shorten text to the limit at a natural break: a sentence end, then a clause, then a word."""
+    text = " ".join(str(text).split())
+    if len(text) <= limit:
+        return text
+    i = text[:limit + 1].rfind(". ")
+    if i >= limit // 3:
+        return text[:i + 1]
+    head = text[:limit - 1]
+    for sep in ("; ", ", ", " — ", " - ", " "):
+        i = head.rfind(sep)
+        if i >= limit // 3:
+            return head[:i].rstrip(" ,;:—-") + "…"
+    return head + "…"
+
+
 def transcript_speakers(path):
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -301,8 +321,15 @@ def gather(args):
 
     names, turns = transcript_speakers(transcript) if transcript else ([], 0)
     voices = extra.get("voices") or {}
-    speakers = [{"name": n, "voice": voices[n]} if voices.get(n) else {"name": n} for n in names]
     warnings = []
+    speakers = []
+    for n in names:
+        sp = {"name": fit(n, LIMITS["speaker name"])}
+        if voices.get(n):
+            # A Qwen3 voice is its description, often longer than the library keeps. The render
+            # keeps the full one (it's the voice's key); the library gets a shortened label.
+            sp["voice"] = fit(voices[n], LIMITS["speaker voice"])
+        speakers.append(sp)
     timed = extra.get("turnTimes") if isinstance(extra.get("turnTimes"), list) else chap.get("chapters") or []
     if chapters and transcript and len(timed) != turns:
         warnings.append("The turn timings (%d) don't match the transcript's turns (%d), so the web app can't "
@@ -330,9 +357,9 @@ def gather(args):
     }.items() if v not in (None, "", {})}
 
     metadata = {
-        "title": title,
-        "author": args.author or st.get("author") or "",
-        "template": args.template or st.get("template_name") or "",
+        "title": fit(title, LIMITS["title"]),
+        "author": fit(args.author or st.get("author") or "", LIMITS["author"]),
+        "template": fit(args.template or st.get("template_name") or "", LIMITS["template"]),
         "speakers": speakers,
         "meta": meta,
     }
@@ -341,7 +368,7 @@ def gather(args):
     if created:
         metadata["createdAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(float(created)))
     if args.description:
-        metadata["description"] = args.description
+        metadata["description"] = fit(args.description, LIMITS["description"])
     if args.tag:
         metadata["tags"] = args.tag
     files = [(kind, path) for kind, path in (("transcript", transcript), ("chapters", chapters), ("audio", audio), ("bundle", bundle)) if path]
@@ -430,9 +457,9 @@ def cmd_edit(args):
     url, token = need(args)
     body = {}
     if args.title:
-        body["title"] = args.title
+        body["title"] = fit(args.title, LIMITS["title"])
     if args.description is not None:
-        body["description"] = args.description
+        body["description"] = fit(args.description, LIMITS["description"])
     if args.tags is not None:
         body["tags"] = [t.strip() for t in args.tags.split(",") if t.strip()]
     if args.add_tag:
