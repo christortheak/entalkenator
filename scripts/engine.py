@@ -16,18 +16,36 @@ Modes (init --mode):
   fresh   a new speaker agent every turn, full sheet each time (the app's behaviour)
   single  the showrunner writes every turn from a short per-step instruction
 
+Directed programs (init --program FILE) have no fixed steps. The showrunner writes the
+program (setting, roles, and segments with target minutes, see PROGRAM below), then directs
+every turn: who speaks and what the moment calls for (`advance --speaker NAME --say -`, the
+instruction on stdin). It can revise the plan as the conversation goes (`program RUN --file`).
+The engine keeps the bookkeeping it keeps for templates: the speakers' sheets and deltas,
+director's notes, timing against each segment's target, and the transcript.
+
+Turn-taking (init --floor):
+  template  where a step lists several roles, pick one at random (the app's behaviour)
+  natural   the showrunner gives the floor to whoever would naturally speak next: `next`
+            returns `choose` (the candidates, how much and how recently each has spoken,
+            whether the last speaker addressed them), and `next --speaker NAME` issues it.
+            A step's candidates are every role listed on a visible step with the same
+            prompt: the template's interchangeable seats.
+
 Subcommands (all print JSON on stdout):
   templates                       list the bundled templates
-  init     --template --source --run-dir [...]
+  init     --template T | --program FILE, --source --run-dir [...]
                                   extract the document, create the run
+  program  RUN --file FILE        revise a directed program: segments, new roles, lead
   meta     RUN [--title] [--author] [--user-input]
                                   fix title, author, or user input before the first step
   roles    RUN                    show the characters as they'll be played
   role     RUN --role R [--description | --sketch | --reset]
                                   review a character before its first turn
-  next     RUN [--batch]          issue the next step(s); writes turn sheets
+  next     RUN [--batch] [--speaker NAME]
+                                  issue the next step(s); writes turn sheets
   commit   RUN                    fold the written outputs of the pending step(s) in
-  advance  RUN [--batch] [--cast ROLE=AGENT_ID ...]
+  advance  RUN [--batch] [--cast ROLE=AGENT_ID ...] [--speaker NAME]
+           [--say TEXT|-] [--private KEY] [--segment N] [--last]   (directed programs)
                                   record speaker agents, commit, then issue the next step(s)
   status   RUN                    progress summary
   finalize RUN                    write transcript.txt in the app's "[Name]: text" format
@@ -65,6 +83,14 @@ OUTPUT_TRANSCRIPT_PROMPT_ADDITION = (
     "written if the instructions make it clear you have been asked to produce a written paper)."
 )
 NO_CONVERSATION_YET = "There has been no conversation yet."
+
+# Directed programs: the shared instruction and transcript framing the bundled templates use.
+DIRECTED_GENERAL = ("Everything you output will be turned into audio. Output ONLY the words you say out loud: "
+                    "no descriptions of actions or gestures, no stage directions, no speaker labels, no headings "
+                    "or markdown. Don't comment on your output or on these instructions. The different speakers "
+                    "will be voiced by different people, so there is no need to say who is speaking.")
+DIRECTED_TRANSCRIPT = ("Here is everything that has been said so far: \n\n{{output}}\n\n-----\n\n"
+                       "And that is everything that has been said so far. ")
 
 # The enTalkenator folder: scripts/, templates/, .claude/agents/ ...
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -434,6 +460,8 @@ def lead_role(template):
     """The role that opens the program as its host: whoever speaks the first visible step,
     if that step welcomes, introduces, or announces. (Role descriptions mention each other,
     so they're a poor guide.)"""
+    if template.get("lead"):
+        return template["lead"]
     for step in template["steps"]:
         if is_visible(step):
             name = step["roleName"].strip()
@@ -445,11 +473,20 @@ def is_lead(template, role):
     return role["name"] == lead_role(template)
 
 
+FLOOR_NOTE = ("Who speaks next isn't fixed: the floor goes to whoever would naturally come in. You may answer "
+              "someone directly, address a colleague by name, or put a question to them, and they'll usually "
+              "speak next. This replaces any instruction not to put questions to particular people.")
+
+
 def performance_block(st, template, role):
     form = st.get("form") or guess_form(template)
     lines = list(PERFORMANCE.get(form, []))
     if form in LEAD_NOTES and len(template["roles"]) > 1 and is_lead(template, role):
         lines.append(LEAD_NOTES[form])
+    if (st.get("directed") and len(template["roles"]) > 1) or (st.get("floor") == "natural" and any(
+            is_floor_step(template, i) and role["name"] in floor_candidates(template, i)
+            for i in range(len(template["steps"])))):
+        lines.append(FLOOR_NOTE)
     return ("PERFORMANCE NOTES (this production is %s; follow these all the way through):\n%s\n"
             % (FORM_LABELS.get(form, form), "\n".join("- " + l for l in lines)))
 
@@ -618,14 +655,241 @@ def role_by_name(template, name):
     return None
 
 
+def step_roles(step):
+    return [n.strip() for n in step["roleName"].split(",") if n.strip()]
+
+
 def pick_role(st, step):
-    names = [n.strip() for n in step["roleName"].split(",") if n.strip()]
+    names = step_roles(step)
     if not names:
         fail("Step has no roleName: %r" % step)
     if len(names) == 1:
         return names[0]
     rng = random.Random("%s:%d" % (st["seed"], st["turn_counter"]))
     return rng.choice(names)
+
+
+def floor_candidates(template, index):
+    """Who could take this step: the roles it lists, plus every role listed on another visible
+    step with the same prompt (the template's interchangeable seats)."""
+    step = template["steps"][index]
+    names = step_roles(step)
+    if len(names) < 2 or not is_visible(step):
+        return names
+    for s in template["steps"]:
+        if is_visible(s) and s["promptTemplate"] == step["promptTemplate"] and len(step_roles(s)) > 1:
+            names += [n for n in step_roles(s) if n not in names]
+    return names
+
+
+def is_floor_step(template, index):
+    return is_visible(template["steps"][index]) and len(floor_candidates(template, index)) > 1
+
+
+def floor_steps(template):
+    return sum(1 for i in range(len(template["steps"])) if is_floor_step(template, i))
+
+
+TITLES = {"the", "judge", "justice", "professor", "prof", "dr", "mr", "mrs", "ms", "host", "guest", "author",
+          "moderator", "chair"}
+
+
+def addressed(text, name):
+    """Whether the text names this role (a hint for the showrunner, not a rule)."""
+    words = [w for w in name.split() if w.lower().strip(".") not in TITLES and len(w) > 2] or [name]
+    return any(re.search(r"\b%s\b" % re.escape(w), text) for w in words)
+
+
+def floor_rows(st, names):
+    """How much and how recently each of these roles has spoken, and whether the last turn named them."""
+    history = st["history"]
+    last = history[-1] if history else {"role": None, "text": ""}
+    rows = []
+    for name in names:
+        mine = [i for i, h in enumerate(history) if h["role"] == name]
+        rows.append({"role": name, "turns": len(mine), "words": sum(word_count(history[i]["text"]) for i in mine),
+                     "turnsSince": (len(history) - 1 - mine[-1]) if mine else None,
+                     "addressed": bool(last["text"]) and name != last["role"] and addressed(last["text"], name)})
+    return rows, last
+
+
+def floor_choice(st, template, index):
+    """The showrunner's choice of the next speaker, or None where there's nothing to choose."""
+    if st.get("floor") != "natural" or not is_floor_step(template, index):
+        return None
+    rows, last = floor_rows(st, floor_candidates(template, index))
+    if any(r["role"] != last["role"] for r in rows):
+        rows = [r for r in rows if r["role"] != last["role"]]
+    words = last["text"].split()
+    return {"step": index, "candidates": rows, "lastSpeaker": last["role"],
+            "lastWords": ("..." if len(words) > 60 else "") + " ".join(words[-60:])}
+
+
+def resolve_speaker(choice, step, wanted):
+    names = [r["role"] for r in choice["candidates"]] if choice else step_roles(step)
+    w = wanted.strip().lower()
+    hits = [n for n in names if n.lower() == w] or [n for n in names if w in [x.lower() for x in n.split()]]
+    if len(hits) != 1:
+        fail("%r can't take this turn. Choose one of: %s" % (wanted, ", ".join(names)))
+    return hits[0]
+
+
+# ---------------------------------------------------------------------------
+# directed programs
+
+
+def load_program(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            prog = json.load(f)
+    except (OSError, ValueError) as e:
+        fail("Can't read the program %s: %s" % (path, e))
+    problems = []
+    if not isinstance(prog.get("setting"), str) or not prog["setting"].strip():
+        problems.append("`setting` (who is where, and why) is required")
+    roles = prog.get("roles") or []
+    names = [r.get("name", "").strip() for r in roles if isinstance(r, dict)]
+    if not roles or len(names) != len(roles) or not all(names):
+        problems.append("`roles` needs at least one {name, description}")
+    elif len(set(names)) != len(names):
+        problems.append("role names must be unique")
+    for r in roles:
+        if isinstance(r, dict) and not (r.get("description") or "").strip():
+            problems.append("role %r needs a description" % r.get("name"))
+    for i, seg in enumerate(prog.get("segments") or [], 1):
+        if not isinstance(seg, dict) or not seg.get("title") or not isinstance(seg.get("minutes"), (int, float)) \
+                or seg["minutes"] <= 0:
+            problems.append("segment %d needs a title and minutes > 0" % i)
+    if not prog.get("segments"):
+        problems.append("`segments` needs at least one {title, minutes, plan}")
+    if prog.get("form", "conversation") not in FORMS:
+        problems.append("`form` must be one of %s" % ", ".join(FORMS))
+    if prog.get("lead") and prog["lead"] not in names:
+        problems.append("`lead` must be one of the roles")
+    if problems:
+        fail("The program isn't complete: " + "; ".join(problems) + ".")
+    prog.setdefault("form", "conversation")
+    return prog
+
+
+def program_template(prog, old=None):
+    """A directed program as a template whose steps are the turns directed so far."""
+    setting = prog["setting"].strip()
+    if "{{transcript}}" not in setting:
+        setting += "\n\nHere is the source material everyone has read:\n\n{{transcript}}\n\n-----\n\n"
+    ids = {r["name"]: r.get("id") for r in (old or {}).get("roles", [])}
+    return {
+        "id": (old or {}).get("id") or str(uuid.uuid4()).upper(),
+        "displayName": prog.get("title") or "Custom Program",
+        "initialContext": {"generalInstruction": DIRECTED_GENERAL, "setting": setting},
+        "outputTranscriptPrompt": DIRECTED_TRANSCRIPT,
+        "roles": [{"id": ids.get(r["name"]) or str(uuid.uuid4()).upper(), "name": r["name"].strip(),
+                   "roleDescription": r["description"].strip()} for r in prog["roles"]],
+        "steps": (old or {}).get("steps", []),
+        "lead": prog.get("lead"),
+        "useCaching": True,
+        "directed": True,
+    }
+
+
+def save_template(st, template):
+    with open(st["template_path"], "w", encoding="utf-8") as f:
+        json.dump(template, f, indent=2, ensure_ascii=False)
+
+
+def program_progress(st):
+    segs = st["program"]["segments"]
+    p = {"targetMinutes": round(sum(s["minutes"] for s in segs), 1), "segments": [
+        {"n": i, "title": s["title"], "minutes": s["minutes"]} for i, s in enumerate(segs, 1)]}
+    n = st.get("segment")
+    if n:
+        start = st["segment_starts"][-1]["atWords"]
+        p["segment"] = {"n": n, "title": segs[n - 1]["title"], "targetMinutes": segs[n - 1]["minutes"],
+                        "minutesSoFar": round((st["total_words"] - start) / WORDS_PER_MINUTE, 1)}
+    return p
+
+
+def read_say(args):
+    say = getattr(args, "say", None)
+    if say == "-":
+        say = sys.stdin.read()
+    return (say or "").strip()
+
+
+def directed_next(args, st, template, run, mode):
+    """Issue the turn(s) the showrunner directs, or show where things stand so it can decide."""
+    names = [r["name"] for r in template["roles"]]
+    wanted = getattr(args, "speaker", None) or []
+    if not wanted:
+        rows, last = floor_rows(st, names)
+        save_state(run, st)
+        emit({"done": False, "mode": mode, "direct": {"roles": rows, "lastSpeaker": last["role"]},
+              "progress": progress(st, template),
+              "next": "Decide who speaks next and what the moment calls for, then run `engine.py advance %s "
+                      "--speaker NAME --say -` with the instruction on stdin (add --segment N when a new "
+                      "segment begins, --private KEY for preparation nobody hears, --last for the final turn)." % run})
+        return
+    say = read_say(args)
+    if not say:
+        fail("--speaker needs --say: what this speaker is to do in this turn.")
+    if len(wanted) > 1 and not args.private:
+        fail("Several speakers at once only for private preparation (--private KEY); spoken turns go one at a time.")
+    if args.last and (args.private or len(wanted) > 1):
+        fail("--last marks the final spoken turn.")
+    every = {"roleName": ", ".join(names)}
+    chosen = [resolve_speaker(None, every, w) for w in wanted]
+    if len(set(chosen)) != len(chosen):
+        fail("Each speaker once per batch.")
+    if args.segment:
+        if not 1 <= args.segment <= len(st["program"]["segments"]):
+            fail("--segment must be 1 to %d." % len(st["program"]["segments"]))
+        if args.segment != st.get("segment"):
+            st["segment"] = args.segment
+            st["segment_starts"].append({"segment": args.segment, "turn": st["turn_counter"] + 1,
+                                         "atWords": st["total_words"]})
+    batch = []
+    for name in chosen:
+        key = args.private if not args.private or len(chosen) == 1 else "%s_%s" % (args.private, slug(name))
+        template["steps"].append({"roleName": name, "promptTemplate": say, "outputKey": key or "output",
+                                  "includeInTranscript": "false" if args.private else "true"})
+        idx = len(template["steps"]) - 1
+        st["current_index"] = idx
+        pend, _ = issue(st, template, idx, name)
+        pend["last"] = bool(args.last)
+        batch.append(pend)
+    save_template(st, template)
+    st["pending"] = batch
+    save_state(run, st)
+    emit({"done": False, "mode": mode, "issue": [describe(st, p, mode) for p in batch],
+          "progress": progress(st, template)})
+
+
+def cmd_program(args):
+    """Revise a directed program mid-run: segments, lead, new roles. Started roles keep their cards."""
+    st = load_state(args.run_dir)
+    if not st.get("directed"):
+        fail("This run follows a template; only a directed program (init --program) can be revised.")
+    prog = load_program(args.file)
+    template = template_of(st)
+    old = {r["name"]: r["roleDescription"] for r in template["roles"]}
+    new = {r["name"].strip(): r["description"].strip() for r in prog["roles"]}
+    gone = [n for n in old if n not in new and role_started(st, n)]
+    if gone:
+        fail("These roles have spoken and can't leave the program: %s" % ", ".join(gone))
+    changed = [n for n in old if n in new and new[n] != old[n] and role_started(st, n)]
+    if changed:
+        fail("These roles have spoken, so their descriptions are fixed (use `role --sketch` to add colour): %s"
+             % ", ".join(changed))
+    if st.get("segment") and st["segment"] > len(prog["segments"]):
+        st["segment"] = len(prog["segments"])
+    setting_changed = prog["setting"].strip() != st["program"]["setting"].strip()
+    st["program"] = prog
+    st["form"] = prog["form"]
+    save_template(st, program_template(prog, template))
+    save_state(args.run_dir, st)
+    emit({"ok": True, "addedRoles": [n for n in new if n not in old], "segments": program_progress(st)["segments"],
+          "note": "The new setting reaches only speakers who haven't had their first turn; tell the others what "
+                  "changed in their next instruction." if setting_changed else None})
 
 
 # ---------------------------------------------------------------------------
@@ -651,18 +915,29 @@ def cmd_templates(args):
             "loopMinutes": [lv[1] for lv in loops if lv and lv[0] == "start"],
             "userInput": (t.get("userInputConfig") or {}).get("label"),
             "form": guess_form(t),
+            "floorSteps": floor_steps(t),
         })
     emit({"templatesDir": d, "templates": out})
 
 
 def cmd_init(args):
-    tdir = find_templates_dir(args.templates_dir)
-    tpath, template = resolve_template(args.template, tdir)
+    if bool(args.template) == bool(args.program):
+        fail("Give either --template (run one as written) or --program (a program you direct).")
     run = os.path.abspath(args.run_dir)
+    prog = None
+    if args.program:
+        prog = load_program(args.program)
+        template = program_template(prog)
+        tpath = os.path.join(run, "template.json")
+    else:
+        tpath, template = resolve_template(args.template, find_templates_dir(args.templates_dir))
     if os.path.exists(state_path(run)) and not args.force:
         fail("%s already holds a run. Use --force to start over, or pick another --run-dir." % run)
     os.makedirs(os.path.join(run, "turns"), exist_ok=True)
     os.makedirs(os.path.join(run, "source"), exist_ok=True)
+    if prog:
+        with open(tpath, "w", encoding="utf-8") as f:
+            json.dump(template, f, indent=2, ensure_ascii=False)
 
     src = os.path.abspath(args.source)
     if not os.path.isfile(src):
@@ -696,7 +971,7 @@ def cmd_init(args):
 
     title = args.title or os.path.splitext(os.path.basename(src))[0]
     models = parse_models(args.model, args.models, template)
-    form = args.form if args.form and args.form != "auto" else guess_form(template)
+    form = args.form if args.form and args.form != "auto" else (prog["form"] if prog else guess_form(template))
     st = {
         "version": 1,
         "run_dir": run,
@@ -715,6 +990,11 @@ def cmd_init(args):
         "models": models,   # role -> "" (session model), an alias, or a full model ID
         "director": not args.no_director,
         "form": form,
+        "floor": args.floor,
+        "directed": bool(prog),
+        "program": prog,
+        "segment": None,
+        "segment_starts": [],
         "role_overrides": {},
         "seed": uuid.uuid4().hex,
         "current_index": 0,
@@ -751,6 +1031,10 @@ def cmd_init(args):
         "models": {r: (m or "session") for r, m in models.items()},
         "form": form,
         "formLabel": FORM_LABELS[form],
+        "floor": args.floor,
+        "floorSteps": floor_steps(template),
+        "directed": bool(prog),
+        "segments": program_progress(st)["segments"] if prog else None,
         "documentHead": text[:800],
     })
 
@@ -874,9 +1158,9 @@ def delta_sheet(st, template, step, role_name, variables, n, visible):
     )
 
 
-def issue(st, template, index):
+def issue(st, template, index, speaker=None):
     step = template["steps"][index]
-    role_name = pick_role(st, step)
+    role_name = speaker or pick_role(st, step)
     role = effective_role(st, template, role_name)
     if role is None:
         fail("Step %d names role %r, which the template does not define." % (index, role_name))
@@ -1074,6 +1358,8 @@ def progress(st, template):
         "stepIndex": st["current_index"],
         "stepCount": len(template["steps"]),
     }
+    if st.get("directed"):
+        p["program"] = program_progress(st)
     if st["loop_start_index"] is not None and st["loop_duration"]:
         p["loop"] = {
             "minutesSoFar": round(st["accumulated_words"] / WORDS_PER_MINUTE, 1),
@@ -1102,9 +1388,23 @@ def cmd_next(args, st=None):
 
     if st["first_issue_at"] is None:
         st["first_issue_at"] = now()
+    if st.get("directed"):
+        return directed_next(args, st, template, run, mode)
     steps = template["steps"]
     idx = st["current_index"]
-    pend, _ = issue(st, template, idx)
+    choice = floor_choice(st, template, idx)
+    wanted = (getattr(args, "speaker", None) or [None])
+    if len(wanted) > 1:
+        fail("One --speaker per turn.")
+    wanted = wanted[0]
+    if choice and not wanted:
+        save_state(run, st)
+        emit({"done": False, "mode": mode, "choose": choice, "progress": progress(st, template),
+              "next": "Give the floor to whoever would most naturally speak next, then run "
+                      "`engine.py advance %s --speaker NAME`." % run})
+        return
+    speaker = resolve_speaker(choice, steps[idx], wanted) if wanted else None
+    pend, _ = issue(st, template, idx, speaker)
     batch = [pend]
     if getattr(args, "batch", False) and mode != "single" and not pend["visible"] and loop_value(steps[idx]) is None:
         # Consecutive hidden steps that do not read each other's outputKeys can be
@@ -1209,7 +1509,7 @@ def commit_one(st, template, pend):
         "committed_at": now(),
         "write_seconds": round(os.path.getmtime(out_file) - pend["issued_at"], 1),
     })
-    if st["current_index"] >= len(template["steps"]):
+    if (pend.get("last") if st.get("directed") else st["current_index"] >= len(template["steps"])):
         st["done"] = True
         st["finished_at"] = now()
     return "ok"
@@ -1234,8 +1534,12 @@ def cmd_commit(args, quiet=False):
         st["pending"].pop(0)
         text = st["variables"].get(pend["outputKey"]) if pend.get("outputKey") else read_text(pend["output_file"])
         text = text or read_text(pend["output_file"])
-        committed.append({"turn": pend["turn"], "role": pend["role"], "visible": pend["visible"],
-                          "words": word_count(text), "preview": text[:160].replace("\n", " ")})
+        item = {"turn": pend["turn"], "role": pend["role"], "visible": pend["visible"], "words": word_count(text)}
+        if st.get("directed") and pend["visible"]:
+            item["text"] = text  # the showrunner directs from what was actually said
+        else:
+            item["preview"] = text[:160].replace("\n", " ")
+        committed.append(item)
     save_state(run, st)
     if problems:
         emit({"committed": committed, "problems": problems,
@@ -1292,6 +1596,10 @@ def cmd_advance(args):
     sys.stdout = buf
     try:
         cmd_next(args, st)
+    except SystemExit:
+        sys.stdout = old
+        sys.stdout.write(buf.getvalue())  # next's error, which would otherwise be lost
+        raise
     finally:
         sys.stdout = old
     out = json.loads(buf.getvalue())
@@ -1431,6 +1739,9 @@ def cmd_finalize(args):
         "estimatedMinutes": round(st["total_words"] / WORDS_PER_MINUTE, 1),
         "generationSeconds": round(elapsed),
         "roles": [r["name"] for r in template["roles"]],
+        "segments": [{"segment": x["segment"], "title": st["program"]["segments"][x["segment"] - 1]["title"]
+                      if x["segment"] <= len(st["program"]["segments"]) else None, "startTurn": x["turn"]}
+                     for x in st.get("segment_starts", [])] if st.get("directed") else None,
         "changedAfterCommit": changed,
         "viewAudit": audit_views(st, template),
     })
@@ -1804,7 +2115,9 @@ def main():
     p.set_defaults(func=cmd_templates)
 
     p = sub.add_parser("init")
-    p.add_argument("--template", required=True, help="file stem (debate), id, displayName, or a .json path")
+    p.add_argument("--template", help="file stem (debate), id, displayName, or a .json path")
+    p.add_argument("--program", help="a program you direct turn by turn (JSON: title, form, setting, lead, "
+                                     "roles [{name, description}], segments [{title, minutes, plan}])")
     p.add_argument("--source", required=True, help="PDF, .txt, or .md file (a prepared reading from sources.py is a .md)")
     p.add_argument("--original", action="append", help="an original document the reading came from (repeatable); "
                                                        "speakers may open it to check a figure or exact wording")
@@ -1820,6 +2133,8 @@ def main():
                                    "(default), or a full ID such as claude-opus-4-8")
     p.add_argument("--models", help='per-role overrides, e.g. "Hillford Johns=haiku;*=opus"')
     p.add_argument("--no-director", action="store_true", help="don't add director's notes to turn sheets")
+    p.add_argument("--floor", choices=["template", "natural"], default="template",
+                   help="natural: the showrunner picks who speaks where the template allows several roles")
     p.add_argument("--form", choices=("auto",) + FORMS, default="auto",
                    help="what kind of program this is; sets performance notes and director checks (default: guessed)")
     p.add_argument("--mode", choices=["cast", "fresh", "single"], default="cast",
@@ -1860,11 +2175,23 @@ def main():
         if name == "advance":
             p.add_argument("--cast", action="append", metavar="ROLE=AGENT_ID",
                            help="record the persistent speaker agent for a role (repeatable)")
+        p.add_argument("--speaker", action="append",
+                       help="who takes the next turn (--floor natural, or a directed program; repeat for "
+                            "parallel private preparation)")
+        p.add_argument("--say", help="directed programs: this turn's instruction, or - to read it from stdin")
+        p.add_argument("--private", metavar="KEY", help="directed programs: preparation nobody hears, saved as {{KEY}}")
+        p.add_argument("--segment", type=int, help="directed programs: this turn begins segment N")
+        p.add_argument("--last", action="store_true", help="directed programs: this is the final spoken turn")
         p.set_defaults(func=fn)
 
     p = sub.add_parser("commit")
     p.add_argument("run_dir")
     p.set_defaults(func=cmd_commit)
+
+    p = sub.add_parser("program", help="revise a directed program")
+    p.add_argument("run_dir")
+    p.add_argument("--file", required=True)
+    p.set_defaults(func=cmd_program)
 
     for name, fn in (("status", cmd_status), ("finalize", cmd_finalize)):
         p = sub.add_parser(name)

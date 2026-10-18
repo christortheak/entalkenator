@@ -101,7 +101,7 @@ def main():
     if sys.platform != "darwin" or not os.path.exists("/usr/sbin/cupsfilter"):
         raise SystemExit("These tests need macOS (cupsfilter and PDFKit).")
     tmp = tempfile.mkdtemp(prefix="entalk-sources-")
-    env = dict(os.environ, ENTALKENATOR_CONFIG_DIR=os.path.join(tmp, "config"))
+    env = dict(os.environ, ENTALKENATOR_CONFIG_DIR=os.path.join(tmp, "config"), ENTALKENATOR_HOME=os.path.join(tmp, "home"))
     try:
         txt = os.path.join(tmp, "paper.txt")
         with open(txt, "w") as f:
@@ -215,6 +215,34 @@ def main():
         code, out = run("read", run3, "d1", env=env)
         check("`read` sends a garbled text layer to readers after all", code == 0 and len(out["tasks"]) == 1
               and out["tasks"][0]["pages"] == "1-3" and os.path.isfile(out["tasks"][0]["sheet"]), out)
+        print("summaries for a large set")
+        run5 = os.path.join(tmp, "run5")
+        run("plan", run5, "--text-layer", "--source", folder, env=env)
+        code, out = run("summarize", run5, env=env)
+        check("summarize needs the text first", code == 1 and "stitch" in out.get("error", ""), out)
+        run("stitch", run5, env=env)
+        code, out = run("summarize", run5, env=env)
+        tasks5 = out.get("tasks", [])
+        sheet5 = open(tasks5[0]["sheet"]).read() if tasks5 else ""
+        check("one summarizer task per document, pointing at its text and its PDF parts", code == 0 and len(tasks5) == 2
+              and "reading.md" in sheet5 and "pages 1-3:" in sheet5 and tasks5[0]["output"] in sheet5, out)
+        code, out = run("stitch", run5, "--summaries", "d1", env=env)
+        check("stitch refuses a summary that doesn't exist yet", code == 1 and "No summary yet" in out.get("error", ""), out)
+        with open(tasks5[0]["output"], "w") as f:
+            f.write("The Law of Quiet Things, by A. Scholar.\n\nSilence is ambiguous, and doctrine should admit it.\n")
+        code, out = run("stitch", run5, "--summaries", "d1", env=env)
+        combined = open(out["combined"]).read() if code == 0 else ""
+        check("the summarized document comes as a summary, the rest in full",
+              "What follows is a summary of the text entitled a:" in combined and "Silence is ambiguous" in combined
+              and "Courts have long treated" not in combined and "Some notes on silence" in combined
+              and out["summarized"] == ["d1"] and out["docs"][0]["summaryWords"] > 5, combined[:400])
+        run6 = os.path.join(tmp, "run6")
+        run("plan", run6, "--text-layer", "--source", folder, env=env)
+        run("stitch", run6, env=env)
+        code, out = run("summarize", run6, env=env)
+        check("a summary of the same file is reused in a later program", code == 0 and out["reused"] == ["d1"]
+              and [t["doc"] for t in out["tasks"]] == ["d2"], out)
+
         scan_txt = os.path.join(tmp, "scan.txt")
         with open(scan_txt, "w") as f:
             f.write("1\f2\n")

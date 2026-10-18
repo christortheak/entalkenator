@@ -21,10 +21,13 @@ Commands (each prints JSON):
        [--pages 1-12] [--pages-per-task 8]       (FILE may be a folder, or file.pdf:15-24)
        [--text-layer]    use each PDF's own text instead of readers, except for scans
   read RUN DOC [DOC ...]   send a document to readers after all (its text layer is garbled)
+  summarize RUN [DOC ...]  set up summarizer tasks for a set too large to hand every speaker
+                   in full (after stitch); summaries already made for the same file are reused
   map RUN [--doc d1]   a page-by-page sketch from the text layer (words, opening and closing
                    words, contents-page dots, footnote-like lines) to help write the brief
   stitch RUN       join the readers' output into sources/<doc>/reading.json and reading.md,
-                   and sources/combined.md (every document, for conversations)
+       [--summaries all|d2,d3]   and sources/combined.md (every document, for conversations;
+                   with --summaries, those documents' summaries instead of their text)
   audit RUN        compare each reading with the PDF's text layer: how much of the reading is
                    the author's own words, and which passages may have been dropped or reworded
   script RUN [--notes after-paragraph|section-end|none] [--figures describe|skip]
@@ -44,6 +47,7 @@ import argparse
 import datetime as _dt
 import difflib
 import glob
+import hashlib
 import json
 import os
 import re
@@ -60,6 +64,9 @@ import prefs as preferences  # noqa: E402
 TEXTUTIL_TYPES = {".doc", ".docx", ".rtf", ".rtfd", ".html", ".htm", ".odt", ".webarchive", ".wordml"}
 TEXT_TYPES = {".txt", ".md", ".markdown", ".text"}
 END_MARKER = "=== END OF TASK ==="
+ENT_HOME = os.environ.get("ENTALKENATOR_HOME", os.path.expanduser("~/.cache/entalkenator"))
+SUMMARY_CACHE = os.path.join(ENT_HOME, "summaries")
+SUMMARY_VERSION = "1"  # bump when the summarizer's instructions change, so old summaries aren't reused
 
 JXA_PAGES = r"""
 ObjC.import('PDFKit');
@@ -564,9 +571,73 @@ def doc_label(doc):
     return "%s%s" % (title, (" by " + doc["author"]) if doc.get("author") else "")
 
 
+def summary_key(doc):
+    """Summaries are kept by the file's contents and pages, so the same reading reuses them."""
+    src = doc.get("pdf") or doc.get("source")
+    h = hashlib.sha256()
+    with open(src, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return "%s-%s-v%s" % (h.hexdigest()[:32], "-".join(map(str, doc.get("range") or [])) or "all", SUMMARY_VERSION)
+
+
+def summary_path(run, doc):
+    return os.path.join(sources_dir(run), doc["id"], "summary.md")
+
+
+def summary_sheet(run, doc, out):
+    reading = os.path.join(sources_dir(run), doc["id"], "reading.md")
+    lines = sum(1 for _ in open(reading, encoding="utf-8"))
+    parts = [c for c in doc.get("chunks") or [] if c.get("path")]
+    return "\n".join([
+        "SUMMARY TASK for %s" % doc_label(doc),
+        "",
+        "The document's text (%d lines; read all of it, with offset if a read stops early):" % lines,
+        reading,
+        "",
+    ] + (["If a passage of the text is garbled (a table, an equation), the original PDF's pages are here:"]
+         + ["- pages %d-%d: %s" % (c["first"], c["last"], c["path"]) for c in parts] + [""] if parts else []) + [
+        "Write the summary to:",
+        out,
+        "",
+        END_MARKER,
+        "",
+    ])
+
+
+def cmd_summarize(args):
+    run = os.path.abspath(args.run)
+    m = load_manifest(run)
+    docs = [find_doc(m, k) for k in args.doc] if args.doc else m["docs"]
+    tasks, reused = [], []
+    for doc in docs:
+        if not os.path.isfile(os.path.join(sources_dir(run), doc["id"], "reading.md")):
+            fail("Run `sources.py stitch` first: %s has no text yet." % doc["name"])
+        out = summary_path(run, doc)
+        cached = os.path.join(SUMMARY_CACHE, summary_key(doc) + ".md")
+        if os.path.isfile(cached):
+            shutil.copyfile(cached, out)
+            reused.append(doc["id"])
+            continue
+        sheet = os.path.join(sources_dir(run), doc["id"], "summary-task.md")
+        write_text(sheet, summary_sheet(run, doc, out))
+        tasks.append({"doc": doc["id"], "name": doc["name"], "sheet": sheet, "output": out})
+    emit({"ok": True, "tasks": tasks, "reused": reused,
+          "note": ("Spawn one summarizer agent per task (subagent_type summarizer), all at once; then "
+                   "`sources.py stitch RUN --summaries ...`." if tasks else
+                   "Every summary was made before; run `sources.py stitch RUN --summaries ...`.")})
+
+
 def cmd_stitch(args):
     run = os.path.abspath(args.run)
     m = load_manifest(run)
+    summarized = set()
+    if args.summaries:
+        keys = [k.strip() for k in args.summaries.split(",") if k.strip()]
+        summarized = {d["id"] for d in m["docs"]} if keys == ["all"] else {find_doc(m, k)["id"] for k in keys}
+        missing = [d["name"] for d in m["docs"] if d["id"] in summarized and not os.path.isfile(summary_path(run, d))]
+        if missing:
+            fail("No summary yet for %s. Run `sources.py summarize` and its tasks first." % ", ".join(missing))
     report, problems, parts = [], [], []
     for doc in m["docs"]:
         ddir = os.path.join(sources_dir(run), doc["id"])
@@ -595,17 +666,27 @@ def cmd_stitch(args):
             md = read_text(os.path.join(ddir, "text.txt"))
             write_text(os.path.join(ddir, "reading.md"), md)
             report.append({"doc": doc["id"], "name": doc["name"], "bodyWords": len(md.split())})
+        if doc["id"] in summarized:
+            md = read_text(summary_path(run, doc)).strip() + "\n"
+            report[-1]["summaryWords"] = len(md.split())
+            cached = os.path.join(SUMMARY_CACHE, summary_key(doc) + ".md")
+            if not os.path.isfile(cached):
+                write_text(cached, md)
         parts.append((doc, md))
     save_manifest(run, m)
     # One file with every document, labelled the way the app's Topics label them.
-    if len(parts) == 1:
+    if len(parts) == 1 and not summarized:
         combined = parts[0][1]
     else:
-        combined = "".join("What follows is the text entitled %s:\n\n%s\n[End of the text entitled %s]\n\n"
-                           % (doc_label(d), md.strip(), doc_label(d)) for d, md in parts)
+        combined = "".join(
+            ("What follows is a summary of the text entitled %s:\n\n%s\n[End of the summary of the text entitled %s]\n\n"
+             if d["id"] in summarized else
+             "What follows is the text entitled %s:\n\n%s\n[End of the text entitled %s]\n\n")
+            % (doc_label(d), md.strip(), doc_label(d)) for d, md in parts)
     write_text(os.path.join(sources_dir(run), "combined.md"), combined)
     emit({"ok": not any(p.get("problem") == "missing" for p in problems), "docs": report, "problems": problems,
-          "combined": os.path.join(sources_dir(run), "combined.md"), "combinedWords": len(combined.split())})
+          "combined": os.path.join(sources_dir(run), "combined.md"), "combinedWords": len(combined.split()),
+          "summarized": sorted(summarized)})
 
 
 # ---------------------------------------------------------------------------
@@ -1053,10 +1134,18 @@ def main():
     p.add_argument("run")
     p.add_argument("--doc")
     p.set_defaults(func=cmd_map)
-    for name, fn in (("stitch", cmd_stitch), ("audit", cmd_audit), ("status", cmd_status)):
+    p = sub.add_parser("stitch")
+    p.add_argument("run")
+    p.add_argument("--summaries", help="all, or documents (d2,d3) to give as summaries instead of full text")
+    p.set_defaults(func=cmd_stitch)
+    for name, fn in (("audit", cmd_audit), ("status", cmd_status)):
         p = sub.add_parser(name)
         p.add_argument("run")
         p.set_defaults(func=fn)
+    p = sub.add_parser("summarize")
+    p.add_argument("run")
+    p.add_argument("doc", nargs="*")
+    p.set_defaults(func=cmd_summarize)
     p = sub.add_parser("script")
     p.add_argument("run")
     p.add_argument("--notes", default="after-paragraph", choices=["after-paragraph", "section-end", "none"])

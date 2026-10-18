@@ -1,15 +1,22 @@
 ---
 name: entalkenate
-description: Turn a document (PDF, text, or pasted text) into an enTalkenator audio program, such as a debate, podcast conversation, seminar, oral argument, or quiz show. It runs one of the templates in templates/, voices each role with its own speaker subagent, renders a multi-voice .m4a on this Mac (Kokoro or the macOS voices), and can publish it to the person's own library and podcast feed. Use when asked to "entalkenate" something, or to make a debate, podcast, or similar audio program from a paper, article, or notes.
-argument-hint: <document.pdf|.txt> [template] [--model opus|fable|sonnet|haiku] [--single|--fresh] [--loop-scale 0.3] [--engine kokoro|gemini|say] [--voices "Role=voice;..."] [--user-input "..."] [--no-audio] [--publish|--no-publish] [--tag "..."]
+description: Turn a document or a set of documents into an enTalkenator audio program, such as a faculty workshop, a lecture or class, a debate, a podcast conversation, an oral argument, a quiz show, or whatever format the person describes. Claude composes the program from the request (format, cast, segments, length) and directs it turn by turn, each role voiced by its own speaker subagent, or runs one of the bundled templates as written. It renders a multi-voice .m4a on this Mac and can publish it to the person's own library and podcast feed. Use when asked to "entalkenate" something, or to make a workshop, class, debate, podcast, or similar audio program from a paper, article, or notes.
+argument-hint: <document.pdf|.txt|folder> [what to make, in your own words] [--template T] [--model opus|fable|sonnet|haiku] [--single|--fresh] [--loop-scale 0.3] [--engine kokoro|gemini|say] [--voices "Role=voice;..."] [--user-input "..."] [--no-audio] [--publish|--no-publish] [--tag "..."]
 allowed-tools: Read Write Bash(python3 scripts/*)
 ---
 
 # enTalkenate
 
-You are the **showrunner**. You run an enTalkenator template step by step. A script
-does the bookkeeping, and the performers write the lines. You don't write the
-spoken lines yourself unless single-writer mode is on.
+You are the **showrunner**. You compose the program the person asks for and direct it turn
+by turn: who speaks, when, and what each moment calls for. A script does the bookkeeping, and
+the performers write the lines. You don't write the spoken lines yourself unless
+single-writer mode is on.
+
+The bundled templates come from the enTalkenator app, which needed fixed steps because no
+model was in charge of the show. You are, so treat them as starting points. A program fits
+the request, follows where the conversation goes, and changes its plan when it should. Run a
+template exactly as written only when the person asks for that template, or passes
+`--template`.
 
 Arguments: `$ARGUMENTS`
 
@@ -19,7 +26,7 @@ Code, on their Mac" in CLAUDE.md.
 **No questions.** If the person said "no questions", "use your best judgment", or "I'm walking
 away", or `PREFS show` has `questions=none`, ask nothing from start to finish. Skip:
 - the settings menu
-- the character review
+- the plan and character reviews
 - voice auditions
 - the library question
 
@@ -51,9 +58,14 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
      fetch goes into a `.md` file in the run directory. A set is discussed as a set: a
      seminar on three articles, a debate between two briefs, a podcast on a week of
      reading. A finished narration's `sources/combined.md` can be reused as is.
-   - **Template**: a file stem, id, or display name from `templates/`. If none is
-     given, run `ENGINE templates` and ask the user to pick one, describing each in a few
-     plain words (its format, roles, and rough length) rather than listing file names.
+   - **What to make**: the format in their own words, with any length, proportions,
+     audience, or style: "an hour-long faculty workshop, 20-minute talk, the rest
+     questions"; "an intro lecture for college students, half lecture, half back and
+     forth"; "a Socratic law school class on this article". If they name only a format
+     ("a debate"), give it that format's usual shape. If they don't say what to make, ask
+     in one short question, offering three or four formats that suit the material; with no
+     questions, choose one yourself. `--template T` (a stem, id, or display name from
+     `ENGINE templates`) runs that template as written instead.
    - **Flags**:
      - `--single`: single-writer mode. You write every turn.
      - `--fresh`: a new speaker agent every turn. This is the app's stateless behaviour, kept
@@ -78,10 +90,10 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
    - **Settings** (header "Settings"):
      - "Use the best (Recommended)": your session's model for every speaker, their chosen
        voices cast automatically, full template length, cast mode, and their preferences
-     - "Review the characters first": the defaults, plus the character review in step 7.
-       For a one-role template (a written piece), word it "Review the author's voice
-       first".
-     - "Customize everything": the questions below, then the character review
+     - "Review the plan first": the defaults, plus the plan review in step 4 (for a
+       template run, the character review in step 7). For a one-role piece, word it
+       "Review the author's voice first".
+     - "Customize everything": the questions below, then the plan or character review
    If they choose Customize everything, ask these together in one more call:
    - **Speaker model** (header "Model"): "Opus", "Fable", "Sonnet", and "Haiku". Put
      "(Recommended)" on whichever matches the session's model.
@@ -94,7 +106,8 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
        `claude-opus-4-8`), or a per-role mix such as `Hillford Johns=haiku; *=opus`.
    - **Length** (header "Length"): "Full (Recommended)", "Short, about 30%", "Medium,
      about 60%". These map to `--loop-scale` 1, 0.3, and 0.6. Loops set the length, so a
-     template without loops is unaffected. "Other" takes a custom scale.
+     template without loops is unaffected. For a program, scale its segments' minutes
+     instead. "Other" takes a custom scale. Skip this question when they gave a length.
    - **Voices** (header "Voices"): run `VOICE_OPTIONS list` first. Offer up to three
      ready options, their default first, marked "(Recommended)". Label each with its cost
      ("Kokoro: free, on this Mac", "Gemini Flash: about $0.40 per 30 min"). Add "Show me all
@@ -104,6 +117,10 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
    - **Writers** (header "Writers"): "One agent per role (Recommended)", "Single writer
      (fastest; one agent writes every role)", "Fresh agent every turn (the app's way;
      most tokens)". These map to modes cast, single, and fresh.
+   - **Turns** (header "Turns"), only for a template run whose `floorSteps` (in `ENGINE
+     templates`) is above 0: "Natural: whoever would speak up next (Recommended)" and "As
+     the template has it (a random pick)". These map to init `--floor natural` and
+     `--floor template`. Their `turns` preference answers it; without one, use natural.
 
    The menu choices override the matching flags.
 
@@ -114,7 +131,7 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
      The file stays for next time.
    - The user's organization may restrict models. If a spawn on a pinned model fails,
      say so and fall back to an alias.
-3. Choose a run directory in this folder: `programs/<template>-<YYYYmmdd-HHMMSS>`. Then
+3. Choose a run directory in this folder: `programs/<format>-<YYYYmmdd-HHMMSS>` (such as `programs/workshop-20261018-1430`). Then
    **prepare the documents**. Every speaker gets their text once, in their first sheet
    (later sheets carry only what's new). Speakers discuss a document rather than read it
    aloud, so they don't need a clean reading: the PDF's own text does, running heads and
@@ -142,9 +159,57 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
      entitled …") as the app's Topics do. A document taken from its text layer is labelled
      by its file name until you name it: `SOURCES meta <dir> d2 --title "..." --author "..."`
      from its opening, then stitch again.
-   - If `combinedWords` is over about 150,000, say that's a lot for every speaker to hold.
-     Offer to narrow the set.
-4. Run `ENGINE init --template <t> --source <dir>/sources/combined.md --original <dir>/sources/<doc>/original.pdf [--original ...] --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh] [--form F]`.
+   - **Full text or summaries.** Every speaker holds the whole of `combined.md`, so what a
+     run costs grows with its size times the number of speakers. Up to about 100,000 words
+     (roughly 200 pages), give them the full text without asking. Above that, ask once
+     (header "Sources"): "Summaries of each document (Recommended)", "The full text", and,
+     if one or two documents are plainly the focus, "Full text of <them>, summaries of the
+     rest". With no questions, use summaries, keeping the full text of any document the
+     request centres on. The person can ask for summaries at any size.
+     - Run `SOURCES summarize <dir> [d2 d3 ...]` (every document if none are named). Spawn
+       one `summarizer` agent per task, all at once with `run_in_background: true`, with the
+       prompt `Summary task: <sheet>`. A summary made before for the same file comes back
+       under `reused`, with no task.
+     - When they've finished, run `SOURCES stitch <dir> --summaries all` (or `d2,d3`). The
+       speakers still get every original's parts, so they can check the full text.
+4. **Compose the program** (skip for a template run). Write `<dir>/program.json`:
+   ```json
+   {
+     "title": "Faculty Workshop",
+     "form": "workshop",
+     "setting": "Where this is, who is there and why, and that everyone has read the material:\n\n{{transcript}}\n\n-----",
+     "lead": "Gene Alford",
+     "roles": [
+       {"name": "Gene Alford", "description": "You are ... (second person: who, what you know, where you stand, temperament, pronouns)"}
+     ],
+     "segments": [
+       {"title": "The talk", "minutes": 20, "plan": "Janson presents the paper in three parts: ..."},
+       {"title": "Questions", "minutes": 40, "plan": "Colleagues press on ...; Gene keeps it moving and closes."}
+     ]
+   }
+   ```
+   - **Start from the closest template.** `ENGINE templates` lists them. Read the closest
+     one's JSON in `templates/` for its setting, its roles, and its beats: private
+     preparation, the opening, the back-and-forth, the close. Keep what fits the request
+     and change what it changes. The templates' recurring characters can return.
+   - **Roles**: usually two to six speakers. Write each description in the second person,
+     as the templates do: who they are, what they know, where they stand on the material,
+     their temperament, and the pronouns the transcript should use. Give positions an edge
+     where the format wants one; a workshop with no skeptic is dull.
+   - **Segments**: the program's phases in order, with target minutes that add up to the
+     requested length. With no length given, use what the format usually runs: about 30
+     minutes for a podcast, 45 for a debate, 50 for a class, 60 for a workshop. Each `plan`
+     says what happens, who leads it, and what it should achieve. Segments are the natural
+     chapter breaks.
+   - **Time**: the engine counts 175 spoken words a minute (people speak 160–200), so a
+     20-minute talk is about 3,500 words.
+   - `form` is the closest of debate, hearing, conversation, workshop, class, quiz, or
+     written; it sets the speakers' performance notes and the director's checks. `lead` is
+     whoever runs things: the moderator, host, presiding judge, or teacher.
+   - With "Review the plan first", show the plan before going on: the format, each segment
+     with its minutes, and each character in a line. Take their changes into the file.
+
+   Then run `ENGINE init (--program <dir>/program.json | --template <t> [--floor natural|template]) --source <dir>/sources/combined.md --original <dir>/sources/<doc>/original.pdf [--original ...] --run-dir <dir> [--model <m>] [--models "Role=m;*=m"] [--loop-scale X] [--user-input ...] [--language ...] [--mode single|fresh] [--form F]`.
    `--original` lists the copies of the documents inside the run directory (not the
    person's own files elsewhere, which could need a permission prompt mid-run). The speakers'
    sheets list each one with its parts by page, so a speaker can open the part that holds a
@@ -160,10 +225,12 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
    author is the authors' names or "Various authors".
    Use the title if one is evident, otherwise a concise title-case title. Use the author's
    name, or "Unknown Author". Save them with `ENGINE meta <dir> --title "..." --author "..."`.
-6. If the template's `userInputConfig.isRequired` is true and no `--user-input` was given,
+6. For a template run: if the template's `userInputConfig.isRequired` is true and no `--user-input` was given,
    ask the user for it (use its `label` and `description`) and save it with `meta --user-input`.
    An optional input stays empty unless the user supplied one.
-7. **Character review** (when the user chose to review characters or customize). Run
+7. **Character review** (a template run, when the user chose to review characters or
+   customize; a program's characters were settled in step 4, though `ENGINE role --sketch`
+   still adds colour before a character's first turn). Run
    `ENGINE roles <dir>`. Show each character's name and description in a short list,
    then ask with AskUserQuestion (header "Characters"):
    - "Use them as written (Recommended)"
@@ -192,7 +259,69 @@ changed directory, `cd` back there first. Quote other paths; they may contain sp
 
 ## 2. Generate the transcript
 
-Repeat until the JSON says `"done": true`:
+### Directing a program
+
+You decide every turn. Issue one with:
+
+```
+ENGINE advance <dir> [--cast "<role>=<agentId>" ...] --speaker "<name>" [--segment N] [--last] --say - <<'EOF'
+<the instruction for this turn>
+EOF
+```
+
+Its `issue` item goes to the speaker as described under cast mode below (spawn or
+message). When the speaker finishes, run `ENGINE advance <dir> [--cast ...]` with no
+speaker. It commits the turn and returns:
+- `committed`, with the **full text** of what was just said
+- `direct`: each role's turns and words so far, how many turns since they last spoke, and
+  whether the last speaker named them
+- `progress.program`: the current segment's minutes against its target, and the total
+
+Read what was said, decide, and direct the next turn. That's two `advance` calls a turn.
+
+**Writing the instruction.** Tell the speaker the moment and the job, not the words:
+- where things stand: "The talk is over and questions have begun", or "Abney has just
+  challenged your reading of the second experiment"
+- what's wanted: "answer her directly, concede what's fair, then press your main point",
+  or "call on someone who hasn't spoken"
+- how long: "two or three sentences", or "about 900 words"
+
+Leave their opinions and phrasing to them; their character and the material supply those.
+Don't put words in their mouths, and don't tell them who's right.
+
+**Shape and pace.**
+- A long stretch by one speaker, such as a talk or a lecture, goes in turns of 600–1,000
+  words (four to six minutes), each picking up where the last stopped. Have them outline it
+  privately first (`--private outline`: "Outline your 20-minute talk in three parts"), and
+  refer to it in later instructions as `{{outline}}`.
+- Preparation nobody hears can run in parallel: `--speaker A --speaker B --private
+  questions` gives each the same instruction at once. Each speaker remembers their own
+  notes.
+- Give the floor to whoever would naturally come in next: someone just addressed or
+  challenged, someone whose expertise the point touches, the lead when things drift or
+  time is up, or someone who has been quiet. Let people speak to each other by name. Let a
+  good exchange run two or three rounds, and end one that circles. Avoid both a fixed
+  rotation and ping-pong between the same two people.
+- Vary the rhythm: short interjections ("one or two sentences") between longer answers,
+  and an aside or a joke where these people would make one.
+- Mark each segment's first turn with `--segment N`. Move on when its minutes are up or it
+  has done its job, through the lead and within the story ("We have time for one more
+  question"). Land the whole program within about 10% of its target length.
+
+**Changing the plan.** Follow the conversation where it's good. When the plan should
+change, edit `program.json` and run `ENGINE program <dir> --file <dir>/program.json`. A
+segment might run long because it's the heart of the thing, an argument might need a new
+voice, or a class might need another example. You can add roles and change or add segments;
+characters who have spoken keep their cards. Tell the speakers what changed in their next
+instruction.
+
+**Ending.** The lead closes the program. Mark that turn `--last`, then run `finalize`.
+
+In single-writer mode you direct the same way and write each turn yourself (see below).
+
+### Running a template, and the speakers in both
+
+For a template run, repeat until the JSON says `"done": true`:
 
 ```
 ENGINE advance <dir> --batch [--cast "<role>=<agentId>" ...]
@@ -203,6 +332,12 @@ Each result lists the step(s) to write under `issue`. Each item has `role`, `tur
 what was just `committed`, with a short `preview`, and shows `progress` (spoken minutes
 so far, loop target). If it reports `problems` instead, some turns are still open; their
 details are under `pending`.
+
+With `--floor natural`, where the template lets several people take a turn, `advance`
+returns `choose` instead of `issue`. It lists the candidates, how much and how recently
+each has spoken, whether the last speaker addressed them, and the last speaker's closing
+words (`lastWords`). Give the floor to whoever would most naturally come in, as when
+directing a program, then run `ENGINE advance <dir> --speaker "<name>"`.
 
 **Cast mode (default): one persistent speaker per role.** Each role is played by one
 `speaker` agent for the whole run. It is cast on its first turn and
@@ -262,8 +397,9 @@ reaches you as a notification with its one-line reply, and that starts your next
 Then run `advance`.
 - If you launched several speakers, `advance` commits the finished ones and reports
   the rest as still open. End your response again until the others finish.
-- Don't read the turn sheets or output files yourself. The speaker's reply and the
-  `preview` are enough to follow the show.
+- Don't read the turn sheets or output files yourself. In a template run, the speaker's
+  reply and the `preview` are enough to follow the show; in a program, `committed` already
+  carries the text you direct from.
 - A speaker that reports a problem, or whose output file is missing, gets the same
   turn again. `advance` re-issues open turns.
 
@@ -326,7 +462,8 @@ on:
   speaker's argument
 - the closing
 
-That's usually one chapter every 2–5 minutes, and never one per turn. Follow their
+In a program, `finalize` lists where each segment began; those are chapters, with topic
+chapters inside the long ones. That's usually one chapter every 2–5 minutes, and never one per turn. Follow their
 preferences: `chapters.conversation=few` means just the big parts, and notes may say more. Titles are 2–7 words
 and say what's discussed ("Is silence consent?"). Name a speaker only for a set piece ("Ms.
 Norton's argument"). Then run
@@ -445,7 +582,7 @@ Tell the user:
 - the bundle path, the .m4a path, and the audio duration
 - which voices were used (engine and model) and which voice each role got, plus the cost
   for a paid engine
-- the template and mode
+- the format (the program's segments with their minutes, or the template) and the mode
 - how long generation and rendering took
 - whether it was published to their library, with its `appUrl`
 - anything that went wrong

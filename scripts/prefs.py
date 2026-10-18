@@ -16,6 +16,7 @@ Settings (anything else goes in a note):
   narration.figures   describe | skip
   chapters.narration  all-headings (default) | main-parts (top two levels) | top-level
   chapters.conversation  topics (default: a chapter per question or phase) | few (just the big parts)
+  turns               natural (default: whoever would speak up next) | template (a template's random pick)
 
 Kept in ~/.config/entalkenator/preferences.json. Python 3.9+, standard library only.
 """
@@ -37,6 +38,7 @@ CHOICES = {
     "narration.figures": {"describe", "skip"},
     "chapters.narration": {"all-headings", "main-parts", "top-level"},
     "chapters.conversation": {"topics", "few"},
+    "turns": {"natural", "template"},
 }
 FREE = {"tags"}
 # How deep a narration's chapters go, by chapters.narration.

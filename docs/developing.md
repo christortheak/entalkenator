@@ -43,6 +43,8 @@ None needs an account or touches real settings:
 - `test_sources.py` checks reading, stitching, the faithfulness audit, and the text-layer path
   conversations use.
 - `test_chapters.py` renders with `say` and checks the chapters AVFoundation reads (macOS).
+- `test_engine.py` checks natural turn-taking in a template, and a directed program from
+  plan to transcript.
 - `test_status.py` checks that off a Mac (Cowork, say) the status tells Claude to stop and
   send the person to Claude Code.
 The library Worker's own suites (`cloud/test/`) need a local `wrangler dev`; see

@@ -5,8 +5,9 @@ pasted text, or a whole set of them):
 - **Narration:** the document itself, read aloud word for word like an audiobook. Running
   heads and footnote numbers are gone, citations are handled, figures are described, and
   the footnotes that matter are read in a second voice.
-- **Programs:** a debate, a podcast conversation, a seminar, an oral argument, a quiz show,
-  and so on, about one document or a set. You run it. Each template role is voiced by its own speaker subagent, the audio is
+- **Programs:** a faculty workshop, a lecture or class, a debate, a podcast conversation, an
+  oral argument, a quiz show, or whatever format they describe, about one document or a set.
+  You compose it and direct it. Each role is voiced by its own speaker subagent, the audio is
 rendered on this Mac with free local voices, and the result can go into the person's own
 private library on Cloudflare. That library is a web app plus a podcast feed, so programs
 play on their phone or in their podcast app.
@@ -67,8 +68,10 @@ what enTalkenator does in two sentences and offer the guided setup: the **setup*
 | find their podcast feed address | the web app's **Podcast feeds** page: `python3 scripts/library.py open '#/feeds'` |
 | hear a program | the `.m4a` in its `programs/` folder (`open` it), or the library |
 
-Templates live in `templates/` (the same ones as the enTalkenator app). `python3
-scripts/engine.py templates` lists them with their roles and lengths.
+A program is composed from what the person asks for ("an hour-long faculty workshop, a
+20-minute talk and the rest questions") and directed turn by turn. The templates in
+`templates/` (the same ones as the enTalkenator app) are its starting points, or run as
+written when someone asks for one; `python3 scripts/engine.py templates` lists them.
 
 ## Rules that always apply
 

@@ -119,6 +119,37 @@ Deliberate differences:
   across line breaks and runs loops slightly longer.
 - Placeholders expand repeatedly, so the result doesn't depend on dictionary order.
 
+### Directed programs: no fixed steps
+
+The app needed templates because nothing was in charge of the show: every call was a fresh
+model following a fixed step. Here the showrunner is, so a program is composed from the
+request and directed as it goes. `init --program program.json` takes:
+- the setting, which carries `{{transcript}}`
+- the roles, as second-person descriptions
+- the lead
+- the form, which picks the performance notes and director's checks
+- segments, each with a title, target minutes, and a plan
+
+The engine turns that into a template with no steps yet. Each turn the showrunner directs
+(`advance --speaker NAME --say -`) is appended as a step: its instruction is the step
+prompt, and `--private KEY` makes it a hidden step with an `outputKey`. So everything a
+template run has carries over unchanged: full and delta sheets, director's notes, the view
+audit, `finalize`, and the bundle.
+
+- **Time** is counted per segment at the app's 175 words a minute; `progress.program`
+  reports the current segment's minutes against its target.
+- **Directing from what was said.** `advance` returns each committed turn's full text, plus
+  how much and how recently each role has spoken and whether the last speaker named them.
+- **Revising.** `program RUN --file` changes segments and adds roles mid-run. A role that has
+  spoken keeps its card, since its speaker already holds it.
+- **Ending.** The run ends only after the turn marked `--last`.
+
+Template runs get part of this: with `--floor natural`, a step that lists several roles
+("Hillford Johns, Janson Skullbottom") returns `choose`, and the showrunner gives the floor
+to whoever would naturally come in. The candidates are widened to every role listed on a
+visible step with the same prompt, the template's interchangeable seats, and speakers are
+told they may address one another by name.
+
 ### Cast mode: one persistent speaker per role
 
 The app re-sends the static context, the whole document, and the whole transcript on
@@ -373,6 +404,14 @@ text (below).
   whose text layer the showrunner finds garbled (`sources.py read RUN d2`). Two test
   articles, 98 pages, were ready in 3 seconds with no reader tasks; read by Claude, the same
   pages took a dozen readers and several minutes.
+- **Summaries for large sets.** Each speaker holds the whole of `combined.md`, so a set's
+  cost is its size times the number of speakers. Above about 100,000 words the showrunner
+  offers summaries. `sources.py summarize` sets up one `summarizer` agent per document, and
+  `stitch --summaries` puts the summaries in place of those documents' text. Summaries are
+  kept under `~/.cache/entalkenator/summaries`, keyed by the file's contents, and reused.
+  They're written for speakers rather than listeners: the claim, the structure, the
+  evidence, passages worth quoting with their page marks, and what a careful reader would
+  push on.
 - **Sets for conversations.** Persistent speakers get `combined.md` once, in their first
   sheet, and only what's new after that. The sheet lists each original by its file name, with
   its parts by page, so a speaker can open the part that holds a figure, a table, or the exact

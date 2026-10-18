@@ -72,6 +72,15 @@ Open the folder in Claude and ask in your own words:
 
 > Make a workshop hot bench from this PDF. No questions, use your best judgment.
 
+> An hour-long faculty workshop on this paper: a 20-minute talk, the rest questions
+
+> A Socratic law school class on this article
+
+Claude plans the program from what you ask (who's there, what happens, and for how long)
+and then directs it as it goes, giving the floor to whoever would naturally speak next and
+changing the plan when the conversation earns it. The formats from the enTalkenator app are
+its starting points.
+
 With "no questions", Claude makes every choice itself, publishes to your library, and tells
 you when it's done, so you can walk away. Keep the Mac awake and Claude open until it
 finishes. Otherwise Claude asks only when a choice is really yours, and offers to remember
@@ -84,7 +93,9 @@ main parts only", "never read footnotes"), and it remembers.
 
 Claude shows you the speakers and lets you flesh them out, then writes the program one
 speaker at a time. The speakers work from each PDF's own text and can open the PDF itself to
-check a figure or a table; only a scanned PDF needs Claude to read it first. You can also type `/entalkenate`. Programs are saved in the
+check a figure or a table; only a scanned PDF needs Claude to read it first. For a large set
+of reading, Claude offers to summarize each document for the speakers instead, and keeps
+the summaries for next time. You can also type `/entalkenate`. Programs are saved in the
 `programs` folder. If you set up the library, Claude offers to publish each one when it's
 done.
 
