@@ -1,0 +1,8 @@
+{
+  "name": "entalkenator-mac-check",
+  "displayName": "enTalkenator Mac check",
+  "version": "0.0.3",
+  "description": "A test for enTalkenator: checks whether Cowork can reach a helper running on your Mac. Safe to remove afterwards.",
+  "author": { "name": "enTalkenator" },
+  "license": "MIT"
+}
