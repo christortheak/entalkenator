@@ -1,4 +1,4 @@
-"""Batched generation for Breeze TTS 2 (mlx-audio's MLX build), used by render_audio.py.
+"""Batched generation for Breeze TTS 2 (mlx-audio's MLX build): render_audio.py --breeze-fast.
 
 Runs in the voice engine's venv, never under the system Python. mlx-audio's
 Model.generate voices one line at a time. Every sound frame (1/12.5 s) runs the 28-layer

@@ -11,7 +11,7 @@ page changes. Researched on 17 October 2026.
 | Kokoro-82M | Mac (mlx-audio) | Apache-2.0; espeak-ng fallback GPL-3.0 | Artificial Analysis Elo 1061, 7th of 17 open models; TTS Arena V2 ties Chatterbox | 1× (0.07) | free |
 | Qwen3-TTS 1.7B (VoiceDesign + Base, 8-bit) | Mac (mlx-audio), 16 GB+ | Apache-2.0, not gated | Not on the arenas; Seed-TTS English WER 1.24 (maker's figure) | about 7× (0.5) | free |
 | Qwen3-TTS 1.7B CustomVoice (8-bit), "preset voices" | Mac (mlx-audio), 16 GB+ (5.3 GB in use) | Apache-2.0 | Nine presets; only Ryan and Aiden are native English (male) | about 3× (0.19, batched with a voice and note per line) | free |
-| Breeze TTS 2 (3B, MLX build) | Mac (mlx-audio), 24 GB+ (13 GB in use) | BreezeBlue Research and Non-Commercial License: personal, educational and research use; outputs not for commercial use; no unconsented cloning | Elo 1215, top open-weights model (reported Sept 2026); preferred in our listening test | about 12× undirected (0.85), 20× with a note per line (1.5) | free |
+| Breeze TTS 2 (3B, MLX build) | Mac (mlx-audio), 24 GB+ (13 GB in use) | BreezeBlue Research and Non-Commercial License: personal, educational and research use; outputs not for commercial use; no unconsented cloning | Elo 1215, top open-weights model (reported Sept 2026); preferred in our listening test | about 12× undirected (0.85), 20× with a note per line (1.5); a fast mode is several times quicker (below) | free |
 | macOS `say` | Mac | Apple system voices | Clearly synthetic | about 1× | free |
 | Gemini 3.8 Flash TTS | Google | Free tier may use prompts for training; EEA/UK/CH paid only | Elo 1275, #5 overall | cloud | $0.41 (≈$0.81 from Jan 2027) |
 | Gemini 3.8 Flash-Lite TTS | Google | as above | Elo 1248, #8 | cloud | $0.28 (≈$0.55 from 2027) |
@@ -60,8 +60,41 @@ nearly doubles the work: notes are for turns that need one. Running several Bree
 processes at once barely helps: on the same 12 lines, one process took 1.45× the audio's
 length, two 1.26×, three 1.24×, each using about 13 GB. One process already keeps the GPU
 busy; the time goes to the two guided passes run one after the other and a CPU round trip
-for every sound token. Batching inside Breeze's MLX code (the two passes together, several
-lines at once) is the real fix.
+for every sound token.
+
+### Breeze's fast mode (18 October 2026)
+
+`scripts/breeze_fast.py` batches inside mlx-audio 0.5.8's Breeze generation, without changing
+the package:
+- the guided and unguided passes run as one batch;
+- several lines run together, each prompt prefilled on its own and then merged into one
+  left-padded cache, so every line keeps its own positions;
+- the depth decoder keeps a KV cache. Without one it re-reads its 12 layers for each of 15
+  codebooks, about 80% of the weights read per sound frame;
+- sampled tokens stay on the GPU, and end-of-speech is checked a frame late, so the CPU never
+  stalls it.
+
+Checks:
+- **Exactness.** With no note, and the depth decoder re-run the way generate does it, the same
+  seed gives generate's tokens exactly for whole lines. Otherwise tokens drift apart through
+  rounding: matrix products round differently with 2 or 16 rows than with 1, and guidance
+  (4 × guided − 3 × unguided) magnifies that up to 7×.
+- **Isolation.** Random values in the padded part of the cache change nothing, and a line's
+  output doesn't depend on which lines share its batch.
+- **Faithfulness.** Against a float32 copy of the model, both paths are 6.3% off per token
+  (total variation), with the same entropy.
+- **Delivery.** Over 24 takes per path of three lines, length (29.4 against 29.6 s), pauses
+  (9.5 against 9.0 a take) and noise floor didn't differ.
+
+Speed on the 4-minute excerpt, both paths under the same conditions: 5.1× real time one line
+at a time, 0.90× batched. Another GPU job was running at the time, so these aren't the
+figures to quote.
+
+In blind pairs the person preferred the one-at-a-time delivery four times out of four, with
+one pair a tie; on single turns they found it closer. So Breeze stays one line at a time by
+default, and `render_audio.py --breeze-fast` is offered for long programs and drafts. Its
+clips are cached under their own model label ("Breeze-TTS-2 (MLX, batched)"). Its speed is
+recorded as `breeze-fast`, and `voices.py list` turns that into `fastRenderMinutes`.
 
 ## Why these, and not others
 

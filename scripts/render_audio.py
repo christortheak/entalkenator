@@ -16,7 +16,9 @@ Engines (scripts/voices.py describes each: cost, speed, download, what it needs)
               use (BreezeBlue's licence). Voices are descriptions, designed once and cloned like
               qwen3's, and each turn can be directed: the role's --styles note plus the turn's
               delivery note. It performs (laughs), (sighs), (coughs) and (clears throat), which
-              the other engines leave out. The heaviest local engine.
+              the other engines leave out. The heaviest local engine. --breeze-fast voices
+              several lines at once (breeze_fast.py): several times quicker, but the person
+              preferred the default's delivery in a blind test.
   say         The macOS `say` command. No install, no cost, robotic.
   gemini      Google Gemini TTS (--model gemini-3.8-flash-tts or gemini-3.8-flash-lite-tts)
               through the Interactions API, one request per turn. Paid; needs a key.
@@ -102,8 +104,9 @@ BREEZE_MODEL = voice_options.BREEZE_REPO
 BREEZE_VOICE_DIR = os.path.join(ENT_HOME, "breeze-voices")
 BREEZE_REF_LINE = ("Well, that's the interesting part, isn't it? I'd have said the opposite a year ago. "
                    "But the evidence kept pointing the same way, so here we are.")
-BREEZE_CFG = 4.0  # the model card's guidance strength for following a direction
-BREEZE_BATCH = 8  # pieces voiced together by breeze_fast.py
+BREEZE_CFG = 4.0  # the model card's guidance strength for following a direction (it doubles the work)
+BREEZE_BATCH = 8  # pieces voiced together by breeze_fast.py (--breeze-fast)
+BREEZE_FAST_MODEL = "Breeze-TTS-2 (MLX, batched)"  # its own model label, so its clips are cached apart
 # Vocal sounds a speaker may write; Breeze performs them, the other engines leave them out.
 EVENT_RE = re.compile(r"\s*\((laughs?|laughing|chuckles?|sighs?|coughs?|clears (?:his |her |their )?throat)\)\s*", re.I)
 BREEZE_EVENTS = {"laugh": "laugh", "laughs": "laugh", "laughing": "laugh", "chuckle": "laugh", "chuckles": "laugh",
@@ -472,12 +475,13 @@ class QwenPresetRenderer:
 
 class BreezeRenderer:
     """Breeze TTS 2 in the child process: design each described voice once, then clone it for every
-    turn, directed by the turn's note. Pieces are voiced BREEZE_BATCH at a time by breeze_fast.py
-    (windows of whole turns, sorted by length, each written as soon as it's done).
-    ENTALKENATOR_BREEZE_ORIGINAL=1 uses mlx-audio's own generate instead, one piece at a time."""
+    turn, directed by the turn's note. Turns go one at a time through mlx-audio's own generate, each
+    written as soon as it's done. fast=True (--breeze-fast) voices BREEZE_BATCH pieces at once with
+    breeze_fast.py instead, in windows of whole turns sorted by length: several times quicker, but
+    the person preferred the default's delivery in a blind test."""
     name = "breeze"
 
-    def __init__(self):
+    def __init__(self, fast=False):
         import numpy as np
         import mlx.core as mx
         from mlx_audio.tts.utils import load_model
@@ -485,9 +489,10 @@ class BreezeRenderer:
         self.model = load_model(BREEZE_MODEL)
         self.rate = self.model.sample_rate
         self.fast = None
-        if os.environ.get("ENTALKENATOR_BREEZE_ORIGINAL") != "1":
+        if fast:
             from breeze_fast import BatchedBreeze
             self.fast = BatchedBreeze(self.model)
+            log("  fast mode: %d pieces at a time" % BREEZE_BATCH)
 
     @staticmethod
     def ref_path(description, line=None):
@@ -907,7 +912,7 @@ def local_worker(engine_name, jobs_file, speed):
     if engine_name == "qwen3":
         QwenRenderer().render_all(jobs)
     elif engine_name == "breeze":
-        BreezeRenderer().render_all(jobs)
+        BreezeRenderer(fast=bool(jobs) and jobs[0].get("model") == BREEZE_FAST_MODEL).render_all(jobs)
     elif engine_name == "qwen3-preset":
         QwenPresetRenderer().render_all(jobs)
     else:
@@ -1188,7 +1193,7 @@ def audition(args, engine_name, model, pool, turns, roles, styles):
         for n, voice in enumerate(cands, 1):
             path = clip_path(work, "aud", engine_name, model, voice, args.speed, styles.get(role), first_line[role])
             jobs.append({"text": first_line[role], "voice": voice, "path": path, "style": styles.get(role),
-                         "label": "%s in %s" % (role, voice[:40])})
+                         "model": model, "label": "%s in %s" % (role, voice[:40])})
             entry["order"].append({"n": n, "voice": voice, "sounds": describe_voice(engine_name, voice, pool), "path": path})
         plan.append(entry)
     rendered = render_jobs(engine_name, model, jobs, args.speed, work)
@@ -1285,6 +1290,9 @@ def main():
     ap.add_argument("--engines", help='an engine per role, e.g. "Professor Swift=breeze;Rigel=qwen3-preset;*=kokoro" '
                                       '("*" is everyone else; default --engine)')
     ap.add_argument("--speeds", help='kokoro and say: a role\'s pace, e.g. "Professor Swift=0.95;Rigel=1.05"')
+    ap.add_argument("--breeze-fast", action="store_true",
+                    help="breeze: voice several pieces at once (breeze_fast.py), several times quicker; in a blind "
+                         "test the person preferred the default's delivery, so offer it for long programs or drafts")
     ap.add_argument("--delivery", help="per-turn delivery notes (default: delivery.json beside the transcript)")
     ap.add_argument("--bitrate", type=int, default=48000)
     ap.add_argument("--work-dir", help="clip cache (default: <out>.clips/)")
@@ -1297,6 +1305,8 @@ def main():
     args = ap.parse_args()
 
     engine_name, model = pick_engine(args.engine, args.model)
+    if args.breeze_fast and engine_name == "breeze":
+        model = BREEZE_FAST_MODEL
     pool = voice_pool(engine_name, model)
     if args.list_voices:
         listing = {"engine": engine_name, "model": model,
@@ -1341,6 +1351,8 @@ def main():
     spec = parse_overrides(args.engines)
     default = pick_engine(spec.pop("*"), None) if "*" in spec else (engine_name, model)
     role_engine = {r: (pick_engine(spec[r], None) if r in spec else default) for r in roles}
+    if args.breeze_fast:
+        role_engine = {r: (e, BREEZE_FAST_MODEL if e == "breeze" else m) for r, (e, m) in role_engine.items()}
     warnings = ["--engines names %r, who isn't in the transcript." % r for r in spec if r not in roles]
     groups = []
     for r in roles:
@@ -1422,12 +1434,13 @@ def main():
     gaps = [args.gap] * len(jobs) if args.gap is not None else turn_gaps(turns, deliveries)
     seconds, spans = stitch([j["path"] for j in jobs], gaps, out, args.bitrate, work)
     for eng, mdl in groups:
-        original_breeze = eng == "breeze" and os.environ.get("ENTALKENATOR_BREEZE_ORIGINAL") == "1"
-        if eng in LOCAL_IN_CHILD + ("say",) and not original_breeze:
-            # How fast this engine runs on this Mac, for voices.py's estimates.
-            done_here = sum(b - a for (a, b), j in zip(spans, jobs) if j["path"] in fresh and j["engine"] == eng)
+        if eng in LOCAL_IN_CHILD + ("say",):
+            # How fast this engine runs on this Mac, for voices.py's estimates (Breeze's fast mode on its own).
+            done_here = sum(b - a for (a, b), j in zip(spans, jobs)
+                            if j["path"] in fresh and (j["engine"], j["model"]) == (eng, mdl))
             if done_here:
-                voice_options.record_speed(eng, done_here, timing[(eng, mdl)])
+                name = "breeze-fast" if mdl == BREEZE_FAST_MODEL else eng
+                voice_options.record_speed(name, done_here, timing[(eng, mdl)])
     mixed = len(groups) > 1
     engine_out = "mixed" if mixed else groups[0][0]
     model_out = "; ".join("%s: %s" % (r, role_engine[r][0]) for r in roles) if mixed else groups[0][1]

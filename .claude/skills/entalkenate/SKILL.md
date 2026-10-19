@@ -498,6 +498,11 @@ with its turn's opening words, so check they land where you meant. In section 3,
      voice, or a cloud voice with its cost. With no questions, go ahead with their choice
      and say how long it took in the report. With no figure yet, say this is the first
      render with that voice here and the time will be known after it.
+     For breeze the listing can also give `fastRenderMinutes`, for Breeze's fast mode
+     (`--breeze-fast`). It's several times quicker, but in a blind test it sounded slightly
+     less natural. When a Breeze render would be long, include it in the choice, e.g. "about
+     70 minutes, or about 15 in the fast mode, which sounds a little less natural". With no
+     questions, keep the default unless they've said speed matters more.
 2. **Cast the voices**, unless the user gave `--voices`. Never cast a real person's voice
    or ask for one ("sounds like" a named person), except a recorded voice its owner made
    (see below).
@@ -579,6 +584,7 @@ with its turn's opening words, so check they land where you meant. In section 3,
    - **Breeze** follows the role's `--styles` note and each turn's delivery note, and
      performs `(laughs)`, `(sighs)`, `(coughs)` and `(clears throat)` where the speakers wrote
      them. A note on every turn nearly doubles its work, so keep them for turns that need one.
+     `--breeze-fast` voices several turns at once: much quicker, slightly less natural.
    - The pauses between turns follow the conversation: a quick reply comes fast, a question
      gets a beat, and a turn that cuts in overlaps. `--gap N` makes them all the same.
    - Clips are cached by text, voice, model, and delivery note, so a re-run after a failure,

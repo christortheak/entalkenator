@@ -301,11 +301,9 @@ def main():
         check("before any render here, a local voice gives its relative work, not a time",
               "renderMinutes" not in e and "about 20 times Kokoro's work" in e["renderNote"], e)
         with open(os.path.join(home, "speeds.json"), "w") as f:
-            json.dump({"kokoro": [{"ratio": 0.08}, {"ratio": 0.1}, {"ratio": 0.09}],
-                       "breeze": [{"ratio": 1.632, "audioSeconds": 237}]}, f)
+            json.dump({"kokoro": [{"ratio": 0.08}, {"ratio": 0.1}, {"ratio": 0.09}]}, f)
         e = est("breeze")
-        check("after Kokoro has rendered here, the others are guessed from its speed (Breeze renders from "
-              "before it voiced several lines at once don't count)",
+        check("after Kokoro has rendered here, the others are guessed from its speed",
               e.get("renderMinutes") == 18.0 and "rough guess" in e["renderNote"], e)
         sys.path.insert(0, os.path.join(ROOT, "scripts"))
         os.environ["ENTALKENATOR_HOME"] = home
@@ -317,6 +315,10 @@ def main():
         e = est("breeze")
         check("an engine's own renders here replace the guess (short ones don't count)",
               e.get("renderMinutes") == 14.0 and "this Mac's earlier renders" in e["renderNote"], e)
+        vmod.record_speed("breeze-fast", 600, 180)
+        e = est("breeze")
+        check("Breeze's fast mode is timed on its own and estimated beside the default",
+              e.get("fastRenderMinutes") == 3.0 and e.get("renderMinutes") == 14.0, e)
         p = subprocess.run([sys.executable, VOICES, "machine"], capture_output=True, text=True, env=henv)
         m = json.loads(p.stdout)
         check("machine lists the local voices with their work and whether they fit",

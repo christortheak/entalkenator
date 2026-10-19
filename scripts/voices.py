@@ -77,8 +77,6 @@ RECORD_SCRIPT = ("Thanks for having me. I'll be honest: when I first read this p
                  "But the more I thought about it, the more it held up. So here's my question for you. "
                  "What would it actually take to change your mind?")
 CLONE_ENGINES = ("qwen3", "breeze")  # engines that can speak in a recorded voice
-# Raised when an engine's renderer gets much faster, so renders timed before don't skew estimates.
-SPEED_VERSIONS = {"breeze": 2}  # 2: several lines at once (breeze_fast.py)
 
 KEY_ENV = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "elevenlabs": "ELEVENLABS_API_KEY"}
 KEY_PAGES = {
@@ -121,11 +119,13 @@ OPTIONS = [
      "summary": "Free, the most natural local voices: each character's voice is designed from a description, "
                 "and each line can be directed (\"wry, conceding the point\"); it laughs and sighs where the "
                 "script says so. Very heavy: about 12 times Kokoro's work, about 20 with a delivery note on "
-                "every line. Personal, educational and research use only.",
+                "every line. A fast mode voices several lines at once and is several times quicker, but sounded "
+                "slightly less natural in a blind test. Personal, educational and research use only.",
      "quality": "Preferred in our listening test; leads the open-weights Speech Arena (Elo 1215, reported "
                 "September 2026). English and Chinese only.",
      "voices": "any voice you can describe; a direction per line; (laughs), (sighs), (coughs), (clears throat)",
      "work": 20, "compute": "very heavy", "download": "7.6 GB, plus Kokoro's install", "memory": "about 13 GB",
+     "fastMode": "--breeze-fast",
      "requires": ["apple-silicon", "24gb"],
      "license": "BreezeBlue Research and Non-Commercial License: free for personal, educational and research "
                 "use; no commercial use. Don't clone a real person's voice without their consent.",
@@ -297,8 +297,7 @@ def hardware():
 def measured_ratio(engine):
     """Render seconds per second of audio for this engine on this Mac: the median of recent renders."""
     rows = (read_json(SPEEDS_FILE).get(engine) or [])[-8:]
-    version = SPEED_VERSIONS.get(engine, 1)
-    ratios = sorted(r["ratio"] for r in rows if r.get("ratio") and r.get("v", 1) == version)
+    ratios = sorted(r["ratio"] for r in rows if r.get("ratio"))
     return ratios[len(ratios) // 2] if ratios else None
 
 
@@ -307,11 +306,8 @@ def record_speed(engine, audio_seconds, render_seconds):
     if audio_seconds < 60 or render_seconds <= 0:
         return
     data = read_json(SPEEDS_FILE)
-    row = {"ratio": round(render_seconds / audio_seconds, 3), "audioSeconds": round(audio_seconds),
-           "at": time.strftime("%Y-%m-%d")}
-    if engine in SPEED_VERSIONS:
-        row["v"] = SPEED_VERSIONS[engine]
-    data.setdefault(engine, []).append(row)
+    data.setdefault(engine, []).append({"ratio": round(render_seconds / audio_seconds, 3),
+                                        "audioSeconds": round(audio_seconds), "at": time.strftime("%Y-%m-%d")})
     data[engine] = data[engine][-8:]
     write_private(SPEEDS_FILE, data)
 
@@ -371,6 +367,13 @@ def estimate(opt, words, chars):
         est["renderNote"] = ("not known on this Mac yet: %s (%s); a short sample render would tell"
                              % (opt.get("compute"), "Kokoro's work" if opt.get("work") == 1 else
                                 "about %d times Kokoro's work" % opt.get("work", 1)))
+    if opt.get("fastMode"):
+        # Breeze's fast mode (render_audio.py --breeze-fast), measured under its own name.
+        fast = measured_ratio(opt["engine"] + "-fast")
+        if not fast and measured_ratio("kokoro") and opt.get("fastWork"):
+            fast = measured_ratio("kokoro") * opt["fastWork"]
+        if fast:
+            est["fastRenderMinutes"] = round(max(0.2, minutes * fast), 1)
     if "perMinute" in opt:
         est["costUSD"] = round(minutes * opt["perMinute"], 2)
         if "perMinuteFrom2027" in opt:
