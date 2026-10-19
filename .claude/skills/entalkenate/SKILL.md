@@ -499,9 +499,9 @@ with its turn's opening words, so check they land where you meant. In section 3,
      and say how long it took in the report. With no figure yet, say this is the first
      render with that voice here and the time will be known after it.
      For breeze the listing can also give `fastRenderMinutes`, for Breeze's fast mode
-     (`--breeze-fast`). It's several times quicker, but in a blind test it sounded slightly
-     less natural. When a Breeze render would be long, include it in the choice, e.g. "about
-     70 minutes, or about 15 in the fast mode, which sounds a little less natural". With no
+     (`--breeze-fast`). It takes about a quarter of the time, but in a blind test it sounded
+     slightly less natural. When a Breeze render would be long, include it in the choice, e.g.
+     "about 70 minutes, or about 20 in the fast mode, which sounds a little less natural". With no
      questions, keep the default unless they've said speed matters more.
 2. **Cast the voices**, unless the user gave `--voices`. Never cast a real person's voice
    or ask for one ("sounds like" a named person), except a recorded voice its owner made

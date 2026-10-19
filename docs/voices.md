@@ -11,7 +11,7 @@ page changes. Researched on 17 October 2026.
 | Kokoro-82M | Mac (mlx-audio) | Apache-2.0; espeak-ng fallback GPL-3.0 | Artificial Analysis Elo 1061, 7th of 17 open models; TTS Arena V2 ties Chatterbox | 1× (0.07) | free |
 | Qwen3-TTS 1.7B (VoiceDesign + Base, 8-bit) | Mac (mlx-audio), 16 GB+ | Apache-2.0, not gated | Not on the arenas; Seed-TTS English WER 1.24 (maker's figure) | about 7× (0.5) | free |
 | Qwen3-TTS 1.7B CustomVoice (8-bit), "preset voices" | Mac (mlx-audio), 16 GB+ (5.3 GB in use) | Apache-2.0 | Nine presets; only Ryan and Aiden are native English (male) | about 3× (0.19, batched with a voice and note per line) | free |
-| Breeze TTS 2 (3B, MLX build) | Mac (mlx-audio), 24 GB+ (13 GB in use) | BreezeBlue Research and Non-Commercial License: personal, educational and research use; outputs not for commercial use; no unconsented cloning | Elo 1215, top open-weights model (reported Sept 2026); preferred in our listening test | about 12× undirected (0.85), 20× with a note per line (1.5); a fast mode is several times quicker (below) | free |
+| Breeze TTS 2 (3B, MLX build) | Mac (mlx-audio), 24 GB+ (13 GB in use) | BreezeBlue Research and Non-Commercial License: personal, educational and research use; outputs not for commercial use; no unconsented cloning | Elo 1215, top open-weights model (reported Sept 2026); preferred in our listening test | about 12× undirected (0.85), 20× with a note per line (1.4); its fast mode about 5× (0.37, below) | free |
 | macOS `say` | Mac | Apple system voices | Clearly synthetic | about 1× | free |
 | Gemini 3.8 Flash TTS | Google | Free tier may use prompts for training; EEA/UK/CH paid only | Elo 1275, #5 overall | cloud | $0.41 (≈$0.81 from Jan 2027) |
 | Gemini 3.8 Flash-Lite TTS | Google | as above | Elo 1248, #8 | cloud | $0.28 (≈$0.55 from 2027) |
@@ -86,9 +86,20 @@ Checks:
 - **Delivery.** Over 24 takes per path of three lines, length (29.4 against 29.6 s), pauses
   (9.5 against 9.0 a take) and noise floor didn't differ.
 
-Speed on the 4-minute excerpt, both paths under the same conditions: 5.1× real time one line
-at a time, 0.90× batched. Another GPU job was running at the time, so these aren't the
-figures to quote.
+Speed on an M5 Pro with the GPU otherwise idle (render time ÷ audio), on eight 61–82-word lines.
+The batch of 16 repeats them:
+
+| | generate, one line at a time | 1 line per batch | 2 | 4 | 8 | 16 |
+|---|---|---|---|---|---|---|
+| no note | 0.86 | 0.73 | 0.44 | 0.39 | 0.22 | 0.15 |
+| a note per line | 2.0 | 1.09 | 0.65 | 0.42 | 0.21 | 0.13 |
+
+Batched, a note costs almost nothing, because the guided and unguided passes share the work.
+The whole 4-minute excerpt, with a note on every turn, rendered end to end in 1.35× real time
+the default way and 0.37× in the fast mode, about 5× Kokoro's work. The fast mode takes up to
+eight pieces at a time from windows of sixteen. Peak memory goes from 14 GB to 16.5 GB in
+batches of eight with notes, and to 18 GB in batches of sixteen. That's too close to a 24 GB
+Mac's limit, so the renderer uses eight.
 
 In blind pairs the person preferred the one-at-a-time delivery four times out of four, with
 one pair a tie; on single turns they found it closer. So Breeze stays one line at a time by

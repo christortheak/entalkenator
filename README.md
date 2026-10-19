@@ -112,7 +112,7 @@ needs relative to Kokoro instead of times:
 | **Kokoro** | your Mac | free | light | Natural and even. Any Apple Silicon Mac; 660 MB download. |
 | **Qwen3-TTS** | your Mac | free | heavy: about 7× Kokoro | More expressive: each character's voice is designed from a description. 16 GB of memory or more; 6.2 GB download. |
 | **Qwen3 preset voices** | your Mac | free | medium: about 3× Kokoro | Directed line by line ("amused, pressing"). Only two native English voices, both men; the other seven speak English with an accent. 16 GB of memory or more; 3.1 GB download. |
-| **Breeze TTS 2** | your Mac | free | very heavy: about 12–20× Kokoro (a fast mode is several times quicker, a little less natural) | The most natural local voices: designed from descriptions, directed line by line, and they laugh and sigh. 24 GB of memory or more; 7.6 GB download. Personal, educational and research use only (BreezeBlue's licence). English and Chinese. |
+| **Breeze TTS 2** | your Mac | free | very heavy: about 12–20× Kokoro (a fast mode takes about a quarter of the time, a little less natural) | The most natural local voices: designed from descriptions, directed line by line, and they laugh and sigh. 24 GB of memory or more; 7.6 GB download. Personal, educational and research use only (BreezeBlue's licence). English and Chinese. |
 | **macOS voices** | your Mac | free | light | Built in, nothing to install, robotic. |
 | **Google Gemini** | cloud | about $0.19–$0.28 | none | Best value; excellent quality. Needs a Google AI Studio key. |
 | **OpenAI** | cloud | about $0.30–$0.65 | none | gpt-4o-mini-tts, tts-1 and tts-1-hd. Needs an OpenAI key with credit. |

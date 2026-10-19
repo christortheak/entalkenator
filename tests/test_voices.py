@@ -305,6 +305,7 @@ def main():
         e = est("breeze")
         check("after Kokoro has rendered here, the others are guessed from its speed",
               e.get("renderMinutes") == 18.0 and "rough guess" in e["renderNote"], e)
+        check("so is Breeze's fast mode", e.get("fastRenderMinutes") == 4.5, e)
         sys.path.insert(0, os.path.join(ROOT, "scripts"))
         os.environ["ENTALKENATOR_HOME"] = home
         import importlib

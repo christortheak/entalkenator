@@ -119,13 +119,14 @@ OPTIONS = [
      "summary": "Free, the most natural local voices: each character's voice is designed from a description, "
                 "and each line can be directed (\"wry, conceding the point\"); it laughs and sighs where the "
                 "script says so. Very heavy: about 12 times Kokoro's work, about 20 with a delivery note on "
-                "every line. A fast mode voices several lines at once and is several times quicker, but sounded "
-                "slightly less natural in a blind test. Personal, educational and research use only.",
+                "every line. A fast mode voices several lines at once and takes about a quarter of the time (about "
+                "5 times Kokoro's work), but sounded slightly less natural in a blind test. Personal, "
+                "educational and research use only.",
      "quality": "Preferred in our listening test; leads the open-weights Speech Arena (Elo 1215, reported "
                 "September 2026). English and Chinese only.",
      "voices": "any voice you can describe; a direction per line; (laughs), (sighs), (coughs), (clears throat)",
      "work": 20, "compute": "very heavy", "download": "7.6 GB, plus Kokoro's install", "memory": "about 13 GB",
-     "fastMode": "--breeze-fast",
+     "fastMode": "--breeze-fast", "fastWork": 5,
      "requires": ["apple-silicon", "24gb"],
      "license": "BreezeBlue Research and Non-Commercial License: free for personal, educational and research "
                 "use; no commercial use. Don't clone a real person's voice without their consent.",

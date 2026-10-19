@@ -17,8 +17,8 @@ Engines (scripts/voices.py describes each: cost, speed, download, what it needs)
               qwen3's, and each turn can be directed: the role's --styles note plus the turn's
               delivery note. It performs (laughs), (sighs), (coughs) and (clears throat), which
               the other engines leave out. The heaviest local engine. --breeze-fast voices
-              several lines at once (breeze_fast.py): several times quicker, but the person
-              preferred the default's delivery in a blind test.
+              several lines at once (breeze_fast.py) in about a quarter of the time, but the
+              person preferred the default's delivery in a blind test.
   say         The macOS `say` command. No install, no cost, robotic.
   gemini      Google Gemini TTS (--model gemini-3.8-flash-tts or gemini-3.8-flash-lite-tts)
               through the Interactions API, one request per turn. Paid; needs a key.
@@ -477,8 +477,8 @@ class BreezeRenderer:
     """Breeze TTS 2 in the child process: design each described voice once, then clone it for every
     turn, directed by the turn's note. Turns go one at a time through mlx-audio's own generate, each
     written as soon as it's done. fast=True (--breeze-fast) voices BREEZE_BATCH pieces at once with
-    breeze_fast.py instead, in windows of whole turns sorted by length: several times quicker, but
-    the person preferred the default's delivery in a blind test."""
+    breeze_fast.py instead, in windows of whole turns sorted by length: about a quarter of the time,
+    but the person preferred the default's delivery in a blind test."""
     name = "breeze"
 
     def __init__(self, fast=False):
@@ -1291,8 +1291,8 @@ def main():
                                       '("*" is everyone else; default --engine)')
     ap.add_argument("--speeds", help='kokoro and say: a role\'s pace, e.g. "Professor Swift=0.95;Rigel=1.05"')
     ap.add_argument("--breeze-fast", action="store_true",
-                    help="breeze: voice several pieces at once (breeze_fast.py), several times quicker; in a blind "
-                         "test the person preferred the default's delivery, so offer it for long programs or drafts")
+                    help="breeze: voice several pieces at once (breeze_fast.py) in about a quarter of the time; in a "
+                         "blind test the person preferred the default's delivery, so offer it for long programs or drafts")
     ap.add_argument("--delivery", help="per-turn delivery notes (default: delivery.json beside the transcript)")
     ap.add_argument("--bitrate", type=int, default=48000)
     ap.add_argument("--work-dir", help="clip cache (default: <out>.clips/)")
