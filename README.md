@@ -180,8 +180,12 @@ same.
 
 ## Licences
 
+enTalkenator itself is MIT-licensed (see `LICENSE`). What it downloads, with your OK, has
+its own terms:
 - The voice models **Kokoro-82M** and **Qwen3-TTS**, and Kokoro's **misaki** pronunciation
   library, are Apache-2.0.
+- **Breeze TTS 2** is under BreezeBlue's Research and Non-Commercial License: personal,
+  educational and research use only, and no cloning a voice without its owner's consent.
 - **mlx-audio** is MIT.
 - The installer also fetches **espeak-ng** (GPL-3.0), used for pronunciation.
 - Cloudflare's **Wrangler** is MIT/Apache-2.0.
